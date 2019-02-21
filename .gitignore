@@ -1,2 +1,4 @@
 dotnet-template/bin/
 dotnet-template/obj/
+example-plugin/bin/
+example-plugin/obj/

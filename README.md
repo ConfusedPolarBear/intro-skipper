@@ -14,7 +14,7 @@ Awesome! This guide is for you. Jellyfin plugins are written using the dotnet st
 ## 0.5. Quickstarts
 We have a number of quickstart options available to speed you along the way
 
-- [Download the Example Plugin] - coming soon - from this repository and open it in your IDE and go to step 3
+- [Download the Example Plugin Project](https://github.com/LogicalPhallacy/jellyfin-plugin-example/tree/master/example-plugin) from this repository, open it in your IDE and go to step 3
 - Install our dotnet template off of [Nuget] - coming soon - and run this command then skip to step 4
    
       dotnet new Jellyfin-plugin -name MyPlugin
