@@ -15,10 +15,17 @@ Awesome! This guide is for you. Jellyfin plugins are written using the dotnet st
 We have a number of quickstart options available to speed you along the way
 
 - [Download the Example Plugin Project](https://github.com/LogicalPhallacy/jellyfin-plugin-example/tree/master/example-plugin) from this repository, open it in your IDE and go to step 3
-- Install our dotnet template off of [Nuget] - coming soon - and run this command then skip to step 4
+- Install our dotnet template by [downloading the dotnet-template/content folder from this repo](https://github.com/LogicalPhallacy/jellyfin-plugin-example/tree/master/dotnet-template/content) or off of Nuget (Coming soon)
+   ```
+   dotnet new -i /path/to/templatefolder
+   ```
+
+  - and run this command then skip to step 4
    
+   ```
       dotnet new Jellyfin-plugin -name MyPlugin
-- Install our [visual studio plugin] - coming soon - and make a new Jellyfin plugin project, then skip to step 4
+   ```
+- Install our visual studio plugin  (coming soon) and make a new Jellyfin plugin project, then skip to step 4
 
 If you'd rather start from scratch keep going on to step 1. This assumes no specific editor or IDE and requires only the command line with dotnet in the path. 
 
