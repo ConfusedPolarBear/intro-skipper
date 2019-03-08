@@ -14,8 +14,8 @@ Awesome! This guide is for you. Jellyfin plugins are written using the dotnet st
 ## 0.5. Quickstarts
 We have a number of quickstart options available to speed you along the way
 
-- [Download the Example Plugin Project](https://github.com/LogicalPhallacy/jellyfin-plugin-example/tree/master/example-plugin) from this repository, open it in your IDE and go to step 3
-- Install our dotnet template by [downloading the dotnet-template/content folder from this repo](https://github.com/LogicalPhallacy/jellyfin-plugin-example/tree/master/dotnet-template/content) or off of Nuget (Coming soon)
+- [Download the Example Plugin Project](https://github.com/jellyfin/jellyfin-plugin-template/tree/master/example-plugin) from this repository, open it in your IDE and go to step 3
+- Install our dotnet template by [downloading the dotnet-template/content folder from this repo](https://github.com/LogicalPhallacy/jellyfin-plugin-template/tree/master/dotnet-template/content) or off of Nuget (Coming soon)
    ```
    dotnet new -i /path/to/templatefolder
    ```
@@ -121,4 +121,6 @@ Likewise you might need to get data and services from the Jellyfin core, Jellyfi
 - **IZipClient** - Allows you to use the core zip client for compressing and decompressing data
 
 ## 5. Submit your plugin to the Jellyfin repo
-- Coming Soon. If you have a plugin you would like submitted check out the [main Jellyfin project](https://github.com/jellyfin/jellyfin)
+- Choose a License, Jellyfin recommends [GPLv2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html). If you would like your plugin to be integrated into Jellyfin and available from the plugin browser you MUST choose a [GPL Compatible License](https://www.gnu.org/licenses/license-list.html#GPLCompatibleLicenses)
+- Upload your plugin to github.
+- Contact the Jellyfin Team!
