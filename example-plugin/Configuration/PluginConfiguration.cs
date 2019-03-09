@@ -1,5 +1,6 @@
 using MediaBrowser.Model.Plugins;
-namespace Jellyfin.Plugin.ExamplePlugin.Configuration
+
+namespace Jellyfin.Plugin.Template.Configuration
 {
     public enum SomeOptions
     {
@@ -9,10 +10,10 @@ namespace Jellyfin.Plugin.ExamplePlugin.Configuration
     public class PluginConfiguration : BasePluginConfiguration
     {
         //This is where you should store configurable settings your plugin might need.
-        public bool TrueFalseSetting {get; set;}
-        public int AnInteger {get; set;}
-        public string AString {get; set;}
-        public SomeOptions Options {get; set;}
+        public bool TrueFalseSetting { get; set; }
+        public int AnInteger { get; set; }
+        public string AString { get; set; }
+        public SomeOptions Options { get; set; }
         public PluginConfiguration()
         {
             Options = SomeOptions.AnotherOption;
