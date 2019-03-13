@@ -26,7 +26,7 @@ namespace Jellyfin.Plugin.Template
                 new PluginPageInfo
                 {
                     Name = this.Name,
-                    EmbeddedResourcePath = string.Format("Jellyfin.Plugin.{0}.Configuration.configPage.html", this.Name)
+                    EmbeddedResourcePath = string.Format("{0}.Configuration.configPage.html", GetType().Namespace)
                 }
             };
         }
