@@ -91,7 +91,6 @@ Here's some interfaces you could implement for common use cases:
 - **IMetadataSaver** - Allows you to define a metadata standard that Jellyfin can use to write metadata
 - **IResolverIgnoreRule** - Allows you to define subpaths that are ignored by media resolvers for use with another function (i.e. you wanted to have a theme song for each tv series stored in a subfolder that could be accessed by your plugin for playback in a menu).
 - **IScheduledTask** - Allows you to create a scheduled task that will appear in the scheduled task lists on the dashboard.
-- **IWeatherProvider** - Allows you to define other weather sources
 	
 There are loads of other interfaces that can be used, but you'll need to poke around the API to get some info. If you're an expert on a particular interface, you should help [contribute some documentation](https://jellyfin.readthedocs.io/en/latest/)!
 
