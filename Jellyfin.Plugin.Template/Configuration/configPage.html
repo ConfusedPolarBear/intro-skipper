@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
     <title>Template</title>
 </head>
 <body>
@@ -63,7 +63,7 @@
                     config.AnInteger = $('#AnInteger').val();
                     config.TrueFalseSetting = $('#TrueFalseSetting').prop('checked');
                     config.AString = $('#AString').val();
-                    ApiClient.updatePluginConfiguration(ExamplePluginConfigurationPage.pluginUniqueId, config).then(function (result) {
+                    ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
                     });
                 });
