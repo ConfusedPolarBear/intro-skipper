@@ -11,7 +11,9 @@ namespace Jellyfin.Plugin.Template
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     {
         public override string Name => "Template";
+
         public override Guid Id => Guid.Parse("eb5d7894-8eef-4b36-aa6f-5d124e828ce1");
+
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer) : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
