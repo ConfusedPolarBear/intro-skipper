@@ -2,7 +2,7 @@
 name: "jellyfin-plugin-template"
 guid: "eb5d7894-8eef-4b36-aa6f-5d124e828ce1"
 version: "1.0.0"
-jellyfin_version: "10.3.7"
+jellyfin_version: "10.5.0"
 nicename: "Template"
 description: "Short description about your plugin"
 overview: >
@@ -14,4 +14,4 @@ artifacts:
   - "Jellyfin.Plugin.Template.dll"
 build_type: "dotnet"
 dotnet_configuration: "Release"
-dotnet_framework: "netstandard2.0"
+dotnet_framework: "netstandard2.1"
