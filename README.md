@@ -2,9 +2,10 @@
 
 Awesome! This guide is for you. Jellyfin plugins are written using the dotnet standard framework. What that means is you can write them in any language that implements the CLI or the DLI and can compile to netstandard2.1. The examples on this page are in C# because that is what most of Jellyfin is written in, but F#, Visual Basic, and IronPython should all be compatible once compiled.
 
-## 0. Things you need to get started:
+## 0. Things you need to get started
 
 - [Dotnet Core SDK 2.2](https://dotnet.microsoft.com/download)
+
 - An editor of your choice. Some free choices are:
 
    [Visual Studio Code](https://code.visualstudio.com/)
@@ -15,7 +16,7 @@ Awesome! This guide is for you. Jellyfin plugins are written using the dotnet st
 
 ## 0.5. Quickstarts
 
-We have a number of quickstart options available to speed you along the way
+We have a number of quickstart options available to speed you along the way.
 
 - [Download the Example Plugin Project](https://github.com/jellyfin/jellyfin-plugin-template/tree/master/Jellyfin.Plugin.Template) from this repository, open it in your IDE and go to [step 3](https://github.com/jellyfin/jellyfin-plugin-template#3-customize-plugin-information)
 
@@ -33,7 +34,7 @@ We have a number of quickstart options available to speed you along the way
 
 If you'd rather start from scratch keep going on to step 1. This assumes no specific editor or IDE and requires only the command line with dotnet in the path.
 
-## 1. Initialize your project
+## 1. Initialize your Project
 
 Make a new dotnet standard project with the following command, it will make a directory for itself:
 
@@ -117,7 +118,9 @@ There are loads of other interfaces that can be used, but you'll need to poke ar
 If your plugin doesn't fit perfectly neatly into a predefined interface, never fear, there are a set of interfaces that allow your plugin to extend Jellyfin any which way you please. Here's a quick overview on how to use them
 
 - **IPluginConfigurationPage** - Allows you to have a plugin config page on the dashboard. If you used one of the quickstart example projects, a premade page with some useful components to work with has been created for you! If not you can check out this guide here for how to whip one up.
+
 - **IRestfulService** - Allows you to extend the Jellyfin http API and handle API calls that come in on the routes you define.
+
 - **IServerEntryPoint** - Allows you to run code at server startup that will stay in memory. You can make as many of these as you need and it is wildly useful for loading configs or persisting state.
 
 Likewise you might need to get data and services from the Jellyfin core, Jellyfin provides a number of interfaces you can add as parameters to your plugin constructor which are then made available in your project (you can see the 2 mandatory ones that are needed by the plugin system in the constructor as is).
@@ -138,8 +141,10 @@ Likewise you might need to get data and services from the Jellyfin core, Jellyfi
 - **IXmlSerializer** - Allows you to use the main xml serializer
 - **IZipClient** - Allows you to use the core zip client for compressing and decompressing data
 
-## 5. Submit your plugin to the Jellyfin repo
+## 5. Submit your Plugin
 
 - Choose a License, Jellyfin recommends [GPLv2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html). If you would like your plugin to be integrated into Jellyfin and available from the plugin browser you MUST choose a [GPL Compatible License](https://www.gnu.org/licenses/license-list.html#GPLCompatibleLicenses)
+
 - Upload your plugin to github.
+
 - Contact the Jellyfin Team!
