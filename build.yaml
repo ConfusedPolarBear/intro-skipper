@@ -1,5 +1,5 @@
 ---
-name: "jellyfin-plugin-template"
+name: "Template"
 guid: "eb5d7894-8eef-4b36-aa6f-5d124e828ce1"
 version: "1.0.0.0"
 targetAbi: "10.5.0.0"
@@ -11,3 +11,5 @@ category: "General"
 owner: "jellyfin"
 artifacts:
 - "Jellyfin.Plugin.Template.dll"
+changelog: >
+  changelog
