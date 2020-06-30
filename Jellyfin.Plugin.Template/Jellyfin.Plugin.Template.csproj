@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.*" />
-    <PackageReference Include="Jellyfin.Model" Version="10.*" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.*-*" />
+    <PackageReference Include="Jellyfin.Model" Version="10.*-*" />
   </ItemGroup>
 
   <ItemGroup>
