@@ -50,7 +50,7 @@
                 ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                     $('#Options').val(config.Options).change();
                     $('#AnInteger').val(config.AnInteger).change();
-                    $('#TrueFalseSetting').checked = config.TrueFalseSetting;
+                    document.getElementById('TrueFalseSetting').checked = config.TrueFalseSetting;
                     $('#AString').val(config.AString).change();
                     Dashboard.hideLoadingMsg();
                 });
