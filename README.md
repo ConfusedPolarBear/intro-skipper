@@ -80,12 +80,18 @@ public override Guid Id => Guid.Parse("");
 ## 3. Customize Plugin Information
 
 You need to populate some of your plugin's information. Go ahead a put in a string of the Name you've overridden name, and generate a GUID
-- **Windows Users**: you can use the Powershell command `New-Guid` or the Visual Studio GUID generator
-- **Linux and OS X users**: you can use the Powershell Core command `New-Guid` or this command from your shell of choice:
+- **Windows Users**: you can use the Powershell command `New-Guid`, `[guid]::NewGuid()` or the Visual Studio GUID generator
+- **Linux and OS X Users**: you can use the Powershell Core command `New-Guid` or this command from your shell of choice:
 
    ```bash
    od -x /dev/urandom | head -1 | awk '{OFS="-"; srand($6); sub(/./,"4",$5); sub(/./,substr("89ab",rand()*4,1),$6); print $2$3,$4,$5,$6,$7$8$9}'
    ```
+or
+
+   ```bash
+   uuidgen
+   ```
+
 - Place that guid inside the `Guid.Parse("")` quotes to define your plugin's ID.
 
 ## 4. Adding Functionality
