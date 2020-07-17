@@ -2,7 +2,7 @@
 name: "Template"
 guid: "eb5d7894-8eef-4b36-aa6f-5d124e828ce1"
 version: "1.0.0.0"
-targetAbi: "10.5.0.0"
+targetAbi: "10.6.0.0"
 overview: "Short description about your plugin"
 description: >
   This is a longer description that can span more than one
