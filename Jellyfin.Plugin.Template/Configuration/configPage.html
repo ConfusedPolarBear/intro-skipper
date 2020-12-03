@@ -45,24 +45,26 @@
                 pluginUniqueId: 'eb5d7894-8eef-4b36-aa6f-5d124e828ce1'
             };
 
-            $('#TemplateConfigPage').on('pageshow', function () {
+            document.querySelector('#TemplateConfigPage')
+                .addEventListener('pageshow', function(){
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
+                        document.querySelector('#Options').value = config.Options;
+                        document.querySelector('#AnInteger').value = config.AnInteger;
+                        document.getElementById('TrueFalseSetting').checked = config.TrueFalseSetting;
+                        document.querySelector('#AString').value = config.AString;
+                        Dashboard.hideLoadingMsg();
+                    });    
+                })
+            
+            document.querySelector('#TemplateConfigForm')
+                .addEventListener('submit', function() {
                 Dashboard.showLoadingMsg();
                 ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
-                    $('#Options').val(config.Options).change();
-                    $('#AnInteger').val(config.AnInteger).change();
-                    document.getElementById('TrueFalseSetting').checked = config.TrueFalseSetting;
-                    $('#AString').val(config.AString).change();
-                    Dashboard.hideLoadingMsg();
-                });
-            });
-
-            $('#TemplateConfigForm').on('submit', function () {
-                Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
-                    config.Options = $('#Options').val();
-                    config.AnInteger = $('#AnInteger').val();
+                    config.Options = document.querySelector('#Options').value;
+                    config.AnInteger = document.querySelector('#AnInteger').value;
                     config.TrueFalseSetting = document.getElementById('TrueFalseSetting').checked;
-                    config.AString = $('#AString').val();
+                    config.AString = document.querySelector('#AString').value;
                     ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
                     });
