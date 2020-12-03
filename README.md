@@ -4,7 +4,7 @@ Awesome! This guide is for you. Jellyfin plugins are written using the dotnet st
 
 ## 0. Things you need to get started
 
-- [Dotnet Core SDK 2.2](https://dotnet.microsoft.com/download)
+- [Dotnet SDK 5.0](https://dotnet.microsoft.com/download)
 
 - An editor of your choice. Some free choices are:
 
@@ -133,7 +133,6 @@ Likewise you might need to get data and services from the Jellyfin core, Jellyfi
 
 - **IBlurayExaminer** - Allows you to examine blu-ray folders
 - **IDtoService** - Allows you to create data transport objects, presumably to send to other plugins or to the core
-- **IIsoManager** - Allows the mounting and unmounting of ISO files
 - **IJsonSerializer** - Allows you to use the main json serializer
 - **ILibraryManager** - Allows you to directly access the media libraries without hopping through the API
 - **ILocalizationManager** - Allows you tap into the main localization engine which governs translations, rating systems, units etc...
