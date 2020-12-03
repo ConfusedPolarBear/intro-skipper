@@ -63,7 +63,7 @@
                 ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                     config.Options = document.querySelector('#Options').value;
                     config.AnInteger = document.querySelector('#AnInteger').value;
-                    config.TrueFalseSetting = document.getElementById('TrueFalseSetting').checked;
+                    config.TrueFalseSetting = document.querySelector('#TrueFalseSetting').checked;
                     config.AString = document.querySelector('#AString').value;
                     ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
