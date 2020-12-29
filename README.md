@@ -1,6 +1,6 @@
 # So you want to make a Jellyfin plugin
 
-Awesome! This guide is for you. Jellyfin plugins are written using the dotnet standard framework. What that means is you can write them in any language that implements the CLI or the DLI and can compile to netstandard2.1. The examples on this page are in C# because that is what most of Jellyfin is written in, but F#, Visual Basic, and IronPython should all be compatible once compiled.
+Awesome! This guide is for you. Jellyfin plugins are written using the dotnet standard framework. What that means is you can write them in any language that implements the CLI or the DLI and can compile to net5.0. The examples on this page are in C# because that is what most of Jellyfin is written in, but F#, Visual Basic, and IronPython should all be compatible once compiled.
 
 ## 0. Things you need to get started
 
@@ -39,7 +39,7 @@ If you'd rather start from scratch keep going on to step 1. This assumes no spec
 Make a new dotnet standard project with the following command, it will make a directory for itself:
 
 ```
-dotnet new classlib -f netstandard2.0 -n MyJellyFinPlugin
+dotnet new classlib -f net5.0 -n MyJellyFinPlugin
 ```
 
 Now add the Jellyfin shared libraries.
@@ -57,7 +57,7 @@ There are a few mandatory classes you'll need for a plugin so we need to make th
 
 ### Make a new class called PluginConfiguration
 
-You can call it watever you'd like readlly. This class is used to hold settings your plugin might need. We can leave it empty for now. This class should inherit from `MediaBrowser.Model.Plugins.BasePluginConfiguration`
+You can call it whatever you'd like really. This class is used to hold settings your plugin might need. We can leave it empty for now. This class should inherit from `MediaBrowser.Model.Plugins.BasePluginConfiguration`
 
 ### Make a new class called Plugin
 
@@ -146,13 +146,9 @@ Likewise you might need to get data and services from the Jellyfin core, Jellyfi
 - **IXmlSerializer** - Allows you to use the main xml serializer
 - **IZipClient** - Allows you to use the core zip client for compressing and decompressing data
 
-## 5. Submit your Plugin
+## 5. Create a Repo
 
-- Choose a License, Jellyfin recommends [GPLv2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html). If you would like your plugin to be integrated into Jellyfin and available from the plugin browser you MUST choose a [GPL Compatible License](https://www.gnu.org/licenses/license-list.html#GPLCompatibleLicenses)
-
-- Upload your plugin to github.
-
-- Contact the Jellyfin Team!
+- [See blog post](https://jellyfin.org/posts/plugin-updates/)
 
 ## A note about licensing
 
