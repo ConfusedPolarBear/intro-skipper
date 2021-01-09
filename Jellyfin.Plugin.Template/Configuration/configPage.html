@@ -21,7 +21,7 @@
                         <input id="AnInteger" name="AnInteger" type="number" is="emby-input" min="0" />
                         <div class="fieldDescription">A Description</div>
                     </div>
-                    <div class="checkboxContainer checkboxContainer-withDescripton">
+                    <div class="checkboxContainer checkboxContainer-withDescription">
                         <label class="emby-checkbox-label">
                             <input id="TrueFalseSetting" name="TrueFalseCheckBox" type="checkbox" is="emby-checkbox" />
                             <span>A Checkbox</span>
@@ -46,7 +46,7 @@
             };
 
             document.querySelector('#TemplateConfigPage')
-                .addEventListener('pageshow', function(){
+                .addEventListener('pageshow', function() {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                         document.querySelector('#Options').value = config.Options;
@@ -55,7 +55,7 @@
                         document.querySelector('#AString').value = config.AString;
                         Dashboard.hideLoadingMsg();
                     });    
-                })
+                });
             
             document.querySelector('#TemplateConfigForm')
                 .addEventListener('submit', function() {
@@ -69,6 +69,7 @@
                         Dashboard.processPluginConfigurationUpdateResult(result);
                     });
                 });
+
                 return false;
             });
         </script>
