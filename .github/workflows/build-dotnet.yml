@@ -3,12 +3,8 @@ name: Test Build Plugin
 on:
   push:
     branches: [ master ]
-    paths-ignore:
-      - "**/*.md"
   pull_request:
     branches: [ master ]
-    paths-ignore:
-      - "**/*.md"
 
 jobs:
   build:
@@ -29,4 +25,3 @@ jobs:
 
       - name: "Test"
         run: dotnet test --no-restore --verbosity normal
-
