@@ -61,7 +61,7 @@ You can call it whatever you'd like really. This class is used to hold settings 
 
 ### Plugin
 
-This is the main class for your plugin. It will define your name, version and Id. It should inherit from `MediaBrowser.Common.Plugins.BasePlugin<PluginConfiguration> `
+This is the main class for your plugin. It will define your name, version and Id. It should inherit from `MediaBrowser.Common.Plugins.BasePlugin<PluginConfiguration>`
 
 Note: If you called your PluginConfiguration class something different, you need to put that between the <>
 
