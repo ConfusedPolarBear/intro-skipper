@@ -1,6 +1,4 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jellyfin.Plugin.Template", "Jellyfin.Plugin.Template\Jellyfin.Plugin.Template.csproj", "{D921B930-CF91-406F-ACBC-08914DCD0D34}"
 EndProject
 Global
