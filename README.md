@@ -110,11 +110,9 @@ Here's some interfaces you could implement for common use cases:
 
 - **IAuthenticationProvider** - Allows you to add an authentication provider that can authenticate a user based on a name and a password, but that doesn't expect to deal with local users.
 - **IBaseItemComparer** - Allows you to add sorting rules for dealing with media that will show up in sort menus
-- **IImageEnhancer** - Allows you to intercept and manipulate images served by Jellyfin
 - **IIntroProvider** - Allows you to play a piece of media before another piece of media (i.e. a trailer before a movie, or a network bumper before an episode of a show)
 - **IItemResolver** - Allows you to define custom media types
 - **ILibraryPostScanTask** - Allows you to define a task that fires after scanning a library
-- **ILibraryPreScanTask** - Allows you to define a task that fires before scanning a library
 - **IMetadataSaver** - Allows you to define a metadata standard that Jellyfin can use to write metadata
 - **IResolverIgnoreRule** - Allows you to define subpaths that are ignored by media resolvers for use with another function (i.e. you wanted to have a theme song for each tv series stored in a subfolder that could be accessed by your plugin for playback in a menu).
 - **IScheduledTask** - Allows you to create a scheduled task that will appear in the scheduled task lists on the dashboard.
@@ -137,9 +135,7 @@ Likewise you might need to get data and services from the Jellyfin core, Jellyfi
 - **IDtoService** - Allows you to create data transport objects, presumably to send to other plugins or to the core
 - **ILibraryManager** - Allows you to directly access the media libraries without hopping through the API
 - **ILocalizationManager** - Allows you tap into the main localization engine which governs translations, rating systems, units etc...
-- **ILogManager** - Allows you to create log entries with a custom name in the application log file
 - **INetworkManager** - Allows you to get information about the server's networking status
-- **INotificationsRepository** - Allows you to send notifications to users
 - **IServerApplicationPaths** - Allows you to get the running server's paths
 - **IServerConfigurationManager** - Allows you to write or read server configuration data into the application paths
 - **ITaskManager** - Allows you to execute and manipulate scheduled tasks
