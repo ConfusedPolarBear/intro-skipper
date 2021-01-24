@@ -110,11 +110,9 @@ Here's some interfaces you could implement for common use cases:
 
 - **IAuthenticationProvider** - Allows you to add an authentication provider that can authenticate a user based on a name and a password, but that doesn't expect to deal with local users.
 - **IBaseItemComparer** - Allows you to add sorting rules for dealing with media that will show up in sort menus
-- **IImageEnhancer** - Allows you to intercept and manipulate images served by Jellyfin
 - **IIntroProvider** - Allows you to play a piece of media before another piece of media (i.e. a trailer before a movie, or a network bumper before an episode of a show)
 - **IItemResolver** - Allows you to define custom media types
 - **ILibraryPostScanTask** - Allows you to define a task that fires after scanning a library
-- **ILibraryPreScanTask** - Allows you to define a task that fires before scanning a library
 - **IMetadataSaver** - Allows you to define a metadata standard that Jellyfin can use to write metadata
 - **IResolverIgnoreRule** - Allows you to define subpaths that are ignored by media resolvers for use with another function (i.e. you wanted to have a theme song for each tv series stored in a subfolder that could be accessed by your plugin for playback in a menu).
 - **IScheduledTask** - Allows you to create a scheduled task that will appear in the scheduled task lists on the dashboard.
@@ -123,24 +121,21 @@ There are loads of other interfaces that can be used, but you'll need to poke ar
 
 ### 4b. Use plugin aimed interfaces to add custom functionality
 
-If your plugin doesn't fit perfectly neatly into a predefined interface, never fear, there are a set of interfaces that allow your plugin to extend Jellyfin any which way you please. Here's a quick overview on how to use them
+If your plugin doesn't fit perfectly neatly into a predefined interface, never fear, there are a set of interfaces and classes that allow your plugin to extend Jellyfin any which way you please. Here's a quick overview on how to use them
 
 - **IPluginConfigurationPage** - Allows you to have a plugin config page on the dashboard. If you used one of the quickstart example projects, a premade page with some useful components to work with has been created for you! If not you can check out this guide here for how to whip one up.
 
-- **IRestfulService** - Allows you to extend the Jellyfin http API and handle API calls that come in on the routes you define.
-
 - **IServerEntryPoint** - Allows you to run code at server startup that will stay in memory. You can make as many of these as you need and it is wildly useful for loading configs or persisting state.
+
+- **BaseController** - Allows you to define custom REST-API endpoints. This is the default ASP.NET Web-API controller. You can use it exactly as you would in a normal Web-API project. Learn more about it [here](https://docs.microsoft.com/aspnet/core/web-api/?view=aspnetcore-5.0).
 
 Likewise you might need to get data and services from the Jellyfin core, Jellyfin provides a number of interfaces you can add as parameters to your plugin constructor which are then made available in your project (you can see the 2 mandatory ones that are needed by the plugin system in the constructor as is).
 
 - **IBlurayExaminer** - Allows you to examine blu-ray folders
 - **IDtoService** - Allows you to create data transport objects, presumably to send to other plugins or to the core
-- **IJsonSerializer** - Allows you to use the main json serializer
 - **ILibraryManager** - Allows you to directly access the media libraries without hopping through the API
 - **ILocalizationManager** - Allows you tap into the main localization engine which governs translations, rating systems, units etc...
-- **ILogManager** - Allows you to create log entries with a custom name in the application log file
 - **INetworkManager** - Allows you to get information about the server's networking status
-- **INotificationsRepository** - Allows you to send notifications to users
 - **IServerApplicationPaths** - Allows you to get the running server's paths
 - **IServerConfigurationManager** - Allows you to write or read server configuration data into the application paths
 - **ITaskManager** - Allows you to execute and manipulate scheduled tasks
