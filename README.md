@@ -123,19 +123,18 @@ There are loads of other interfaces that can be used, but you'll need to poke ar
 
 ### 4b. Use plugin aimed interfaces to add custom functionality
 
-If your plugin doesn't fit perfectly neatly into a predefined interface, never fear, there are a set of interfaces that allow your plugin to extend Jellyfin any which way you please. Here's a quick overview on how to use them
+If your plugin doesn't fit perfectly neatly into a predefined interface, never fear, there are a set of interfaces and classes that allow your plugin to extend Jellyfin any which way you please. Here's a quick overview on how to use them
 
 - **IPluginConfigurationPage** - Allows you to have a plugin config page on the dashboard. If you used one of the quickstart example projects, a premade page with some useful components to work with has been created for you! If not you can check out this guide here for how to whip one up.
 
-- **IRestfulService** - Allows you to extend the Jellyfin http API and handle API calls that come in on the routes you define.
-
 - **IServerEntryPoint** - Allows you to run code at server startup that will stay in memory. You can make as many of these as you need and it is wildly useful for loading configs or persisting state.
+
+- **BaseController** - Allows you to define custom REST-API endpoints. This is the default ASP.NET Web-API controller. You can use it exactly as you would in a normal Web-API project. Learn more about it [here](https://docs.microsoft.com/aspnet/core/web-api/?view=aspnetcore-5.0).
 
 Likewise you might need to get data and services from the Jellyfin core, Jellyfin provides a number of interfaces you can add as parameters to your plugin constructor which are then made available in your project (you can see the 2 mandatory ones that are needed by the plugin system in the constructor as is).
 
 - **IBlurayExaminer** - Allows you to examine blu-ray folders
 - **IDtoService** - Allows you to create data transport objects, presumably to send to other plugins or to the core
-- **IJsonSerializer** - Allows you to use the main json serializer
 - **ILibraryManager** - Allows you to directly access the media libraries without hopping through the API
 - **ILocalizationManager** - Allows you tap into the main localization engine which governs translations, rating systems, units etc...
 - **ILogManager** - Allows you to create log entries with a custom name in the application log file
