@@ -125,7 +125,7 @@ If your plugin doesn't fit perfectly neatly into a predefined interface, never f
 
 - **IPluginConfigurationPage** - Allows you to have a plugin config page on the dashboard. If you used one of the quickstart example projects, a premade page with some useful components to work with has been created for you! If not you can check out this guide here for how to whip one up.
 
-- **IServerEntryPoint** - Allows you to run code at server startup that will stay in memory. You can make as many of these as you need and it is wildly useful for loading configs or persisting state.
+- **IServerEntryPoint** - Allows you to run code at server startup that will stay in memory. You can make as many of these as you need and it is wildly useful for loading configs or persisting state. **Be aware that your main plugin class (IBasePlugin) cannot also be a IServerEntryPoint.**
 
 - **BaseController** - Allows you to define custom REST-API endpoints. This is the default ASP.NET Web-API controller. You can use it exactly as you would in a normal Web-API project. Learn more about it [here](https://docs.microsoft.com/aspnet/core/web-api/?view=aspnetcore-5.0).
 
