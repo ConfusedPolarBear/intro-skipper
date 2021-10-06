@@ -147,6 +147,24 @@ Likewise you might need to get data and services from the Jellyfin core, Jellyfi
 
 - [See blog post](https://jellyfin.org/posts/plugin-updates/)
 
+## 6. Set Up Debugging
+
+Debugging can be set up by creating tasks which will be executed when running the plugin project. The specifics on setting up these tasks are not included as they may differ from IDE to IDE. The following list describes the general process:
+
+- Compile the plugin in debug mode.
+- Create the plugin directory if it doesn't exist.
+- Copy the plugin into your server directory.
+- Make sure to set the working directory of the program being debugged to the working directory of the Jellyfin Server.
+- Start the server.
+
+Some IDEs like Visual Studio Code may need the following compile flags to compile the plugin:
+
+```shell
+dotnet build Your-Plugin.sln /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary
+```
+
+These flags generate the full paths for file names and **do not** generate a summary during the build process as this may lead to duplicate errors in the problem panel of your IDE.
+
 ## Licensing
 
 Licensing is a complex topic. This repository features a GPLv3 license template that can be used to provide a good default license for your plugin. You may alter this if you like, but if you do a permissive license must be chosen.
