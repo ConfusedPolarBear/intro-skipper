@@ -153,7 +153,7 @@ Debugging can be set up by creating tasks which will be executed when running th
 
 - Compile the plugin in debug mode.
 - Create the plugin directory if it doesn't exist.
-- Copy the plugin into your server directory.
+- Copy the plugin into your server's plugin directory. The server will then execute it.
 - Make sure to set the working directory of the program being debugged to the working directory of the Jellyfin Server.
 - Start the server.
 
