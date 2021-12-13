@@ -5,7 +5,6 @@
 # Core EditorConfig Options   #
 ###############################
 root = true
-
 # All files
 [*]
 indent_style = space
@@ -14,7 +13,7 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 end_of_line = lf
-max_line_length = 9999
+max_line_length = off
 
 # YAML indentation
 [*.{yml,yaml}]
@@ -27,7 +26,6 @@ indent_size = 2
 ###############################
 # .NET Coding Conventions     #
 ###############################
-
 [*.{cs,vb}]
 # Organize usings
 dotnet_sort_system_directives_first = true
@@ -63,7 +61,6 @@ dotnet_style_prefer_conditional_expression_over_return = true:silent
 ###############################
 # Naming Conventions          #
 ###############################
-
 # Style Definitions (From Roslyn)
 
 # Non-private static fields are PascalCase
@@ -138,7 +135,6 @@ dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 ###############################
 # C# Coding Conventions       #
 ###############################
-
 [*.cs]
 # var preferences
 csharp_style_var_for_built_in_types = true:silent
@@ -169,7 +165,6 @@ csharp_style_inlined_variable_declaration = true:suggestion
 ###############################
 # C# Formatting Rules         #
 ###############################
-
 # New line preferences
 csharp_new_line_before_open_brace = all
 csharp_new_line_before_else = true
