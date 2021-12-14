@@ -1,10 +1,14 @@
-name: Test Build Plugin
+name: Build Plugin
 
 on:
   push:
     branches: [ master ]
+    paths-ignore:
+      - '**/*.md'
   pull_request:
     branches: [ master ]
+    paths-ignore:
+      - '**/*.md'
 
 jobs:
   build:
@@ -12,16 +16,21 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: "Setup .NET Core"
+      - name: Setup .NET
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: "5.0.x"
+          dotnet-version: 6.0.x
 
-      - name: "Install dependencies"
-        run: dotnet restore
+      - name: Build Jellyfin Plugin
+        uses: oddstr13/jellyfin-plugin-repository-manager@v0.4.2
+        id: jprm
+        with:
+            dotnet-target: net6.0
 
-      - name: "Build"
-        run: dotnet build --configuration Release --no-restore
-
-      - name: "Test"
-        run: dotnet test --no-restore --verbosity normal
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifact
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ steps.jprm.outputs.artifact }}
