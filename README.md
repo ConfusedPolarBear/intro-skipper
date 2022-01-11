@@ -1,10 +1,10 @@
 # So you want to make a Jellyfin plugin
 
-Awesome! This guide is for you. Jellyfin plugins are written using the dotnet standard framework. What that means is you can write them in any language that implements the CLI or the DLI and can compile to net5.0. The examples on this page are in C# because that is what most of Jellyfin is written in, but F#, Visual Basic, and IronPython should all be compatible once compiled.
+Awesome! This guide is for you. Jellyfin plugins are written using the dotnet standard framework. What that means is you can write them in any language that implements the CLI or the DLI and can compile to net6.0. The examples on this page are in C# because that is what most of Jellyfin is written in, but F#, Visual Basic, and IronPython should all be compatible once compiled.
 
 ## 0. Things you need to get started
 
-- [Dotnet SDK 5.0](https://dotnet.microsoft.com/download)
+- [Dotnet SDK 6.0](https://dotnet.microsoft.com/download)
 
 - An editor of your choice. Some free choices are:
 
@@ -39,7 +39,7 @@ If you'd rather start from scratch keep going on to step one. This assumes no sp
 Make a new dotnet standard project with the following command, it will make a directory for itself.
 
 ```
-dotnet new classlib -f net5.0 -n MyJellyfinPlugin
+dotnet new classlib -f net6.0 -n MyJellyfinPlugin
 ```
 
 Now add the Jellyfin shared libraries.
