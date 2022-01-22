@@ -180,6 +180,32 @@ From now on, everytime you click on start from Visual Studio, it will start Jell
 
 The only thing left to do is to compile the project as it is specified a few lines above and you are done.
 
+### 6.b Automate the Setup on Visual Studio Code
+
+Visual Studio Code allows developers to automate the process of starting all necessary dependencies to start debugging the plugin. This guide assumes the reader is familiar with the [documentation on debugging in Visual Studio Code](https://code.visualstudio.com/docs/editor/debugging) and has read the documentation in this file. It is assumed that the Jellyfin Server has already been compiled once. However, should one desire to automatically compile the server before the start of the debugging session, this can be easily implemented, but is not further discussed here.
+
+1. To automate the process, create a new `launch.json` file for C# projects inside the `.vscode` folder. The example below shows only the relevant parts of the file. Adjustments to your specific setup and operating system may be required.
+
+   ```json
+   "request": "launch",
+   "preLaunchTask": "build-and-copy",
+   "program": "${workspaceFolder}/<path to jellyfin>/bin/Debug/net6.0/jellyfin.dll",
+   "args": [
+      //"--nowebclient"
+      "--webdir",
+      "<path to jellyfin-web>/dist/"
+   ],
+   "cwd": "${workspaceFolder}/<path to jellyfin>",
+   ```
+
+   The `request` type is specified as `launch`, as this `launch.json` file will start the Jellyfin Server process. The `preLaunchTask` defines a task that will run before the Jellyfin Server starts. More on this later. It is important to set the `program` path to the Jellyin Server program and set the current working directory (`cwd`) to the working directory of the Jellyfin Server.
+   The `args` option allows to specify arguments to be passed to the server, e.g. whether Jellyfin should start with the web-client or without it.
+
+2. Create a `tasks.json` file inside your `.vscode` folder and specify a `build-and-copy` task that will run in `sequence` order. This tasks depends on multiple other tasks and all of those other tasks can be defined as simple `shell` tasks that run commands like the `cp` command to copy a file. The sequence to run those tasks in is given below: 
+   1. A build task. This task builds the plugin without generating a summary, but with full paths for file names enabled.
+   2. A tasks which creates the necessary plugin directory and a sub-folder for the specific plugin. The plugin directory is located below the [data directory](https://jellyfin.org/docs/general/administration/configuration.html) of the Jellyfin Server. As an example, the following path can be used for the bookshelf plugin: `$HOME/.local/share/jellyfin/plugins/Bookshelf/`
+
+   3. A tasks which copies the plugin dll which has been built in step 2.1. The file is copied into it's specific plugin directory within the server's plugin directory.
 
 ## Licensing
 
