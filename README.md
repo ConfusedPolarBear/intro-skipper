@@ -165,6 +165,22 @@ dotnet build Your-Plugin.sln /property:GenerateFullPaths=true /consoleloggerpara
 
 These flags generate the full paths for file names and **do not** generate a summary during the build process as this may lead to duplicate errors in the problem panel of your IDE.
 
+### 6.a Set Up Debugging on Visual Studio
+
+Visual Studio allows developers to connect to other processes and debug them, setting breakpoints and inspecting the variables of the program. We can set this up following this steps:
+On this section we will explain how to set up our solution to enable debugging before the server starts.
+
+1. Right-click on the solution, And click on Add -> Existing Project...
+2. Locate Jellyfin executable in your installation folder and click on 'Open'. It is called `Jellyfin.exe`. Now The solution will have a new "Project" called Jellyfin. This is the executable, not the source code of Jellyfin.
+3. Right-click on this new project and click on 'Set up as Startup Project'
+4. Right-click on this new project and click on 'Properties'
+5. Make sure that the 'Attach' parameter is set to 'No'
+
+From now on, everytime you click on start from Visual Studio, it will start Jellyfin attached to the debugger!
+
+The only thing left to do is to compile the project as it is specified a few lines above and you are done.
+
+
 ## Licensing
 
 Licensing is a complex topic. This repository features a GPLv3 license template that can be used to provide a good default license for your plugin. You may alter this if you like, but if you do a permissive license must be chosen.
