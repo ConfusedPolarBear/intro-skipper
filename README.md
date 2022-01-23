@@ -88,6 +88,7 @@ You need to populate some of your plugin's information. Go ahead a put in a stri
    ```bash
    od -x /dev/urandom | head -1 | awk '{OFS="-"; srand($6); sub(/./,"4",$5); sub(/./,substr("89ab",rand()*4,1),$6); print $2$3,$4,$5,$6,$7$8$9}'
    ```
+
 or
 
    ```bash
@@ -187,6 +188,7 @@ Visual Studio Code allows developers to automate the process of starting all nec
 1. To automate the process, create a new `launch.json` file for C# projects inside the `.vscode` folder. The example below shows only the relevant parts of the file. Adjustments to your specific setup and operating system may be required.
 
    ```json
+   // part of "configurations" in the launch.json file
    "request": "launch",
    "preLaunchTask": "build-and-copy",
    "program": "${workspaceFolder}/<path to jellyfin>/bin/Debug/net6.0/jellyfin.dll",
@@ -201,11 +203,61 @@ Visual Studio Code allows developers to automate the process of starting all nec
    The `request` type is specified as `launch`, as this `launch.json` file will start the Jellyfin Server process. The `preLaunchTask` defines a task that will run before the Jellyfin Server starts. More on this later. It is important to set the `program` path to the Jellyin Server program and set the current working directory (`cwd`) to the working directory of the Jellyfin Server.
    The `args` option allows to specify arguments to be passed to the server, e.g. whether Jellyfin should start with the web-client or without it.
 
-2. Create a `tasks.json` file inside your `.vscode` folder and specify a `build-and-copy` task that will run in `sequence` order. This tasks depends on multiple other tasks and all of those other tasks can be defined as simple `shell` tasks that run commands like the `cp` command to copy a file. The sequence to run those tasks in is given below: 
+2. Create a `tasks.json` file inside your `.vscode` folder and specify a `build-and-copy` task that will run in `sequence` order. This tasks depends on multiple other tasks and all of those other tasks can be defined as simple `shell` tasks that run commands like the `cp` command to copy a file. The sequence to run those tasks in is given below. Please note that it might be necessary to adjust the examples for your specific setup and operating system.
+
+   ```json
+   "label": "build-and-copy",
+   "dependsOrder": "sequence",
+   "dependsOn": [
+         "build",
+         "make-plugin-dir",
+         "copy-dll",
+   ],
+   ```
+
    1. A build task. This task builds the plugin without generating a summary, but with full paths for file names enabled.
+
+      ```json
+      "label": "build",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+         "build",
+         "${workspaceFolder}/YourPlugin.sln",
+         "/property:GenerateFullPaths=true",
+         "/consoleloggerparameters:NoSummary"
+      ],
+      "group": "build",
+      "presentation": {
+         "reveal": "silent"
+      },
+      "problemMatcher": "$msCompile"
+      ```
+
    2. A tasks which creates the necessary plugin directory and a sub-folder for the specific plugin. The plugin directory is located below the [data directory](https://jellyfin.org/docs/general/administration/configuration.html) of the Jellyfin Server. As an example, the following path can be used for the bookshelf plugin: `$HOME/.local/share/jellyfin/plugins/Bookshelf/`
 
+      ```json
+      "label": "make-plugin-dir",
+      "type": "shell",
+      "command": "mkdir",
+      "args": [
+         "-p",
+         "<path to the running jellyfin, not the project cloned from git>/plugins/YourPlugin/"
+      ]
+      ```
+
    3. A tasks which copies the plugin dll which has been built in step 2.1. The file is copied into it's specific plugin directory within the server's plugin directory.
+
+      ```json
+         "label": "copy-dll",
+         "type": "shell",
+         "command": "cp",
+         "args": [
+            "./YourPlugin/bin/Debug/net6.0/YourPlugin.dll",
+            "<path to the running jellyfin, not the project cloned from git>/plugins/YourPlugin/YourPlugin.dll"
+         ]
+
+      ```
 
 ## Licensing
 
