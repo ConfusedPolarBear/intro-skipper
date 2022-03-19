@@ -1,0 +1,14 @@
+name: "🆙 Bump Version"
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+jobs:
+  call:
+    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/bump-version.yaml@master
+    with:
+      csproj-name: Jellyfin.Plugin.Template
+      is-unstable: ${{ github.event.release.prerelease }}
