@@ -1,0 +1,12 @@
+name: '🔬 Run CodeQL'
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  call:
+    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@master
+    with:
+      repository-name: jellyfin/jellyfin-plugin-template
