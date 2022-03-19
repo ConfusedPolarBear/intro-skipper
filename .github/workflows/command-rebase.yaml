@@ -13,4 +13,4 @@ jobs:
       repository-full-name: ${{ github.event.client_payload.github.payload.repository.full_name }}
       comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
     secrets:
-      token: ${{ secrets.JF_BOT_TOKEN }}
+      token: ${{ secrets.GITHUB_TOKEN }}

@@ -17,4 +17,4 @@ jobs:
     with:
       repository-name: jellyfin/jellyfin-plugin-template
     secrets:
-      token: ${{ secrets.JF_BOT_TOKEN }}
+      token: ${{ secrets.GITHUB_TOKEN }}
