@@ -10,5 +10,5 @@ jobs:
   call:
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/bump-version.yaml@master
     with:
-      csproj-name: Jellyfin.Plugin.Template
+      csproj-name: ConfusedPolarBear.Plugin.IntroSkipper
       is-unstable: ${{ github.event.release.prerelease }}
