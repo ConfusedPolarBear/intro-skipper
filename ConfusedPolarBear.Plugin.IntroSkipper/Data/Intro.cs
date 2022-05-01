@@ -6,8 +6,12 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// Result of fingerprinting and analyzing two episodes in a season.
 /// All times are measured in seconds relative to the beginning of the media file.
 /// </summary>
-[Serializable]
 public class Intro {
+    /// <summary>
+    /// Episode ID.
+    /// </summary>
+    public Guid EpisodeId { get; set; }
+
     /// <summary>
     /// If this introduction is valid or not. Invalid results should not be returned through the API.
     /// </summary>

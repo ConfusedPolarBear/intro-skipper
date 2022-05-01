@@ -1,22 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+
 using MediaBrowser.Model.Plugins;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
-
-/// <summary>
-/// The configuration options.
-/// </summary>
-public enum SomeOptions
-{
-    /// <summary>
-    /// Option one.
-    /// </summary>
-    OneOption,
-
-    /// <summary>
-    /// Second option.
-    /// </summary>
-    AnotherOption
-}
 
 /// <summary>
 /// Plugin configuration.
@@ -28,30 +16,38 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public PluginConfiguration()
     {
-        // set default options here
-        Options = SomeOptions.AnotherOption;
-        TrueFalseSetting = true;
-        AnInteger = 2;
-        AString = "string";
+        AnalysisResults = new Collection<Intro>();
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether some true or false setting is enabled..
+    /// Save timestamps to disk.
     /// </summary>
-    public bool TrueFalseSetting { get; set; }
+    public void SaveTimestamps()
+    {
+        AnalysisResults.Clear();
+
+        foreach (var intro in Plugin.Instance!.Intros)
+        {
+            AnalysisResults.Add(intro.Value);
+        }
+
+        Plugin.Instance!.SaveConfiguration();
+    }
 
     /// <summary>
-    /// Gets or sets an integer setting.
+    /// Restore previous analysis results from disk.
     /// </summary>
-    public int AnInteger { get; set; }
+    public void RestoreTimestamps()
+    {
+        // Since dictionaries can't be easily serialized, analysis results are stored on disk as a list.
+        foreach (var intro in AnalysisResults)
+        {
+            Plugin.Instance!.Intros[intro.EpisodeId] = intro;
+        }
+    }
 
     /// <summary>
-    /// Gets or sets a string setting.
+    /// Previous analysis results.
     /// </summary>
-    public string AString { get; set; }
-
-    /// <summary>
-    /// Gets or sets an enum option.
-    /// </summary>
-    public SomeOptions Options { get; set; }
+    public Collection<Intro> AnalysisResults { get; private set; }
 }

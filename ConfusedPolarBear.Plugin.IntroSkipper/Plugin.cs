@@ -1,5 +1,4 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Globalization;
 using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
@@ -11,10 +10,25 @@ using MediaBrowser.Model.Serialization;
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
-/// The main plugin.
+/// Intro skipper plugin. Uses audio analysis to find common sequences of audio shared between episodes.
 /// </summary>
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Plugin"/> class.
+    /// </summary>
+    /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
+    /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
+    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        : base(applicationPaths, xmlSerializer)
+    {
+        Intros = new Dictionary<Guid, Intro>();
+        AnalysisQueue = new Dictionary<Guid, List<QueuedEpisode>>();
+        Instance = this;
+
+        Configuration.RestoreTimestamps();
+    }
+
     /// <summary>
     /// Results of fingerprinting all episodes.
     /// </summary>
@@ -30,29 +44,13 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// </summary>
     public int TotalQueued { get; set; }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Plugin"/> class.
-    /// </summary>
-    /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
-    /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
-    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
-        : base(applicationPaths, xmlSerializer)
-    {
-        Intros = new Dictionary<Guid, Intro>();
-        AnalysisQueue = new Dictionary<Guid, List<QueuedEpisode>>();
-
-        Instance = this;
-    }
-
     /// <inheritdoc />
     public override string Name => "Intro Skipper";
 
     /// <inheritdoc />
     public override Guid Id => Guid.Parse("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b");
 
-    /// <summary>
-    /// Gets the current plugin instance.
-    /// </summary>
+    /// <inheritdoc />
     public static Plugin? Instance { get; private set; }
 
     /// <inheritdoc />

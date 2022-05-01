@@ -119,7 +119,7 @@ public class FingerprinterTask : IScheduledTask {
                 }
             }
 
-            // TODO: after every season completes, serialize fingerprints to disk somewhere
+            Plugin.Instance!.Configuration.SaveTimestamps();
         }
 
         return Task.CompletedTask;
@@ -248,10 +248,11 @@ public class FingerprinterTask : IScheduledTask {
         // and that it disappears 10 seconds after the intro begins.
         Plugin.Instance!.Intros[episode] = new Intro()
         {
+            EpisodeId = episode,
             Valid = (introStart > 0) && (introEnd > 0),
             IntroStart = introStart,
             IntroEnd = introEnd,
-            ShowSkipPromptAt = Math.Min(0, introStart - 5),
+            ShowSkipPromptAt = Math.Max(0, introStart - 5),
             HideSkipPromptAt = introStart + 10
         };
     }
