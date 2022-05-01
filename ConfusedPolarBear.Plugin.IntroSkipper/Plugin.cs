@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Globalization;
 using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
@@ -15,6 +16,21 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
     /// <summary>
+    /// Results of fingerprinting all episodes.
+    /// </summary>
+    public Dictionary<Guid, Intro> Intros { get; }
+
+    /// <summary>
+    /// Map of season ids to episodes that have been queued for fingerprinting.
+    /// </summary>
+    public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; }
+
+    /// <summary>
+    /// Total number of episodes in the queue.
+    /// </summary>
+    public int TotalQueued { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
     /// </summary>
     /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
@@ -22,6 +38,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
         : base(applicationPaths, xmlSerializer)
     {
+        Intros = new Dictionary<Guid, Intro>();
+        AnalysisQueue = new Dictionary<Guid, List<QueuedEpisode>>();
+
         Instance = this;
     }
 
