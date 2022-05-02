@@ -75,8 +75,12 @@ public class FingerprinterTask : IScheduledTask {
         foreach (var season in queue) {
             var first = season.Value[0];
 
-            _logger.LogDebug(
-                "Fingerprinting {Count} episodes from {Name} season {Season}",
+            // Don't analyze seasons with <= 1 episode or specials
+            if (season.Value.Count <= 1 || first.SeasonNumber == 0)
+            {
+                continue;
+            }
+
                 season.Value.Count,
                 first.SeriesName,
                 first.SeasonNumber);
@@ -89,6 +93,11 @@ public class FingerprinterTask : IScheduledTask {
 
             for (var i = 0; i < episodes.Count; i += 2)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
                 var lhs = episodes[i];
                 var rhs = episodes[i+1];
 
@@ -120,6 +129,11 @@ public class FingerprinterTask : IScheduledTask {
             }
 
             Plugin.Instance!.Configuration.SaveTimestamps();
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
 
         return Task.CompletedTask;
@@ -249,7 +263,7 @@ public class FingerprinterTask : IScheduledTask {
         Plugin.Instance!.Intros[episode] = new Intro()
         {
             EpisodeId = episode,
-            Valid = (introStart > 0) && (introEnd > 0),
+            Valid = introEnd > 0,
             IntroStart = introStart,
             IntroEnd = introEnd,
             ShowSkipPromptAt = Math.Max(0, introStart - 5),

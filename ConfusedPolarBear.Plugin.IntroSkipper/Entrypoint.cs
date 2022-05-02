@@ -87,6 +87,7 @@ public class Entrypoint : IServerEntryPoint
         // Get all items from this library. Since intros may change within a season, sort the items before adding them.
         var folder = _userViewManager.GetUserViews(query)[0];
         var items = folder.GetItems(new InternalItemsQuery() {
+            ParentId = Guid.Parse(rawId),
             OrderBy = new [] { ("SortName", SortOrder.Ascending) },
             IncludeItemTypes = new BaseItemKind[] { BaseItemKind.Episode },
             Recursive = true,
@@ -159,6 +160,7 @@ public class Entrypoint : IServerEntryPoint
                 continue;
             }
 
+            _logger.LogDebug("Accessing libraries as {Username}", user.Username);
             return user.Id;
         }
 
