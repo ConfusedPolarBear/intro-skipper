@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Model.Tasks;
@@ -39,7 +40,6 @@ public class FingerprinterTask : IScheduledTask {
     public FingerprinterTask(ILogger<FingerprinterTask> logger)
     {
         _logger = logger;
-        _logger.LogInformation("Fingerprinting Task Scheduled!");
     }
 
     /// <summary>
@@ -81,6 +81,8 @@ public class FingerprinterTask : IScheduledTask {
                 continue;
             }
 
+            _logger.LogInformation(
+                "Analyzing {Count} episodes from {Name} season {Season}",
                 season.Value.Count,
                 first.SeriesName,
                 first.SeasonNumber);
@@ -91,6 +93,9 @@ public class FingerprinterTask : IScheduledTask {
                 episodes.Add(episodes[episodes.Count - 2]);
             }
 
+            // Analyze each pair of episodes in the current season
+            var everFoundIntro = false;
+            var failures = 0;
             for (var i = 0; i < episodes.Count; i += 2)
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -100,6 +105,17 @@ public class FingerprinterTask : IScheduledTask {
 
                 var lhs = episodes[i];
                 var rhs = episodes[i+1];
+
+                // TODO: make configurable
+                if (!everFoundIntro && failures >= 6)
+                {
+                    _logger.LogWarning(
+                        "Failed to find an introduction in {Series} season {Season}",
+                        lhs.SeriesName,
+                        lhs.SeasonNumber);
+
+                    break;
+                }
 
                 // FIXME: add retry logic
                 var alreadyDone = Plugin.Instance!.Intros;
@@ -115,7 +131,16 @@ public class FingerprinterTask : IScheduledTask {
 
                 try
                 {
-                    FingerprintEpisodes(lhs, rhs);
+                    _logger.LogDebug("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
+
+                    if (FingerprintEpisodes(lhs, rhs))
+                    {
+                        everFoundIntro = true;
+                    }
+                    else
+                    {
+                        failures += 2;
+                    }
                 }
                 catch (FingerprintException ex)
                 {
@@ -139,7 +164,13 @@ public class FingerprinterTask : IScheduledTask {
         return Task.CompletedTask;
     }
 
-    private void FingerprintEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
+    /// <summary>
+    /// Analyze two episodes to find an introduction sequence shared between them.
+    /// </summary>
+    /// <param name="lhsEpisode">First episode to analyze.</param>
+    /// <param name="rhsEpisode">Second episode to analyze.</param>
+    /// <returns>true if an intro was found in both episodes, otherwise false.</returns>
+    private bool FingerprintEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
     {
         var lhs = FPCalc.Fingerprint(lhsEpisode);
         var rhs = FPCalc.Fingerprint(rhsEpisode);
@@ -148,73 +179,25 @@ public class FingerprinterTask : IScheduledTask {
         var rhsRanges = new List<TimeRange>();
 
         // Compare all elements of the shortest fingerprint to the other fingerprint.
-        var high = Math.Min(lhs.Count, rhs.Count);
+        var limit = Math.Min(lhs.Count, rhs.Count);
 
-        // TODO: see if bailing out early results in false positives.
-        for (var amount = -1 * high; amount < high; amount++) {
-            var leftOffset = 0;
-            var rightOffset = 0;
+        // First, test if an intro can be found within the first 5 seconds of the episodes (±5/0.128 = ±40 samples).
+        var (lhsContiguous, rhsContiguous) = shiftEpisodes(lhs, rhs, -40, 40);
+        lhsRanges.AddRange(lhsContiguous);
+        rhsRanges.AddRange(rhsContiguous);
 
-            // Calculate the offsets for the left and right hand sides.
-            if (amount < 0) {
-                leftOffset -= amount;
-            } else {
-                rightOffset += amount;
-            }
+        // If no valid ranges were found, re-analyze the episodes considering all possible shifts.
+        if (lhsRanges.Count == 0)
+        {
+            _logger.LogDebug("using full scan");
 
-            // Store similar times for both LHS and RHS.
-            var lhsTimes = new List<double>();
-            var rhsTimes = new List<double>();
-
-            // XOR all elements in LHS and RHS, using the shift amount from above.
-            for (var i = 0; i < high - Math.Abs(amount); i++) {
-                // XOR both samples at the current position.
-                var lhsPosition = i + leftOffset;
-                var rhsPosition = i + rightOffset;
-                var diff = lhs[lhsPosition] ^ rhs[rhsPosition];
-
-                // If the difference between the samples is small (< 5/32), flag both times as similar.
-                if (countBits(diff) > MAXIMUM_DIFFERENCES)
-                {
-                    continue;
-                }
-
-                var lhsTime = lhsPosition * SAMPLES_TO_SECONDS;
-                var rhsTime = rhsPosition * SAMPLES_TO_SECONDS;
-
-                lhsTimes.Add(lhsTime);
-                rhsTimes.Add(rhsTime);
-            }
-
-            // Ensure the last timestamp is checked
-            lhsTimes.Add(Double.MaxValue);
-            rhsTimes.Add(Double.MaxValue);
-
-            // Now that both fingerprints have been compared at this shift, see if there's a contiguous time range.
-            var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MAXIMUM_DISTANCE);
-            if (lContiguous is null || lContiguous.Duration < MINIMUM_INTRO_DURATION)
-            {
-                continue;
-            }
-
-            // Since LHS had a contiguous time range, RHS must have one also.
-            var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), MAXIMUM_DISTANCE)!;
-
-            // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
-            if (lContiguous.Duration >= 90)
-            {
-                lContiguous.End -= 6;
-                rContiguous.End -= 6;
-            }
-            else if (lContiguous.Duration >= 35)
-            {
-                lContiguous.End -= 3;
-                rContiguous.End -= 3;
-            }
-
-            // Store the ranges for later.
-            lhsRanges.Add(lContiguous);
-            rhsRanges.Add(rContiguous);
+            (lhsContiguous, rhsContiguous) = shiftEpisodes(lhs, rhs, -1 * limit, limit);
+            lhsRanges.AddRange(lhsContiguous);
+            rhsRanges.AddRange(rhsContiguous);
+        }
+        else
+        {
+            _logger.LogDebug("intro found with quick scan");
         }
 
         if (lhsRanges.Count == 0)
@@ -231,7 +214,7 @@ public class FingerprinterTask : IScheduledTask {
             storeIntro(lhsEpisode.EpisodeId, 0, 0);
             storeIntro(rhsEpisode.EpisodeId, 0, 0);
 
-            return;
+            return false;
         }
 
         // After comparing both episodes at all possible shift positions, store the longest time range as the intro.
@@ -241,7 +224,7 @@ public class FingerprinterTask : IScheduledTask {
         var lhsIntro = lhsRanges[0];
         var rhsIntro = rhsRanges[0];
 
-        // Do a tiny bit of post processing and store the results.
+        // If the intro starts early in the episode, move it to the beginning.
         if (lhsIntro.Start <= 5)
         {
             lhsIntro.Start = 0;
@@ -254,6 +237,115 @@ public class FingerprinterTask : IScheduledTask {
 
         storeIntro(lhsEpisode.EpisodeId, lhsIntro.Start, lhsIntro.End);
         storeIntro(rhsEpisode.EpisodeId, rhsIntro.Start, rhsIntro.End);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Shifts episodes through the range of provided shift amounts and returns discovered contiguous time ranges.
+    /// </summary>
+    /// <param name="lhs">First episode fingerprint.</param>
+    /// <param name="rhs">Second episode fingerprint.</param>
+    /// <param name="lower">Lower end of the shift range.</param>
+    /// <param name="upper">Upper end of the shift range.</param>
+    private static (List<TimeRange>, List<TimeRange>) shiftEpisodes(
+        ReadOnlyCollection<uint> lhs,
+        ReadOnlyCollection<uint> rhs,
+        int lower,
+        int upper
+    ) {
+        var lhsRanges = new List<TimeRange>();
+        var rhsRanges = new List<TimeRange>();
+
+        for (int amount = lower; amount <= upper; amount++)
+        {
+            var (lRange, rRange) = findContiguous(lhs, rhs, amount);
+
+            if (lRange.End == 0 && rRange.End == 0)
+            {
+                continue;
+            }
+
+            lhsRanges.Add(lRange);
+            rhsRanges.Add(rRange);
+        }
+
+        return (lhsRanges, rhsRanges);
+    }
+
+    /// <summary>
+    /// Finds the longest contiguous region of similar audio between two fingerprints using the provided shift amount.
+    /// </summary>
+    /// <param name="lhs">First fingerprint to compare.</param>
+    /// <param name="rhs">Second fingerprint to compare.</param>
+    /// <param name="shiftAmount">Amount to shift one fingerprint by.</param>
+    private static (TimeRange, TimeRange) findContiguous(
+        ReadOnlyCollection<uint> lhs,
+        ReadOnlyCollection<uint> rhs,
+        int shiftAmount
+    ) {
+        var leftOffset = 0;
+        var rightOffset = 0;
+
+        // Calculate the offsets for the left and right hand sides.
+        if (shiftAmount < 0) {
+            leftOffset -= shiftAmount;
+        } else {
+            rightOffset += shiftAmount;
+        }
+
+        // Store similar times for both LHS and RHS.
+        var lhsTimes = new List<double>();
+        var rhsTimes = new List<double>();
+        var upperLimit = Math.Min(lhs.Count, rhs.Count) - Math.Abs(shiftAmount);
+
+        // XOR all elements in LHS and RHS, using the shift amount from above.
+        for (var i = 0; i < upperLimit; i++) {
+            // XOR both samples at the current position.
+            var lhsPosition = i + leftOffset;
+            var rhsPosition = i + rightOffset;
+            var diff = lhs[lhsPosition] ^ rhs[rhsPosition];
+
+            // If the difference between the samples is small (< 5/32), flag both times as similar.
+            if (countBits(diff) > MAXIMUM_DIFFERENCES)
+            {
+                continue;
+            }
+
+            var lhsTime = lhsPosition * SAMPLES_TO_SECONDS;
+            var rhsTime = rhsPosition * SAMPLES_TO_SECONDS;
+
+            lhsTimes.Add(lhsTime);
+            rhsTimes.Add(rhsTime);
+        }
+
+        // Ensure the last timestamp is checked
+        lhsTimes.Add(Double.MaxValue);
+        rhsTimes.Add(Double.MaxValue);
+
+        // Now that both fingerprints have been compared at this shift, see if there's a contiguous time range.
+        var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MAXIMUM_DISTANCE);
+        if (lContiguous is null || lContiguous.Duration < MINIMUM_INTRO_DURATION)
+        {
+            return (new TimeRange(), new TimeRange());
+        }
+
+        // Since LHS had a contiguous time range, RHS must have one also.
+        var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), MAXIMUM_DISTANCE)!;
+
+        // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
+        if (lContiguous.Duration >= 90)
+        {
+            lContiguous.End -= 6;
+            rContiguous.End -= 6;
+        }
+        else if (lContiguous.Duration >= 35)
+        {
+            lContiguous.End -= 3;
+            rContiguous.End -= 3;
+        }
+
+        return (lContiguous, rContiguous);
     }
 
     private static void storeIntro(Guid episode, double introStart, double introEnd)

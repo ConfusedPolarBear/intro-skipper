@@ -24,6 +24,15 @@ public class TimeRange : IComparable
     public double Duration => End - Start;
 
     /// <summary>
+    /// Default constructor.
+    /// </summary>
+    public TimeRange()
+    {
+        Start = 0;
+        End = 0;
+    }
+
+    /// <summary>
     /// Constructor.
     /// </summary>
     public TimeRange(double start, double end)

@@ -133,11 +133,13 @@ public class Entrypoint : IServerEntryPoint
                 Plugin.Instance.AnalysisQueue[episode.SeasonId] = new List<QueuedEpisode>();
             }
 
-            // Only fingerprint up to 25% of the episode.
+            // Only fingerprint up to 25% of the episode and at most 10 minutes.
             var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
             if (duration >= 5*60) {
                 duration /= 4;
             }
+
+            duration = Math.Min(duration, 10 * 60);
 
             Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode() {
                 SeriesName = episode.SeriesName,
