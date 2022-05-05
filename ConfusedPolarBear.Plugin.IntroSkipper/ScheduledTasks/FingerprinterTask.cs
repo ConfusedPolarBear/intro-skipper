@@ -153,7 +153,7 @@ public class FingerprinterTask : IScheduledTask {
                 }
             }
 
-            Plugin.Instance!.Configuration.SaveTimestamps();
+            Plugin.Instance!.SaveTimestamps();
 
             if (cancellationToken.IsCancellationRequested)
             {

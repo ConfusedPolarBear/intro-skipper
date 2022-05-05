@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
@@ -14,6 +15,9 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
+    private IXmlSerializer _xmlSerializer;
+    private string _introPath;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
     /// </summary>
@@ -22,11 +26,69 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
         : base(applicationPaths, xmlSerializer)
     {
+        _xmlSerializer = xmlSerializer;
+
+        // Create the base & cache directories (if needed).
+        FingerprintCachePath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "cache");
+        if (!Directory.Exists(FingerprintCachePath))
+        {
+            Directory.CreateDirectory(FingerprintCachePath);
+        }
+
+        _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
+
         Intros = new Dictionary<Guid, Intro>();
         AnalysisQueue = new Dictionary<Guid, List<QueuedEpisode>>();
         Instance = this;
 
-        Configuration.RestoreTimestamps();
+        RestoreTimestamps();
+    }
+
+    /// <summary>
+    /// Save timestamps to disk.
+    /// </summary>
+    public void SaveTimestamps()
+    {
+        var introList = new List<Intro>();
+
+        foreach (var intro in Plugin.Instance!.Intros)
+        {
+            introList.Add(intro.Value);
+        }
+
+        _xmlSerializer.SerializeToFile(introList, _introPath);
+    }
+
+    /// <summary>
+    /// Restore previous analysis results from disk.
+    /// </summary>
+    public void RestoreTimestamps()
+    {
+        if (!File.Exists(_introPath))
+        {
+            return;
+        }
+
+        // Since dictionaries can't be easily serialized, analysis results are stored on disk as a list.
+        var introList = (List<Intro>)_xmlSerializer.DeserializeFromFile(typeof(List<Intro>), _introPath);
+
+        foreach (var intro in introList)
+        {
+            Plugin.Instance!.Intros[intro.EpisodeId] = intro;
+        }
+    }
+
+    /// <inheritdoc />
+    public IEnumerable<PluginPageInfo> GetPages()
+    {
+        return new[]
+        {
+            new PluginPageInfo
+            {
+                Name = this.Name,
+                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace)
+            }
+        };
     }
 
     /// <summary>
@@ -44,6 +106,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// </summary>
     public int TotalQueued { get; set; }
 
+    /// <summary>
+    /// Directory to cache fingerprints in.
+    /// </summary>
+    public string FingerprintCachePath { get; private set; }
+
     /// <inheritdoc />
     public override string Name => "Intro Skipper";
 
@@ -52,17 +119,4 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     /// <inheritdoc />
     public static Plugin? Instance { get; private set; }
-
-    /// <inheritdoc />
-    public IEnumerable<PluginPageInfo> GetPages()
-    {
-        return new[]
-        {
-            new PluginPageInfo
-            {
-                Name = this.Name,
-                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace)
-            }
-        };
-    }
 }
