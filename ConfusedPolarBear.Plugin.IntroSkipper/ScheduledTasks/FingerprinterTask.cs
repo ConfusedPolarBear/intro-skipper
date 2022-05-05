@@ -350,16 +350,12 @@ public class FingerprinterTask : IScheduledTask {
 
     private static void storeIntro(Guid episode, double introStart, double introEnd)
     {
-        // Recommend that the skip button appears 5 seconds ahead of the intro
-        // and that it disappears 10 seconds after the intro begins.
         Plugin.Instance!.Intros[episode] = new Intro()
         {
             EpisodeId = episode,
             Valid = introEnd > 0,
             IntroStart = introStart,
-            IntroEnd = introEnd,
-            ShowSkipPromptAt = Math.Max(0, introStart - 5),
-            HideSkipPromptAt = introStart + 10
+            IntroEnd = introEnd
         };
     }
 

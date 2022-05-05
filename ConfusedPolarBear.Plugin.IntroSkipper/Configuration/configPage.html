@@ -20,6 +20,23 @@
                             Caching fingerprints avoids having to re-run fpcalc on each file, at the expense of disk usage.
                         </div>
                     </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Show skip prompt at</label>
+                        <input id="ShowPromptAdjustment" type="number" is="emby-input" min="0" />
+                        <div class="fieldDescription">
+                            Seconds before the introduction starts to display the skip prompt at.
+                        </div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Hide skip prompt at</label>
+                        <input id="HidePromptAdjustment" type="number" is="emby-input" min="0" />
+                        <div class="fieldDescription">
+                            Seconds after the introduction starts to hide the skip prompt at.
+                        </div>
+                    </div>
+
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                             <span>Save</span>
@@ -38,6 +55,10 @@
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
+
+                        document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
+                        document.querySelector('#HidePromptAdjustment').value = config.HidePromptAdjustment;
+
                         Dashboard.hideLoadingMsg();
                     });
                 });
@@ -47,6 +68,10 @@
                 Dashboard.showLoadingMsg();
                 ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                     config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
+
+                    config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;
+                    config.HidePromptAdjustment = document.querySelector("#HidePromptAdjustment").value;
+
                     ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
                     });

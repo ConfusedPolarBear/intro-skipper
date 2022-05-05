@@ -42,6 +42,11 @@ public class SkipIntroController : ControllerBase
             return NotFound();
         }
 
+        // Populate the prompt show/hide times.
+        var config = Plugin.Instance!.Configuration;
+        intro.ShowSkipPromptAt = Math.Max(0, intro.IntroStart - config.ShowPromptAdjustment);
+        intro.HideSkipPromptAt = intro.IntroStart + config.HidePromptAdjustment;
+
         return intro;
     }
 }
