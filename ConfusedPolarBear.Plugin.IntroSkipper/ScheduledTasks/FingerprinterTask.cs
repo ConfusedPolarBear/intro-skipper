@@ -17,7 +17,7 @@ public class FingerprinterTask : IScheduledTask {
     /// <summary>
     /// Minimum time (in seconds) for a contiguous time range to be considered an introduction.
     /// </summary>
-    private const int MINIMUM_INTRO_DURATION = 18;
+    private const int MINIMUM_INTRO_DURATION = 15;
 
     /// <summary>
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
@@ -125,6 +125,9 @@ public class FingerprinterTask : IScheduledTask {
                         "Episodes {LHS} and {RHS} have both already been fingerprinted",
                         lhs.EpisodeId,
                         rhs.EpisodeId);
+
+                    totalProcessed += 2;
+                    progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
 
                     continue;
                 }
