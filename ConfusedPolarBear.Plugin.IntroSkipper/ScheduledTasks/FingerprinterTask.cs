@@ -22,7 +22,7 @@ public class FingerprinterTask : IScheduledTask {
     /// <summary>
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
     /// </summary>
-    private const double MAXIMUM_DIFFERENCES = 5;
+    private const double MAXIMUM_DIFFERENCES = 3;
 
     /// <summary>
     /// Maximum time permitted between timestamps before they are considered non-contiguous.
@@ -309,7 +309,7 @@ public class FingerprinterTask : IScheduledTask {
             var rhsPosition = i + rightOffset;
             var diff = lhs[lhsPosition] ^ rhs[rhsPosition];
 
-            // If the difference between the samples is small (< 5/32), flag both times as similar.
+            // If the difference between the samples is small, flag both times as similar.
             if (countBits(diff) > MAXIMUM_DIFFERENCES)
             {
                 continue;
