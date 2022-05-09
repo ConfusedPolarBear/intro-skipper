@@ -115,7 +115,7 @@ public static class FPCalc {
         fingerprint = new List<uint>().AsReadOnly();
 
         // If fingerprint caching isn't enabled, don't try to load anything.
-        if (!Plugin.Instance!.Configuration.CacheFingerprints)
+        if (!(Plugin.Instance?.Configuration.CacheFingerprints ?? false))
         {
             return false;
         }
@@ -151,7 +151,7 @@ public static class FPCalc {
     private static void cacheFingerprint(QueuedEpisode episode, List<uint> fingerprint)
     {
         // Bail out if caching isn't enabled.
-        if (!Plugin.Instance!.Configuration.CacheFingerprints)
+        if (!(Plugin.Instance?.Configuration.CacheFingerprints ?? false))
         {
             return;
         }

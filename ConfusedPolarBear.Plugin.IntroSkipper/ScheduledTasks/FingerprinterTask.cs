@@ -35,6 +35,11 @@ public class FingerprinterTask : IScheduledTask {
     private const double SAMPLES_TO_SECONDS = 0.128;
 
     /// <summary>
+    /// Gets or sets the last detected intro sequence. Only populated when a unit test is running.
+    /// </summary>
+    public static Intro LastIntro { get; private set; } = new Intro();
+
+    /// <summary>
     /// Constructor.
     /// </summary>
     public FingerprinterTask(ILogger<FingerprinterTask> logger)
@@ -173,7 +178,7 @@ public class FingerprinterTask : IScheduledTask {
     /// <param name="lhsEpisode">First episode to analyze.</param>
     /// <param name="rhsEpisode">Second episode to analyze.</param>
     /// <returns>true if an intro was found in both episodes, otherwise false.</returns>
-    private bool FingerprintEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
+    public bool FingerprintEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
     {
         var lhs = FPCalc.Fingerprint(lhsEpisode);
         var rhs = FPCalc.Fingerprint(rhsEpisode);
@@ -353,13 +358,21 @@ public class FingerprinterTask : IScheduledTask {
 
     private static void storeIntro(Guid episode, double introStart, double introEnd)
     {
-        Plugin.Instance!.Intros[episode] = new Intro()
+        var intro = new Intro()
         {
             EpisodeId = episode,
             Valid = introEnd > 0,
             IntroStart = introStart,
             IntroEnd = introEnd
         };
+
+        if (Plugin.Instance is null)
+        {
+            LastIntro = intro;
+            return;
+        }
+
+        Plugin.Instance.Intros[episode] = intro;
     }
 
     private static int countBits(uint number) {
