@@ -9,22 +9,22 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class TimeRange : IComparable
 {
     /// <summary>
-    /// Time range start (in seconds).
+    /// Gets or sets the time range start (in seconds).
     /// </summary>
     public double Start { get; set; }
 
     /// <summary>
-    /// Time range end (in seconds).
+    /// Gets or sets the time range end (in seconds).
     /// </summary>
     public double End { get; set; }
 
     /// <summary>
-    /// Duration of this time range (in seconds).
+    /// Gets the duration of this time range (in seconds).
     /// </summary>
     public double Duration => End - Start;
 
     /// <summary>
-    /// Default constructor.
+    /// Initializes a new instance of the <see cref="TimeRange"/> class.
     /// </summary>
     public TimeRange()
     {
@@ -33,8 +33,10 @@ public class TimeRange : IComparable
     }
 
     /// <summary>
-    /// Constructor.
+    /// Initializes a new instance of the <see cref="TimeRange"/> class.
     /// </summary>
+    /// <param name="start">Time range start.</param>
+    /// <param name="end">Time range end.</param>
     public TimeRange(double start, double end)
     {
         Start = start;
@@ -42,8 +44,9 @@ public class TimeRange : IComparable
     }
 
     /// <summary>
-    /// Copy constructor.
+    /// Initializes a new instance of the <see cref="TimeRange"/> class.
     /// </summary>
+    /// <param name="original">Original TimeRange.</param>
     public TimeRange(TimeRange original)
     {
         Start = original.Start;
@@ -54,6 +57,7 @@ public class TimeRange : IComparable
     /// Compares this TimeRange to another TimeRange.
     /// </summary>
     /// <param name="obj">Other object to compare against.</param>
+    /// <returns>A signed integer that indicates whether this instance precedes, follows, or appears in the same position in the sort order as the obj parameter.</returns>
     public int CompareTo(object? obj)
     {
         if (obj is not TimeRange tr)
@@ -128,6 +132,7 @@ public static class TimeRangeHelpers
     /// </summary>
     /// <param name="times">Sorted timestamps to search.</param>
     /// <param name="maximumDistance">Maximum distance permitted between contiguous timestamps.</param>
+    /// <returns>The longest contiguous time range (if one was found), or null (if none was found).</returns>
     public static TimeRange? FindContiguous(double[] times, double maximumDistance)
     {
         if (times.Length == 0)

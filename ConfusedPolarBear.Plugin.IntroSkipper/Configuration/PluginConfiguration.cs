@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-
 using MediaBrowser.Model.Plugins;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
@@ -19,17 +15,17 @@ public class PluginConfiguration : BasePluginConfiguration
     }
 
     /// <summary>
-    /// If the output of fpcalc should be cached to the filesystem.
+    /// Gets or sets a value indicating whether the output of fpcalc should be cached to the filesystem.
     /// </summary>
     public bool CacheFingerprints { get; set; }
 
     /// <summary>
-    /// Seconds before the intro starts to show the skip prompt at.
+    /// Gets or sets the seconds before the intro starts to show the skip prompt at.
     /// </summary>
     public int ShowPromptAdjustment { get; set; } = 5;
 
     /// <summary>
-    /// Seconds after the intro starts to hide the skip prompt at.
+    /// Gets or sets the seconds after the intro starts to hide the skip prompt at.
     /// </summary>
     public int HidePromptAdjustment { get; set; } = 10;
 }

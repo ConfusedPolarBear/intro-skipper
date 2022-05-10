@@ -92,22 +92,22 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     }
 
     /// <summary>
-    /// Results of fingerprinting all episodes.
+    /// Gets the results of fingerprinting all episodes.
     /// </summary>
     public Dictionary<Guid, Intro> Intros { get; }
 
     /// <summary>
-    /// Map of season ids to episodes that have been queued for fingerprinting.
+    /// Gets the mapping of season ids to episodes that have been queued for fingerprinting.
     /// </summary>
     public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; }
 
     /// <summary>
-    /// Total number of episodes in the queue.
+    /// Gets or sets the total number of episodes in the queue.
     /// </summary>
     public int TotalQueued { get; set; }
 
     /// <summary>
-    /// Directory to cache fingerprints in.
+    /// Gets the directory to cache fingerprints in.
     /// </summary>
     public string FingerprintCachePath { get; private set; }
 

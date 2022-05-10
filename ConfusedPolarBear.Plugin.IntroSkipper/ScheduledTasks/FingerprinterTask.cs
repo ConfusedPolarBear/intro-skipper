@@ -11,7 +11,8 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// <summary>
 /// Fingerprint all queued episodes at the set time.
 /// </summary>
-public class FingerprinterTask : IScheduledTask {
+public class FingerprinterTask : IScheduledTask
+{
     private readonly ILogger<FingerprinterTask> _logger;
 
     /// <summary>
@@ -35,35 +36,36 @@ public class FingerprinterTask : IScheduledTask {
     private const double SAMPLES_TO_SECONDS = 0.128;
 
     /// <summary>
-    /// Gets or sets the last detected intro sequence. Only populated when a unit test is running.
+    /// Gets the last detected intro sequence. Only populated when a unit test is running.
     /// </summary>
     public static Intro LastIntro { get; private set; } = new Intro();
 
     /// <summary>
-    /// Constructor.
+    /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
     /// </summary>
+    /// <param name="logger">Logger.</param>
     public FingerprinterTask(ILogger<FingerprinterTask> logger)
     {
         _logger = logger;
     }
 
     /// <summary>
-    /// Task name.
+    /// Gets the task name.
     /// </summary>
     public string Name => "Analyze episodes";
 
     /// <summary>
-    /// Task category.
+    /// Gets the task category.
     /// </summary>
     public string Category => "Intro Skipper";
 
     /// <summary>
-    /// Task description.
+    /// Gets the task description.
     /// </summary>
     public string Description => "Analyzes the audio of all television episodes to find introduction sequences.";
 
     /// <summary>
-    /// Key.
+    /// Gets the task key.
     /// </summary>
     public string Key => "CPBIntroSkipperRunFingerprinter";
 
@@ -72,12 +74,14 @@ public class FingerprinterTask : IScheduledTask {
     /// </summary>
     /// <param name="progress">Progress.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Task.</returns>
     public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
         var queue = Plugin.Instance!.AnalysisQueue;
         var totalProcessed = 0;
 
-        foreach (var season in queue) {
+        foreach (var season in queue)
+        {
             var first = season.Value[0];
 
             // Don't analyze seasons with <= 1 episode or specials
@@ -94,7 +98,8 @@ public class FingerprinterTask : IScheduledTask {
 
             // Ensure there are an even number of episodes
             var episodes = season.Value;
-            if (episodes.Count % 2 != 0) {
+            if (episodes.Count % 2 != 0)
+            {
                 episodes.Add(episodes[episodes.Count - 2]);
             }
 
@@ -109,7 +114,7 @@ public class FingerprinterTask : IScheduledTask {
                 }
 
                 var lhs = episodes[i];
-                var rhs = episodes[i+1];
+                var rhs = episodes[i + 1];
 
                 // TODO: make configurable
                 if (!everFoundIntro && failures >= 6)
@@ -190,7 +195,7 @@ public class FingerprinterTask : IScheduledTask {
         var limit = Math.Min(lhs.Count, rhs.Count);
 
         // First, test if an intro can be found within the first 5 seconds of the episodes (±5/0.128 = ±40 samples).
-        var (lhsContiguous, rhsContiguous) = shiftEpisodes(lhs, rhs, -40, 40);
+        var (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhs, rhs, -40, 40);
         lhsRanges.AddRange(lhsContiguous);
         rhsRanges.AddRange(rhsContiguous);
 
@@ -199,7 +204,7 @@ public class FingerprinterTask : IScheduledTask {
         {
             _logger.LogDebug("using full scan");
 
-            (lhsContiguous, rhsContiguous) = shiftEpisodes(lhs, rhs, -1 * limit, limit);
+            (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhs, rhs, -1 * limit, limit);
             lhsRanges.AddRange(lhsContiguous);
             rhsRanges.AddRange(rhsContiguous);
         }
@@ -219,8 +224,8 @@ public class FingerprinterTask : IScheduledTask {
 
             // TODO: is this the optimal way to indicate that an intro couldn't be found?
             // the goal here is to not waste time every task run reprocessing episodes that we know will fail.
-            storeIntro(lhsEpisode.EpisodeId, 0, 0);
-            storeIntro(rhsEpisode.EpisodeId, 0, 0);
+            StoreIntro(lhsEpisode.EpisodeId, 0, 0);
+            StoreIntro(rhsEpisode.EpisodeId, 0, 0);
 
             return false;
         }
@@ -243,8 +248,8 @@ public class FingerprinterTask : IScheduledTask {
             rhsIntro.Start = 0;
         }
 
-        storeIntro(lhsEpisode.EpisodeId, lhsIntro.Start, lhsIntro.End);
-        storeIntro(rhsEpisode.EpisodeId, rhsIntro.Start, rhsIntro.End);
+        StoreIntro(lhsEpisode.EpisodeId, lhsIntro.Start, lhsIntro.End);
+        StoreIntro(rhsEpisode.EpisodeId, rhsIntro.Start, rhsIntro.End);
 
         return true;
     }
@@ -256,18 +261,18 @@ public class FingerprinterTask : IScheduledTask {
     /// <param name="rhs">Second episode fingerprint.</param>
     /// <param name="lower">Lower end of the shift range.</param>
     /// <param name="upper">Upper end of the shift range.</param>
-    private static (List<TimeRange>, List<TimeRange>) shiftEpisodes(
+    private static (List<TimeRange> Lhs, List<TimeRange> Rhs) ShiftEpisodes(
         ReadOnlyCollection<uint> lhs,
         ReadOnlyCollection<uint> rhs,
         int lower,
-        int upper
-    ) {
+        int upper)
+    {
         var lhsRanges = new List<TimeRange>();
         var rhsRanges = new List<TimeRange>();
 
         for (int amount = lower; amount <= upper; amount++)
         {
-            var (lRange, rRange) = findContiguous(lhs, rhs, amount);
+            var (lRange, rRange) = FindContiguous(lhs, rhs, amount);
 
             if (lRange.End == 0 && rRange.End == 0)
             {
@@ -287,18 +292,21 @@ public class FingerprinterTask : IScheduledTask {
     /// <param name="lhs">First fingerprint to compare.</param>
     /// <param name="rhs">Second fingerprint to compare.</param>
     /// <param name="shiftAmount">Amount to shift one fingerprint by.</param>
-    private static (TimeRange, TimeRange) findContiguous(
+    private static (TimeRange Lhs, TimeRange Rhs) FindContiguous(
         ReadOnlyCollection<uint> lhs,
         ReadOnlyCollection<uint> rhs,
-        int shiftAmount
-    ) {
+        int shiftAmount)
+    {
         var leftOffset = 0;
         var rightOffset = 0;
 
         // Calculate the offsets for the left and right hand sides.
-        if (shiftAmount < 0) {
+        if (shiftAmount < 0)
+        {
             leftOffset -= shiftAmount;
-        } else {
+        }
+        else
+        {
             rightOffset += shiftAmount;
         }
 
@@ -308,14 +316,15 @@ public class FingerprinterTask : IScheduledTask {
         var upperLimit = Math.Min(lhs.Count, rhs.Count) - Math.Abs(shiftAmount);
 
         // XOR all elements in LHS and RHS, using the shift amount from above.
-        for (var i = 0; i < upperLimit; i++) {
+        for (var i = 0; i < upperLimit; i++)
+        {
             // XOR both samples at the current position.
             var lhsPosition = i + leftOffset;
             var rhsPosition = i + rightOffset;
             var diff = lhs[lhsPosition] ^ rhs[rhsPosition];
 
             // If the difference between the samples is small, flag both times as similar.
-            if (countBits(diff) > MAXIMUM_DIFFERENCES)
+            if (CountBits(diff) > MAXIMUM_DIFFERENCES)
             {
                 continue;
             }
@@ -328,8 +337,8 @@ public class FingerprinterTask : IScheduledTask {
         }
 
         // Ensure the last timestamp is checked
-        lhsTimes.Add(Double.MaxValue);
-        rhsTimes.Add(Double.MaxValue);
+        lhsTimes.Add(double.MaxValue);
+        rhsTimes.Add(double.MaxValue);
 
         // Now that both fingerprints have been compared at this shift, see if there's a contiguous time range.
         var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MAXIMUM_DISTANCE);
@@ -356,7 +365,7 @@ public class FingerprinterTask : IScheduledTask {
         return (lContiguous, rContiguous);
     }
 
-    private static void storeIntro(Guid episode, double introStart, double introEnd)
+    private static void StoreIntro(Guid episode, double introStart, double introEnd)
     {
         var intro = new Intro()
         {
@@ -375,12 +384,15 @@ public class FingerprinterTask : IScheduledTask {
         Plugin.Instance.Intros[episode] = intro;
     }
 
-    private static int countBits(uint number) {
+    private static int CountBits(uint number)
+    {
         var count = 0;
 
-        for (var i = 0; i < 32; i++) {
+        for (var i = 0; i < 32; i++)
+        {
             var low = (number >> i) & 1;
-            if (low == 1) {
+            if (low == 1)
+            {
                 count++;
             }
         }
@@ -391,6 +403,7 @@ public class FingerprinterTask : IScheduledTask {
     /// <summary>
     /// Get task triggers.
     /// </summary>
+    /// <returns>Task triggers.</returns>
     public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
     {
         return new[]

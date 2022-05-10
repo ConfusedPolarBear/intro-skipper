@@ -5,29 +5,30 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// <summary>
 /// Episode queued for analysis.
 /// </summary>
-public class QueuedEpisode {
+public class QueuedEpisode
+{
     /// <summary>
-    /// Series name.
+    /// Gets or sets the series name.
     /// </summary>
-    public string SeriesName { get; set; } = "";
+    public string SeriesName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Season number.
+    /// Gets or sets the season number.
     /// </summary>
     public int SeasonNumber { get; set; }
 
     /// <summary>
-    /// Episode id.
+    /// Gets or sets the episode id.
     /// </summary>
     public Guid EpisodeId { get; set; }
 
     /// <summary>
-    /// Full path to episode.
+    /// Gets or sets the full path to episode.
     /// </summary>
-    public string Path { get; set; } = "";
+    public string Path { get; set; } = string.Empty;
 
     /// <summary>
-    /// Seconds of media file to fingerprint.
+    /// Gets or sets the seconds of media file to fingerprint.
     /// </summary>
     public int FingerprintDuration { get; set; }
 }

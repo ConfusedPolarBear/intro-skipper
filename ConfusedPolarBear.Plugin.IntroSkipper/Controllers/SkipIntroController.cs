@@ -14,7 +14,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper.Controllers;
 public class SkipIntroController : ControllerBase
 {
     /// <summary>
-    /// Constructor.
+    /// Initializes a new instance of the <see cref="SkipIntroController"/> class.
     /// </summary>
     public SkipIntroController()
     {
@@ -26,6 +26,7 @@ public class SkipIntroController : ControllerBase
     /// <param name="id">ID of the episode. Required.</param>
     /// <response code="200">Episode contains an intro.</response>
     /// <response code="404">Failed to find an intro in the provided episode.</response>
+    /// <returns>Detected intro.</returns>
     [HttpGet("Episode/{id}/IntroTimestamps")]
     public ActionResult<Intro> GetIntroTimestamps([FromRoute] Guid id)
     {

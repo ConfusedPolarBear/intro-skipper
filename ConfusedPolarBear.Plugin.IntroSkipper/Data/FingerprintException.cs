@@ -5,25 +5,29 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// <summary>
 /// Exception raised when an error is encountered analyzing audio.
 /// </summary>
-public class FingerprintException: Exception {
+public class FingerprintException : Exception
+{
     /// <summary>
-    /// Constructor.
+    /// Initializes a new instance of the <see cref="FingerprintException"/> class.
     /// </summary>
     public FingerprintException()
     {
     }
 
     /// <summary>
-    /// Constructor.
+    /// Initializes a new instance of the <see cref="FingerprintException"/> class.
     /// </summary>
-    public FingerprintException(string message): base(message)
+    /// <param name="message">Exception message.</param>
+    public FingerprintException(string message) : base(message)
     {
     }
 
     /// <summary>
-    /// Constructor.
+    /// Initializes a new instance of the <see cref="FingerprintException"/> class.
     /// </summary>
-    public FingerprintException(string message, Exception inner): base(message, inner)
+    /// <param name="message">Exception message.</param>
+    /// <param name="inner">Inner exception.</param>
+    public FingerprintException(string message, Exception inner) : base(message, inner)
     {
     }
 }

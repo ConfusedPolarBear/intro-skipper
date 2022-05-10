@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -9,7 +9,6 @@ using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Library;
 using Microsoft.Extensions.Logging;
-using Jellyfin.Data.Enums;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
@@ -26,7 +25,7 @@ public class Entrypoint : IServerEntryPoint
     private readonly object _queueLock = new object();
 
     /// <summary>
-    /// Constructor.
+    /// Initializes a new instance of the <see cref="Entrypoint"/> class.
     /// </summary>
     /// <param name="userManager">User manager.</param>
     /// <param name="userViewManager">User view manager.</param>
@@ -47,12 +46,14 @@ public class Entrypoint : IServerEntryPoint
     /// <summary>
     /// Registers event handler.
     /// </summary>
+    /// <returns>Task.</returns>
     public Task RunAsync()
     {
         FPCalc.Logger = _logger;
 
         // Assert that fpcalc is installed
-        if (!FPCalc.CheckFPCalcInstalled()) {
+        if (!FPCalc.CheckFPCalcInstalled())
+        {
             _logger.LogError("fpcalc is not installed on this system - episodes will not be analyzed");
             return Task.CompletedTask;
         }
@@ -61,8 +62,10 @@ public class Entrypoint : IServerEntryPoint
         _libraryManager.ItemAdded += ItemAdded;
 
         // For all TV show libraries, enqueue all contained items.
-        foreach (var folder in _libraryManager.GetVirtualFolders()) {
-            if (folder.CollectionType != CollectionTypeOptions.TvShows) {
+        foreach (var folder in _libraryManager.GetVirtualFolders())
+        {
+            if (folder.CollectionType != CollectionTypeOptions.TvShows)
+            {
                 continue;
             }
 
@@ -77,25 +80,30 @@ public class Entrypoint : IServerEntryPoint
         return Task.CompletedTask;
     }
 
-    private void QueueLibraryContents(string rawId) {
+    private void QueueLibraryContents(string rawId)
+    {
         // FIXME: do smarterer
 
-        var query = new UserViewQuery() {
+        var query = new UserViewQuery()
+        {
             UserId = GetAdministrator(),
         };
 
         // Get all items from this library. Since intros may change within a season, sort the items before adding them.
         var folder = _userViewManager.GetUserViews(query)[0];
-        var items = folder.GetItems(new InternalItemsQuery() {
+        var items = folder.GetItems(new InternalItemsQuery()
+        {
             ParentId = Guid.Parse(rawId),
-            OrderBy = new [] { ("SortName", SortOrder.Ascending) },
+            OrderBy = new[] { ("SortName", SortOrder.Ascending) },
             IncludeItemTypes = new BaseItemKind[] { BaseItemKind.Episode },
             Recursive = true,
         });
 
         // Queue all episodes on the server for fingerprinting.
-        foreach (var item in items.Items) {
-            if (item is not Episode episode) {
+        foreach (var item in items.Items)
+        {
+            if (item is not Episode episode)
+            {
                 _logger.LogError("Item {Name} is not an episode", item.Name);
                 continue;
             }
@@ -111,7 +119,8 @@ public class Entrypoint : IServerEntryPoint
     /// <param name="e">ItemChangeEventArgs.</param>
     private void ItemAdded(object? sender, ItemChangeEventArgs e)
     {
-        if (e.Item is not Episode episode) {
+        if (e.Item is not Episode episode)
+        {
             return;
         }
 
@@ -120,28 +129,34 @@ public class Entrypoint : IServerEntryPoint
         QueueEpisode(episode);
     }
 
-    private void QueueEpisode(Episode episode) {
-        if (Plugin.Instance is null) {
+    private void QueueEpisode(Episode episode)
+    {
+        if (Plugin.Instance is null)
+        {
             throw new InvalidOperationException("plugin instance was null");
         }
 
-        lock (_queueLock) {
+        lock (_queueLock)
+        {
             var queue = Plugin.Instance.AnalysisQueue;
 
             // Allocate a new list for each new season
-            if (!queue.ContainsKey(episode.SeasonId)) {
+            if (!queue.ContainsKey(episode.SeasonId))
+            {
                 Plugin.Instance.AnalysisQueue[episode.SeasonId] = new List<QueuedEpisode>();
             }
 
             // Only fingerprint up to 25% of the episode and at most 10 minutes.
             var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
-            if (duration >= 5*60) {
+            if (duration >= 5 * 60)
+            {
                 duration /= 4;
             }
 
             duration = Math.Min(duration, 10 * 60);
 
-            Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode() {
+            Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode()
+            {
                 SeriesName = episode.SeriesName,
                 SeasonNumber = episode.AiredSeasonNumber ?? 0,
                 EpisodeId = episode.Id,
@@ -156,9 +171,12 @@ public class Entrypoint : IServerEntryPoint
     /// <summary>
     /// FIXME: don't do this.
     /// </summary>
-    private Guid GetAdministrator() {
-        foreach (var user in _userManager.Users) {
-            if (!user.HasPermission(Jellyfin.Data.Enums.PermissionKind.IsAdministrator)) {
+    private Guid GetAdministrator()
+    {
+        foreach (var user in _userManager.Users)
+        {
+            if (!user.HasPermission(Jellyfin.Data.Enums.PermissionKind.IsAdministrator))
+            {
                 continue;
             }
 
