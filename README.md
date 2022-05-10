@@ -2,6 +2,10 @@
 
 Analyzes the audio of television episodes to detect and skip over intros. Currently in alpha.
 
+Installing this plugin (along with a modified web interface) will result in a skip intro button displaying in the video player, like this:
+
+![Skip intro button](screenshots/skip-button.png)
+
 The custom web interface **is required** in order to display the skip intro button inside the video player.
 
 ## Introduction requirements
