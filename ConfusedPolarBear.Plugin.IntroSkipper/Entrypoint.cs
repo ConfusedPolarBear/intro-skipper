@@ -197,8 +197,9 @@ public class Entrypoint : IServerEntryPoint
     }
 
     /// <summary>
-    /// Dispose.
+    /// Protected dispose.
     /// </summary>
+    /// <param name="dispose">Dispose.</param>
     protected virtual void Dispose(bool dispose)
     {
         if (!dispose)

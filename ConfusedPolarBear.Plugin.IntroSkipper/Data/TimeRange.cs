@@ -9,21 +9,6 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class TimeRange : IComparable
 {
     /// <summary>
-    /// Gets or sets the time range start (in seconds).
-    /// </summary>
-    public double Start { get; set; }
-
-    /// <summary>
-    /// Gets or sets the time range end (in seconds).
-    /// </summary>
-    public double End { get; set; }
-
-    /// <summary>
-    /// Gets the duration of this time range (in seconds).
-    /// </summary>
-    public double Duration => End - Start;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="TimeRange"/> class.
     /// </summary>
     public TimeRange()
@@ -51,6 +36,81 @@ public class TimeRange : IComparable
     {
         Start = original.Start;
         End = original.End;
+    }
+
+    /// <summary>
+    /// Gets or sets the time range start (in seconds).
+    /// </summary>
+    public double Start { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time range end (in seconds).
+    /// </summary>
+    public double End { get; set; }
+
+    /// <summary>
+    /// Gets the duration of this time range (in seconds).
+    /// </summary>
+    public double Duration => End - Start;
+
+    /// <summary>
+    /// Comparison operator.
+    /// </summary>
+    /// <param name="left">Left TimeRange.</param>
+    /// <param name="right">Right TimeRange.</param>
+    public static bool operator ==(TimeRange left, TimeRange right)
+    {
+        return left.Equals(right);
+    }
+
+    /// <summary>
+    /// Comparison operator.
+    /// </summary>
+    /// <param name="left">Left TimeRange.</param>
+    /// <param name="right">Right TimeRange.</param>
+    public static bool operator !=(TimeRange left, TimeRange right)
+    {
+        return !left.Equals(right);
+    }
+
+    /// <summary>
+    /// Comparison operator.
+    /// </summary>
+    /// <param name="left">Left TimeRange.</param>
+    /// <param name="right">Right TimeRange.</param>
+    public static bool operator <=(TimeRange left, TimeRange right)
+    {
+        return left.CompareTo(right) <= 0;
+    }
+
+    /// <summary>
+    /// Comparison operator.
+    /// </summary>
+    /// <param name="left">Left TimeRange.</param>
+    /// <param name="right">Right TimeRange.</param>
+    public static bool operator <(TimeRange left, TimeRange right)
+    {
+        return left.CompareTo(right) < 0;
+    }
+
+    /// <summary>
+    /// Comparison operator.
+    /// </summary>
+    /// <param name="left">Left TimeRange.</param>
+    /// <param name="right">Right TimeRange.</param>
+    public static bool operator >=(TimeRange left, TimeRange right)
+    {
+        return left.CompareTo(right) >= 0;
+    }
+
+    /// <summary>
+    /// Comparison operator.
+    /// </summary>
+    /// <param name="left">Left TimeRange.</param>
+    /// <param name="right">Right TimeRange.</param>
+    public static bool operator >(TimeRange left, TimeRange right)
+    {
+        return left.CompareTo(right) > 0;
     }
 
     /// <summary>
@@ -83,42 +143,6 @@ public class TimeRange : IComparable
     public override int GetHashCode()
     {
         return this.Start.GetHashCode() + this.Duration.GetHashCode();
-    }
-
-    /// <inheritdoc/>
-    public static bool operator ==(TimeRange left, TimeRange right)
-    {
-        return left.Equals(right);
-    }
-
-    /// <inheritdoc/>
-    public static bool operator !=(TimeRange left, TimeRange right)
-    {
-        return !left.Equals(right);
-    }
-
-    /// <inheritdoc/>
-    public static bool operator <=(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) <= 0;
-    }
-
-    /// <inheritdoc/>
-    public static bool operator <(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) < 0;
-    }
-
-    /// <inheritdoc/>
-    public static bool operator >=(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) >= 0;
-    }
-
-    /// <inheritdoc/>
-    public static bool operator >(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) > 0;
     }
 }
 

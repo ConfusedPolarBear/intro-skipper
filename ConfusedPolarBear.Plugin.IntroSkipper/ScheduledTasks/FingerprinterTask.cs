@@ -13,32 +13,27 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public class FingerprinterTask : IScheduledTask
 {
-    private readonly ILogger<FingerprinterTask> _logger;
-
     /// <summary>
     /// Minimum time (in seconds) for a contiguous time range to be considered an introduction.
     /// </summary>
-    private const int MINIMUM_INTRO_DURATION = 15;
+    private const int MinimumIntroDuration = 15;
 
     /// <summary>
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
     /// </summary>
-    private const double MAXIMUM_DIFFERENCES = 3;
+    private const double MaximumDifferences = 3;
 
     /// <summary>
     /// Maximum time permitted between timestamps before they are considered non-contiguous.
     /// </summary>
-    private const double MAXIMUM_DISTANCE = 3.25;
+    private const double MaximumDistance = 3.25;
 
     /// <summary>
     /// Seconds of audio in one number from the fingerprint. Defined by Chromaprint.
     /// </summary>
-    private const double SAMPLES_TO_SECONDS = 0.128;
+    private const double SamplesToSeconds = 0.128;
 
-    /// <summary>
-    /// Gets the last detected intro sequence. Only populated when a unit test is running.
-    /// </summary>
-    public static Intro LastIntro { get; private set; } = new Intro();
+    private readonly ILogger<FingerprinterTask> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
@@ -48,6 +43,11 @@ public class FingerprinterTask : IScheduledTask
     {
         _logger = logger;
     }
+
+    /// <summary>
+    /// Gets the last detected intro sequence. Only populated when a unit test is running.
+    /// </summary>
+    public static Intro LastIntro { get; private set; } = new Intro();
 
     /// <summary>
     /// Gets the task name.
@@ -324,13 +324,13 @@ public class FingerprinterTask : IScheduledTask
             var diff = lhs[lhsPosition] ^ rhs[rhsPosition];
 
             // If the difference between the samples is small, flag both times as similar.
-            if (CountBits(diff) > MAXIMUM_DIFFERENCES)
+            if (CountBits(diff) > MaximumDifferences)
             {
                 continue;
             }
 
-            var lhsTime = lhsPosition * SAMPLES_TO_SECONDS;
-            var rhsTime = rhsPosition * SAMPLES_TO_SECONDS;
+            var lhsTime = lhsPosition * SamplesToSeconds;
+            var rhsTime = rhsPosition * SamplesToSeconds;
 
             lhsTimes.Add(lhsTime);
             rhsTimes.Add(rhsTime);
@@ -341,14 +341,14 @@ public class FingerprinterTask : IScheduledTask
         rhsTimes.Add(double.MaxValue);
 
         // Now that both fingerprints have been compared at this shift, see if there's a contiguous time range.
-        var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MAXIMUM_DISTANCE);
-        if (lContiguous is null || lContiguous.Duration < MINIMUM_INTRO_DURATION)
+        var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MaximumDistance);
+        if (lContiguous is null || lContiguous.Duration < MinimumIntroDuration)
         {
             return (new TimeRange(), new TimeRange());
         }
 
         // Since LHS had a contiguous time range, RHS must have one also.
-        var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), MAXIMUM_DISTANCE)!;
+        var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), MaximumDistance)!;
 
         // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
         if (lContiguous.Duration >= 90)

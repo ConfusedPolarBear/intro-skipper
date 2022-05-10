@@ -45,6 +45,37 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     }
 
     /// <summary>
+    /// Gets the results of fingerprinting all episodes.
+    /// </summary>
+    public Dictionary<Guid, Intro> Intros { get; }
+
+    /// <summary>
+    /// Gets the mapping of season ids to episodes that have been queued for fingerprinting.
+    /// </summary>
+    public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; }
+
+    /// <summary>
+    /// Gets or sets the total number of episodes in the queue.
+    /// </summary>
+    public int TotalQueued { get; set; }
+
+    /// <summary>
+    /// Gets the directory to cache fingerprints in.
+    /// </summary>
+    public string FingerprintCachePath { get; private set; }
+
+    /// <inheritdoc />
+    public override string Name => "Intro Skipper";
+
+    /// <inheritdoc />
+    public override Guid Id => Guid.Parse("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b");
+
+    /// <summary>
+    /// Gets the plugin instance.
+    /// </summary>
+    public static Plugin? Instance { get; private set; }
+
+    /// <summary>
     /// Save timestamps to disk.
     /// </summary>
     public void SaveTimestamps()
@@ -90,33 +121,4 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             }
         };
     }
-
-    /// <summary>
-    /// Gets the results of fingerprinting all episodes.
-    /// </summary>
-    public Dictionary<Guid, Intro> Intros { get; }
-
-    /// <summary>
-    /// Gets the mapping of season ids to episodes that have been queued for fingerprinting.
-    /// </summary>
-    public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; }
-
-    /// <summary>
-    /// Gets or sets the total number of episodes in the queue.
-    /// </summary>
-    public int TotalQueued { get; set; }
-
-    /// <summary>
-    /// Gets the directory to cache fingerprints in.
-    /// </summary>
-    public string FingerprintCachePath { get; private set; }
-
-    /// <inheritdoc />
-    public override string Name => "Intro Skipper";
-
-    /// <inheritdoc />
-    public override Guid Id => Guid.Parse("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b");
-
-    /// <inheritdoc />
-    public static Plugin? Instance { get; private set; }
 }
