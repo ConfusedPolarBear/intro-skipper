@@ -11,6 +11,18 @@ public class TestFPCalc
         Assert.True(FPCalc.CheckFPCalcInstalled());
     }
 
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(5, 213)]
+    [InlineData(10, 56_021)]
+    [InlineData(16, 16_112_341)]
+    [InlineData(19, 2_465_585_877)]
+    public void TestBitCounting(int expectedBits, uint number)
+    {
+        Assert.Equal(expectedBits, FingerprinterTask.CountBits(number));
+    }
+
     [Fact]
     public void TestFingerprinting()
     {

@@ -82,7 +82,7 @@ public class Entrypoint : IServerEntryPoint
 
     private void QueueLibraryContents(string rawId)
     {
-        // FIXME: do smarterer
+        // FIXME: don't do this
 
         var query = new UserViewQuery()
         {

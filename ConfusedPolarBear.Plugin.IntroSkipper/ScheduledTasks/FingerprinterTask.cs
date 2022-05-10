@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
-/// Fingerprint all queued episodes at the set time.
+/// Fingerprint and analyze all queued episodes for common audio sequences.
 /// </summary>
 public class FingerprinterTask : IScheduledTask
 {
@@ -24,12 +24,12 @@ public class FingerprinterTask : IScheduledTask
     private const double MaximumDifferences = 3;
 
     /// <summary>
-    /// Maximum time permitted between timestamps before they are considered non-contiguous.
+    /// Maximum time (in seconds) permitted between timestamps before they are considered non-contiguous.
     /// </summary>
     private const double MaximumDistance = 3.25;
 
     /// <summary>
-    /// Seconds of audio in one number from the fingerprint. Defined by Chromaprint.
+    /// Seconds of audio in one fingerprint point. This value is defined by the Chromaprint library and should not be changed.
     /// </summary>
     private const double SamplesToSeconds = 0.128;
 
@@ -72,7 +72,7 @@ public class FingerprinterTask : IScheduledTask
     /// <summary>
     /// Analyze all episodes in the queue.
     /// </summary>
-    /// <param name="progress">Progress.</param>
+    /// <param name="progress">Task progress.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Task.</returns>
     public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
@@ -84,8 +84,11 @@ public class FingerprinterTask : IScheduledTask
         {
             var first = season.Value[0];
 
-            // Don't analyze seasons with <= 1 episode or specials
-            if (season.Value.Count <= 1 || first.SeasonNumber == 0)
+            /* Don't analyze specials or seasons with an insufficient number of episodes.
+             * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
+             * which would result in the entire episode being marked as an introduction, as the audio is identical.
+             */
+            if (season.Value.Count < 2 || first.SeasonNumber == 0)
             {
                 continue;
             }
@@ -222,8 +225,6 @@ public class FingerprinterTask : IScheduledTask
 
             // TODO: if an episode fails but others in the season succeed, reanalyze it against two that succeeded.
 
-            // TODO: is this the optimal way to indicate that an intro couldn't be found?
-            // the goal here is to not waste time every task run reprocessing episodes that we know will fail.
             StoreIntro(lhsEpisode.EpisodeId, 0, 0);
             StoreIntro(rhsEpisode.EpisodeId, 0, 0);
 
@@ -353,13 +354,13 @@ public class FingerprinterTask : IScheduledTask
         // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
         if (lContiguous.Duration >= 90)
         {
-            lContiguous.End -= 6;
-            rContiguous.End -= 6;
+            lContiguous.End -= 2 * MaximumDistance;
+            rContiguous.End -= 2 * MaximumDistance;
         }
         else if (lContiguous.Duration >= 35)
         {
-            lContiguous.End -= 3;
-            rContiguous.End -= 3;
+            lContiguous.End -= MaximumDistance;
+            rContiguous.End -= MaximumDistance;
         }
 
         return (lContiguous, rContiguous);
@@ -370,7 +371,7 @@ public class FingerprinterTask : IScheduledTask
         var intro = new Intro()
         {
             EpisodeId = episode,
-            Valid = introEnd > 0,
+            Valid = introEnd > 0,       // don't test introStart here as the intro could legitimately happen at the start.
             IntroStart = introStart,
             IntroEnd = introEnd
         };
@@ -384,7 +385,12 @@ public class FingerprinterTask : IScheduledTask
         Plugin.Instance.Intros[episode] = intro;
     }
 
-    private static int CountBits(uint number)
+    /// <summary>
+    /// Count the number of bits that are set in the provided number.
+    /// </summary>
+    /// <param name="number">Number to count bits in.</param>
+    /// <returns>Number of bits that are equal to 1.</returns>
+    public static int CountBits(uint number)
     {
         var count = 0;
 
