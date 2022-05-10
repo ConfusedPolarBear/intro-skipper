@@ -2,24 +2,37 @@
 
 Analyzes the audio of television episodes to detect and skip over intros. Currently in alpha.
 
-## Software requirements
-
-* Jellyfin 10.8.0 beta 2 (or later)
-* Modified [jellyfin-web](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros) interface with intro skip button
-* [chromaprint](https://github.com/acoustid/chromaprint) (only v1.4.3 and later have been tested)
+The custom web interface **is required** in order to display the skip intro button inside the video player.
 
 ## Introduction requirements
 
-Introductions will only detected if they are both:
+Show introductions will only be detected if they are:
 
-* In the first 25% (or 10 minutes, whichever is smaller) of an episode
-* 20 seconds or longer
+* Located within the first 25% of an episode, or the first 10 minutes, whichever is smaller
+* At least 20 seconds long
 
-## Container installation instructions (easiest)
+## Container installation
 
-1. Pull and run the `ghcr.io/confusedpolarbear/jellyfin-intro-skipper` container
+1. Run the `ghcr.io/confusedpolarbear/jellyfin-intro-skipper` container just as you would any other Jellyfin container
+    1. If you reuse the configuration data from another container, **make sure to create a backup first**.
+2. Follow the plugin installation steps below
 
-## Native installation instructions
+## Plugin installation
+1. Add this plugin repository to your server: `https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/manifest.json`
+2. Install the Intro Skipper plugin from the General section
+3. Restart Jellyfin
+4. Go to Dashboard -> Scheduled Tasks -> Analyze Episodes and click the play button
+5. After a season has completed analyzing, play some episodes from it and observe the results
+    1. Status updates are logged before analyzing each season of a show
+
+## Native installation
+### Requirements
+
+* Jellyfin 10.8.0 beta 2 (or later)
+* Compiled [jellyfin-web](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros) interface with intro skip button
+* [chromaprint](https://github.com/acoustid/chromaprint) (only versions 1.4.3 and later have been verified to work)
+
+### Instructions
 
 1. Install the `fpcalc` program
     1. On Debian based distributions, this is provided by the `libchromaprint-tools` package
@@ -28,11 +41,4 @@ Introductions will only detected if they are both:
     1. Serve the web interface directly from your Jellyfin server, or
     2. Serve the web interface using an external web server
     3. The corresponding source code can be found in this [fork](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros)
-
-## Plugin installation
-1. Add this plugin repository to your server: `https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/manifest.json`
-2. Install the Intro Skipper plugin from the General section
-3. Restart Jellyfin
-4. Go to Dashboard -> Scheduled Tasks -> Analyze Episodes and click the play button
-5. After a season has completed analyzing, play some episodes from it and observe the results
-    1. Status updates are logged before processing each season of a show
+3. Follow the plugin installation steps above
