@@ -2,7 +2,7 @@
 
 Analyzes the audio of television episodes to detect and skip over intros. Currently in alpha.
 
-## Requirements
+## Software requirements
 
 * Jellyfin 10.8.0 beta 2 (or later)
 * Modified [jellyfin-web](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros) interface with intro skip button
@@ -15,6 +15,10 @@ Introductions will only detected if they are both:
 * In the first 25% (or 10 minutes, whichever is smaller) of an episode
 * 20 seconds or longer
 
+## Container installation instructions (easiest)
+
+1. Pull and run the `ghcr.io/confusedpolarbear/jellyfin-intro-skipper` container
+
 ## Native installation instructions
 
 1. Install the `fpcalc` program
@@ -24,11 +28,11 @@ Introductions will only detected if they are both:
     1. Serve the web interface directly from your Jellyfin server, or
     2. Serve the web interface using an external web server
     3. The corresponding source code can be found in this [fork](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros)
-3. Add the plugin repository to your server: `https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/manifest.json`
-4. Install the Intro Skipper plugin and restart Jellyfin
-5. Go to Dashboard -> Scheduled Tasks -> Analyze Episodes and click the play button
-6. After the task completes, play some episodes and observe the results
 
-## Docker container instructions
-
-Coming soon.
+## Plugin installation
+1. Add this plugin repository to your server: `https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/manifest.json`
+2. Install the Intro Skipper plugin from the General section
+3. Restart Jellyfin
+4. Go to Dashboard -> Scheduled Tasks -> Analyze Episodes and click the play button
+5. After a season has completed analyzing, play some episodes from it and observe the results
+    1. Status updates are logged before processing each season of a show

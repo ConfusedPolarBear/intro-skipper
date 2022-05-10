@@ -3,3 +3,5 @@ obj/
 .vs/
 .idea/
 artifacts
+
+docker/dist
