@@ -9,15 +9,35 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class Intro
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="Intro"/> class.
+    /// </summary>
+    /// <param name="episode">Episode.</param>
+    /// <param name="start">Intro start time.</param>
+    /// <param name="end">Intro end time.</param>
+    public Intro(Guid episode, double start, double end)
+    {
+        EpisodeId = episode;
+        IntroStart = start;
+        IntroEnd = end;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Intro"/> class.
+    /// </summary>
+    public Intro()
+    {
+    }
+
+    /// <summary>
     /// Gets or sets the Episode ID.
     /// </summary>
     public Guid EpisodeId { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether this introduction is valid or not.
+    /// Gets a value indicating whether this introduction is valid or not.
     /// Invalid results must not be returned through the API.
     /// </summary>
-    public bool Valid { get; set; }
+    public bool Valid => IntroEnd > 0;
 
     /// <summary>
     /// Gets or sets the introduction sequence start time.

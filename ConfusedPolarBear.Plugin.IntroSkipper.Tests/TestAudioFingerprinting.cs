@@ -63,16 +63,18 @@ public class TestFPCalc
         var logger = new Logger<FingerprinterTask>(new LoggerFactory());
         var task = new FingerprinterTask(logger);
 
-        var lhs = queueEpisode("audio/big_buck_bunny_intro.mp3");
-        var rhs = queueEpisode("audio/big_buck_bunny_clip.mp3");
+        var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
+        var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
 
-        var result = task.FingerprintEpisodes(lhs, rhs);
-        var actual = FingerprinterTask.LastIntro;
+        var (lhs, rhs) = task.FingerprintEpisodes(lhsEpisode, rhsEpisode);
 
-        Assert.True(result);
-        Assert.True(actual.Valid);
-        Assert.Equal(5.12, actual.IntroStart);
-        Assert.Equal(22.912, actual.IntroEnd);
+        Assert.True(lhs.Valid);
+        Assert.Equal(0, lhs.IntroStart);
+        Assert.Equal(17.792, lhs.IntroEnd);
+
+        Assert.True(rhs.Valid);
+        Assert.Equal(5.12, rhs.IntroStart);
+        Assert.Equal(22.912, rhs.IntroEnd);
     }
 
     private QueuedEpisode queueEpisode(string path)
