@@ -87,114 +87,126 @@ public class FingerprinterTask : IScheduledTask
 
         foreach (var season in queue)
         {
-            var first = season.Value[0];
+            AnalyzeSeason(season, cancellationToken);
 
-            /* Don't analyze specials or seasons with an insufficient number of episodes.
-             * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
-             * which would result in the entire episode being marked as an introduction, as the audio is identical.
-             */
-            if (season.Value.Count < 2 || first.SeasonNumber == 0)
-            {
-                continue;
-            }
+            // TODO: report progress on a per episode basis
+            totalProcessed += season.Value.Count;
+            progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
+        }
 
-            _logger.LogInformation(
-                "Analyzing {Count} episodes from {Name} season {Season}",
-                season.Value.Count,
-                first.SeriesName,
-                first.SeasonNumber);
+        return Task.CompletedTask;
+    }
 
-            // Ensure there are an even number of episodes
-            var episodes = season.Value;
-            if (episodes.Count % 2 != 0)
-            {
-                episodes.Add(episodes[episodes.Count - 2]);
-            }
+    private void AnalyzeSeason(
+        KeyValuePair<Guid, List<QueuedEpisode>> season,
+        CancellationToken cancellationToken)
+    {
+        var first = season.Value[0];
 
-            // Analyze each pair of episodes in the current season
-            var everFoundIntro = false;
-            var failures = 0;
-            for (var i = 0; i < episodes.Count; i += 2)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
+        /* Don't analyze specials or seasons with an insufficient number of episodes.
+         * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
+         * which would result in the entire episode being marked as an introduction, as the audio is identical.
+         */
+        if (season.Value.Count < 2 || first.SeasonNumber == 0)
+        {
+            return;
+        }
 
-                var lhs = episodes[i];
-                var rhs = episodes[i + 1];
+        _logger.LogInformation(
+            "Analyzing {Count} episodes from {Name} season {Season}",
+            season.Value.Count,
+            first.SeriesName,
+            first.SeasonNumber);
 
-                // TODO: make configurable
-                if (!everFoundIntro && failures >= 6)
-                {
-                    _logger.LogWarning(
-                        "Failed to find an introduction in {Series} season {Season}",
-                        lhs.SeriesName,
-                        lhs.SeasonNumber);
+        // Ensure there are an even number of episodes
+        var episodes = season.Value;
+        if (episodes.Count % 2 != 0)
+        {
+            episodes.Add(episodes[episodes.Count - 2]);
+        }
 
-                    break;
-                }
-
-                // FIXME: add retry logic
-                var alreadyDone = Plugin.Instance!.Intros;
-                if (alreadyDone.ContainsKey(lhs.EpisodeId) && alreadyDone.ContainsKey(rhs.EpisodeId))
-                {
-                    _logger.LogDebug(
-                        "Episodes {LHS} and {RHS} have both already been fingerprinted",
-                        lhs.EpisodeId,
-                        rhs.EpisodeId);
-
-                    totalProcessed += 2;
-                    progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
-
-                    continue;
-                }
-
-                try
-                {
-                    _logger.LogDebug("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
-
-                    var (lhsIntro, rhsIntro) = FingerprintEpisodes(lhs, rhs);
-
-                    Plugin.Instance.Intros![lhsIntro.EpisodeId] = lhsIntro;
-                    Plugin.Instance.Intros![rhsIntro.EpisodeId] = rhsIntro;
-
-                    if (!lhsIntro.Valid)
-                    {
-                        failures += 2;
-                        continue;
-                    }
-
-                    everFoundIntro = true;
-                }
-                catch (FingerprintException ex)
-                {
-                    _logger.LogError("Caught fingerprint error: {Ex}", ex);
-                }
-                finally
-                {
-                    totalProcessed += 2;
-                    progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
-                }
-            }
-
-            Plugin.Instance!.SaveTimestamps();
-
+        // Analyze each pair of episodes in the current season
+        var everFoundIntro = false;
+        var failures = 0;
+        for (var i = 0; i < episodes.Count; i += 2)
+        {
             if (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
 
-            if (!everFoundIntro)
+            var lhs = episodes[i];
+            var rhs = episodes[i + 1];
+
+            // TODO: make configurable
+            if (!everFoundIntro && failures >= 6)
             {
+                _logger.LogWarning(
+                    "Failed to find an introduction in {Series} season {Season}",
+                    lhs.SeriesName,
+                    lhs.SeasonNumber);
+
+                break;
+            }
+
+            // FIXME: add retry logic
+            var alreadyDone = Plugin.Instance!.Intros;
+            if (alreadyDone.ContainsKey(lhs.EpisodeId) && alreadyDone.ContainsKey(rhs.EpisodeId))
+            {
+                _logger.LogDebug(
+                    "Episodes {LHS} and {RHS} have both already been fingerprinted",
+                    lhs.EpisodeId,
+                    rhs.EpisodeId);
+
+                /*
+                TODO: bring back
+                totalProcessed += 2;
+                progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
+                */
+
                 continue;
             }
 
-            // Reanalyze this season to check for (and hopefully correct) outliers and failed episodes.
-            CheckSeason(season.Value);
+            try
+            {
+                _logger.LogDebug("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
+
+                var (lhsIntro, rhsIntro) = FingerprintEpisodes(lhs, rhs);
+
+                Plugin.Instance.Intros![lhsIntro.EpisodeId] = lhsIntro;
+                Plugin.Instance.Intros![rhsIntro.EpisodeId] = rhsIntro;
+
+                if (!lhsIntro.Valid)
+                {
+                    failures += 2;
+                    continue;
+                }
+
+                everFoundIntro = true;
+            }
+            catch (FingerprintException ex)
+            {
+                _logger.LogError("Caught fingerprint error: {Ex}", ex);
+            }
+            finally
+            {
+                /*
+                TODO: bring back
+                totalProcessed += 2;
+                progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
+                */
+            }
         }
 
-        return Task.CompletedTask;
+        Plugin.Instance!.SaveTimestamps();
+
+        if (cancellationToken.IsCancellationRequested || !everFoundIntro)
+        {
+            return;
+        }
+
+        // Reanalyze this season to check for (and hopefully correct) outliers and failed episodes.
+        CheckSeason(season.Value);
     }
 
     /// <summary>
