@@ -85,14 +85,14 @@ public class FingerprinterTask : IScheduledTask
         var queue = Plugin.Instance!.AnalysisQueue;
         var totalProcessed = 0;
 
-        foreach (var season in queue)
+        Parallel.ForEach(queue, (season) =>
         {
             AnalyzeSeason(season, cancellationToken);
 
             // TODO: report progress on a per episode basis
             totalProcessed += season.Value.Count;
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
-        }
+        });
 
         return Task.CompletedTask;
     }
