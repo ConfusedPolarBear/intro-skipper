@@ -232,49 +232,49 @@ public class FingerprinterTask : IScheduledTask
     /// Analyze two episodes to find an introduction sequence shared between them.
     /// </summary>
     /// <param name="lhsId">First episode id.</param>
-    /// <param name="lhs">First episode to analyze.</param>
+    /// <param name="lhsPoints">First episode fingerprint points.</param>
     /// <param name="rhsId">Second episode id.</param>
-    /// <param name="rhs">Second episode to analyze.</param>
+    /// <param name="rhsPoints">Second episode fingerprint points.</param>
     /// <returns>Intros for the first and second episodes.</returns>
     public (Intro Lhs, Intro Rhs) FingerprintEpisodes(
         Guid lhsId,
-        ReadOnlyCollection<uint> lhs,
+        ReadOnlyCollection<uint> lhsPoints,
         Guid rhsId,
-        ReadOnlyCollection<uint> rhs)
+        ReadOnlyCollection<uint> rhsPoints)
     {
         var lhsRanges = new List<TimeRange>();
         var rhsRanges = new List<TimeRange>();
 
         // Compare all elements of the shortest fingerprint to the other fingerprint.
-        var limit = Math.Min(lhs.Count, rhs.Count);
+        var limit = Math.Min(lhsPoints.Count, rhsPoints.Count);
 
         // First, test if an intro can be found within the first 5 seconds of the episodes (±5/0.128 = ±40 samples).
-        var (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhs, rhs, -40, 40);
+        var (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, -40, 40);
         lhsRanges.AddRange(lhsContiguous);
         rhsRanges.AddRange(rhsContiguous);
 
         // If no valid ranges were found, re-analyze the episodes considering all possible shifts.
         if (lhsRanges.Count == 0)
         {
-            _logger.LogDebug("using full scan");
+            _logger.LogDebug("quick scan unsuccessful, falling back to full scan");
 
-            (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhs, rhs, -1 * limit, limit);
+            (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
             lhsRanges.AddRange(lhsContiguous);
             rhsRanges.AddRange(rhsContiguous);
         }
         else
         {
-            _logger.LogDebug("intro found with quick scan");
+            _logger.LogDebug("quick scan successful");
         }
 
         if (lhsRanges.Count == 0)
         {
             _logger.LogDebug(
-                "Unable to find a shared introduction sequence {LHS} and {RHS}",
+                "Unable to find a shared introduction sequence between {LHS} and {RHS}",
                 lhsId,
                 rhsId);
 
-            return (new Intro(lhsId, 0, 0), new Intro(rhsId, 0, 0));
+            return (new Intro(lhsId), new Intro(rhsId));
         }
 
         // After comparing both episodes at all possible shift positions, store the longest time range as the intro.
@@ -295,11 +295,11 @@ public class FingerprinterTask : IScheduledTask
             rhsIntro.Start = 0;
         }
 
-        return (new Intro(lhsId, lhsIntro.Start, lhsIntro.End), new Intro(rhsId, rhsIntro.Start, rhsIntro.End));
+        return (new Intro(lhsId, lhsIntro), new Intro(rhsId, rhsIntro));
     }
 
     /// <summary>
-    /// Shifts episodes through the range of provided shift amounts and returns discovered contiguous time ranges.
+    /// Shifts a pair of episodes through the range of provided shift amounts and returns discovered contiguous time ranges.
     /// </summary>
     /// <param name="lhs">First episode fingerprint.</param>
     /// <param name="rhs">Second episode fingerprint.</param>

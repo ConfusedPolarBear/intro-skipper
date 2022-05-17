@@ -12,13 +12,23 @@ public class Intro
     /// Initializes a new instance of the <see cref="Intro"/> class.
     /// </summary>
     /// <param name="episode">Episode.</param>
-    /// <param name="start">Intro start time.</param>
-    /// <param name="end">Intro end time.</param>
-    public Intro(Guid episode, double start, double end)
+    /// <param name="intro">Introduction time range.</param>
+    public Intro(Guid episode, TimeRange intro)
     {
         EpisodeId = episode;
-        IntroStart = start;
-        IntroEnd = end;
+        IntroStart = intro.Start;
+        IntroEnd = intro.End;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Intro"/> class.
+    /// </summary>
+    /// <param name="episode">Episode.</param>
+    public Intro(Guid episode)
+    {
+        EpisodeId = episode;
+        IntroStart = 0;
+        IntroEnd = 0;
     }
 
     /// <summary>
