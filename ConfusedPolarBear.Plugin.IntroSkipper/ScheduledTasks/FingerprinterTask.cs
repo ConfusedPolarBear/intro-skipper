@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Model.Tasks;
@@ -415,18 +416,7 @@ public class FingerprinterTask : IScheduledTask
     /// <returns>Number of bits that are equal to 1.</returns>
     public static int CountBits(uint number)
     {
-        var count = 0;
-
-        for (var i = 0; i < 32; i++)
-        {
-            var low = (number >> i) & 1;
-            if (low == 1)
-            {
-                count++;
-            }
-        }
-
-        return count;
+        return BitOperations.PopCount(number);
     }
 
     /// <summary>
