@@ -46,7 +46,15 @@ public class FingerprinterTask : IScheduledTask
 
     private readonly ILogger<FingerprinterTask> _logger;
 
+    /// <summary>
+    /// Lock which guards the fingerprint cache dictionary.
+    /// </summary>
     private readonly object _fingerprintCacheLock = new object();
+
+    /// <summary>
+    /// Lock which guards the shared dictionary of intros.
+    /// </summary>
+    private readonly object _introsLock = new object();
 
     /// <summary>
     /// Temporary fingerprint cache to speed up reanalysis.
@@ -95,7 +103,11 @@ public class FingerprinterTask : IScheduledTask
         var queue = Plugin.Instance!.AnalysisQueue;
         var totalProcessed = 0;
 
-        Parallel.ForEach(queue, (season) =>
+        // TODO: make configurable
+        var options = new ParallelOptions();
+        options.MaxDegreeOfParallelism = 2;
+
+        Parallel.ForEach(queue, options, (season) =>
         {
             var first = season.Value[0];
 
@@ -140,6 +152,8 @@ public class FingerprinterTask : IScheduledTask
         KeyValuePair<Guid, List<QueuedEpisode>> season,
         CancellationToken cancellationToken)
     {
+        var seasonIntros = new Dictionary<Guid, Intro>();
+
         var first = season.Value[0];
 
         /* Don't analyze specials or seasons with an insufficient number of episodes.
@@ -206,8 +220,8 @@ public class FingerprinterTask : IScheduledTask
 
                 var (lhsIntro, rhsIntro) = FingerprintEpisodes(lhs, rhs);
 
-                Plugin.Instance.Intros![lhsIntro.EpisodeId] = lhsIntro;
-                Plugin.Instance.Intros![rhsIntro.EpisodeId] = rhsIntro;
+                seasonIntros[lhsIntro.EpisodeId] = lhsIntro;
+                seasonIntros[rhsIntro.EpisodeId] = rhsIntro;
 
                 if (!lhsIntro.Valid)
                 {
@@ -223,7 +237,16 @@ public class FingerprinterTask : IScheduledTask
             }
         }
 
-        Plugin.Instance!.SaveTimestamps();
+        // Ensure only one thread at a time can update the shared intro dictionary.
+        lock (_introsLock)
+        {
+            foreach (var intro in seasonIntros)
+            {
+                Plugin.Instance!.Intros[intro.Key] = intro.Value;
+            }
+
+            Plugin.Instance!.SaveTimestamps();
+        }
 
         if (cancellationToken.IsCancellationRequested || !everFoundIntro)
         {
@@ -603,7 +626,10 @@ public class FingerprinterTask : IScheduledTask
                 oldDuration,
                 newDuration);
 
-            Plugin.Instance!.Intros[episode.EpisodeId] = newRhs;
+            lock (_introsLock)
+            {
+                Plugin.Instance!.Intros[episode.EpisodeId] = newRhs;
+            }
         }
     }
 
