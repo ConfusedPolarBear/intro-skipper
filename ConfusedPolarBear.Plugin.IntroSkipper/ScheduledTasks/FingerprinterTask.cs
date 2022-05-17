@@ -46,6 +46,14 @@ public class FingerprinterTask : IScheduledTask
 
     private readonly ILogger<FingerprinterTask> _logger;
 
+    private readonly object _fingerprintCacheLock = new object();
+
+    /// <summary>
+    /// Temporary fingerprint cache to speed up reanalysis.
+    /// Fingerprints are removed from this after a season is analyzed.
+    /// </summary>
+    private Dictionary<Guid, ReadOnlyCollection<uint>> _fingerprintCache;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
     /// </summary>
@@ -53,6 +61,7 @@ public class FingerprinterTask : IScheduledTask
     public FingerprinterTask(ILogger<FingerprinterTask> logger)
     {
         _logger = logger;
+        _fingerprintCache = new Dictionary<Guid, ReadOnlyCollection<uint>>();
     }
 
     /// <summary>
@@ -88,9 +97,38 @@ public class FingerprinterTask : IScheduledTask
 
         Parallel.ForEach(queue, (season) =>
         {
-            AnalyzeSeason(season, cancellationToken);
+            var first = season.Value[0];
 
-            // TODO: report progress on a per episode basis
+            try
+            {
+                AnalyzeSeason(season, cancellationToken);
+            }
+            catch (FingerprintException ex)
+            {
+                _logger.LogWarning(
+                    "Unable to analyze {Series} season {Season}: unable to fingerprint: {Ex}",
+                    first.SeriesName,
+                    first.SeasonNumber,
+                    ex);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(
+                    "Unable to analyze {Series} season {Season}: cache miss: {Ex}",
+                    first.SeriesName,
+                    first.SeasonNumber,
+                    ex);
+            }
+
+            // Clear this season's episodes from the temporary fingerprint cache.
+            lock (_fingerprintCacheLock)
+            {
+                foreach (var ep in season.Value)
+                {
+                    _fingerprintCache.Remove(ep.EpisodeId);
+                }
+            }
+
             totalProcessed += season.Value.Count;
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
         });
@@ -159,12 +197,6 @@ public class FingerprinterTask : IScheduledTask
                     lhs.EpisodeId,
                     rhs.EpisodeId);
 
-                /*
-                TODO: bring back
-                totalProcessed += 2;
-                progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
-                */
-
                 continue;
             }
 
@@ -189,14 +221,6 @@ public class FingerprinterTask : IScheduledTask
             {
                 _logger.LogError("Caught fingerprint error: {Ex}", ex);
             }
-            finally
-            {
-                /*
-                TODO: bring back
-                totalProcessed += 2;
-                progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
-                */
-            }
         }
 
         Plugin.Instance!.SaveTimestamps();
@@ -220,6 +244,13 @@ public class FingerprinterTask : IScheduledTask
     {
         var lhsFingerprint = FPCalc.Fingerprint(lhsEpisode);
         var rhsFingerprint = FPCalc.Fingerprint(rhsEpisode);
+
+        // Cache the fingerprints for quicker recall in the second pass (if one is needed).
+        lock (_fingerprintCacheLock)
+        {
+            _fingerprintCache[lhsEpisode.EpisodeId] = lhsFingerprint;
+            _fingerprintCache[rhsEpisode.EpisodeId] = rhsFingerprint;
+        }
 
         return FingerprintEpisodes(
             lhsEpisode.EpisodeId,
@@ -501,7 +532,6 @@ public class FingerprinterTask : IScheduledTask
         _logger.LogInformation("Reanalyzing {Count} episodes", totalCount - maxBucket.Count);
 
         // TODO: pick two episodes at random
-        // Cache the fingerprint of the first episode in the max bucket to save CPU cycles
         var lhs = episodes.Find(x => x.EpisodeId == maxBucket.Episodes[1]);
         if (lhs is null)
         {
@@ -509,17 +539,7 @@ public class FingerprinterTask : IScheduledTask
             return;
         }
 
-        ReadOnlyCollection<uint> lhsFingerprint;
-        try
-        {
-            lhsFingerprint = FPCalc.Fingerprint(lhs);
-        }
-        catch (FingerprintException ex)
-        {
-            _logger.LogWarning("Skipping reanalysis of {Show} season {Season}: {Exception}", lhs.SeriesName, lhs.SeasonNumber, ex);
-            return;
-        }
-
+        var lhsFingerprint = _fingerprintCache[lhs.EpisodeId];
         var lhsDuration = GetIntroDuration(lhs.EpisodeId);
         var (lowTargetDuration, highTargetDuration) = (
             lhsDuration - ReanalysisTolerance,
@@ -561,7 +581,7 @@ public class FingerprinterTask : IScheduledTask
                 lhs.EpisodeId,
                 lhsFingerprint,
                 episode.EpisodeId,
-                FPCalc.Fingerprint(episode));
+                _fingerprintCache[episode.EpisodeId]);
 
             // Ensure that the new intro duration is within the targeted bucket and longer than what was found previously.
             var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);
