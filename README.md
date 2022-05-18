@@ -1,5 +1,9 @@
 # Intro Skipper (ALPHA)
 
+<div align="center">
+<img alt="Plugin Banner" src="https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png" />
+</div>
+
 Analyzes the audio of television episodes to detect and skip over intros. Currently in alpha.
 
 Installing this plugin (along with a modified web interface) will result in a skip intro button displaying in the video player, like this:
