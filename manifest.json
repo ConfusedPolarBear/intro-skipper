@@ -6,6 +6,7 @@
         "description": "Analyzes the audio of television episodes and detects introduction sequences.",
         "owner": "ConfusedPolarBear",
         "category": "General",
+        "imageUrl": "https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png",
         "versions": [
             {
                 "version": "0.0.0.1",
