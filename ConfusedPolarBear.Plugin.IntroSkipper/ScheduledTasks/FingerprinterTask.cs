@@ -244,17 +244,19 @@ public class FingerprinterTask : IScheduledTask
             {
                 Plugin.Instance!.Intros[intro.Key] = intro.Value;
             }
+        }
 
+        // Only run the second pass if the user hasn't requested cancellation and we found an intro
+        if (!cancellationToken.IsCancellationRequested && everFoundIntro)
+        {
+            // Run a second pass over this season to remove outliers and fix episodes that failed in the first pass.
+            RunSecondPass(season.Value);
+        }
+
+        lock (_introsLock)
+        {
             Plugin.Instance!.SaveTimestamps();
         }
-
-        if (cancellationToken.IsCancellationRequested || !everFoundIntro)
-        {
-            return;
-        }
-
-        // Reanalyze this season to check for (and hopefully correct) outliers and failed episodes.
-        CheckSeason(season.Value);
     }
 
     /// <summary>
@@ -478,7 +480,7 @@ public class FingerprinterTask : IScheduledTask
     /// Looks for and fixes intro durations that were either not found or are statistical outliers.
     /// </summary>
     /// <param name="episodes">List of episodes that was just analyzed.</param>
-    private void CheckSeason(List<QueuedEpisode> episodes)
+    private void RunSecondPass(List<QueuedEpisode> episodes)
     {
         var intros = Plugin.Instance!.Intros;
 
@@ -539,9 +541,8 @@ public class FingerprinterTask : IScheduledTask
         }
 
         // Ensure that the most frequently seen bucket has a majority
-        // TODO: change to debug
         percentValid = (maxBucket.Count * 100) / validCount;
-        _logger.LogInformation(
+        _logger.LogDebug(
             "Intro duration {Duration} appeared {Frequency} times ({Percent}%)",
             maxDuration,
             maxBucket.Count,
@@ -552,21 +553,28 @@ public class FingerprinterTask : IScheduledTask
             return;
         }
 
-        _logger.LogInformation("Reanalyzing {Count} episodes", totalCount - maxBucket.Count);
+        _logger.LogDebug("Second pass is processing {Count} episodes", totalCount - maxBucket.Count);
 
-        // TODO: pick two episodes at random
-        var lhs = episodes.Find(x => x.EpisodeId == maxBucket.Episodes[1]);
-        if (lhs is null)
+        // Calculate a range of intro durations that are most likely to be correct.
+        var maxEpisode = episodes.Find(x => x.EpisodeId == maxBucket.Episodes[0]);
+        if (maxEpisode is null)
         {
-            _logger.LogError("Reanalysis failed to get episode from bucket");
+            _logger.LogError("Second pass failed to get episode from bucket");
             return;
         }
 
-        var lhsFingerprint = _fingerprintCache[lhs.EpisodeId];
-        var lhsDuration = GetIntroDuration(lhs.EpisodeId);
+        var lhsDuration = GetIntroDuration(maxEpisode.EpisodeId);
         var (lowTargetDuration, highTargetDuration) = (
             lhsDuration - ReanalysisTolerance,
             lhsDuration + ReanalysisTolerance);
+
+        // TODO: add limit and make it customizable
+        var count = maxBucket.Episodes.Count - 1;
+        var goodFingerprints = new List<ReadOnlyCollection<uint>>();
+        foreach (var id in maxBucket.Episodes)
+        {
+            goodFingerprints.Add(_fingerprintCache[id]);
+        }
 
         foreach (var episode in episodes)
         {
@@ -584,7 +592,7 @@ public class FingerprinterTask : IScheduledTask
             // If the episode's intro duration is close enough to the targeted bucket, leave it alone.
             if (Math.Abs(lhsDuration - oldDuration) <= ReanalysisTolerance)
             {
-                _logger.LogInformation(
+                _logger.LogDebug(
                     "Not reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
                     shortPath,
                     Math.Round(oldDuration, 2),
@@ -600,35 +608,40 @@ public class FingerprinterTask : IScheduledTask
                 maxDuration);
 
             // Analyze the episode again, ignoring whatever is returned for the known good episode.
-            var (_, newRhs) = FingerprintEpisodes(
-                lhs.EpisodeId,
-                lhsFingerprint,
-                episode.EpisodeId,
-                _fingerprintCache[episode.EpisodeId]);
-
-            // Ensure that the new intro duration is within the targeted bucket and longer than what was found previously.
-            var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);
-            if (newDuration < oldDuration || newDuration < lowTargetDuration || newDuration > highTargetDuration)
+            foreach (var lhsFingerprint in goodFingerprints)
             {
+                var (_, newRhs) = FingerprintEpisodes(
+                    maxEpisode.EpisodeId,
+                    lhsFingerprint,
+                    episode.EpisodeId,
+                    _fingerprintCache[episode.EpisodeId]);
+
+                // Ensure that the new intro duration is within the targeted bucket and longer than what was found previously.
+                var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);
+                if (newDuration < oldDuration || newDuration < lowTargetDuration || newDuration > highTargetDuration)
+                {
+                    _logger.LogDebug(
+                        "Ignoring reanalysis for {Path} (was {Initial}, now is {New})",
+                        shortPath,
+                        oldDuration,
+                        newDuration);
+
+                    continue;
+                }
+
+                // TODO: change to debug
                 _logger.LogInformation(
-                    "Ignoring reanalysis for {Path} (was {Initial}, now is {New})",
+                    "Reanalysis succeeded for {Path} (was {Initial}, now is {New})",
                     shortPath,
                     oldDuration,
                     newDuration);
 
-                continue;
-            }
+                lock (_introsLock)
+                {
+                    Plugin.Instance!.Intros[episode.EpisodeId] = newRhs;
+                }
 
-            // TODO: change to debug
-            _logger.LogInformation(
-                "Reanalysis succeeded for {Path} (was {Initial}, now is {New})",
-                shortPath,
-                oldDuration,
-                newDuration);
-
-            lock (_introsLock)
-            {
-                Plugin.Instance!.Intros[episode.EpisodeId] = newRhs;
+                break;
             }
         }
     }
