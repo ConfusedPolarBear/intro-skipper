@@ -15,6 +15,14 @@
                 "sourceUrl": "https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.0.1/intro-skipper-v0.0.1.zip",
                 "checksum": "4b0e4ae45d09ecd9014a4986f3095ce4",
                 "timestamp": "2022-05-10T07:57:11Z"
+            },
+            {
+                "version": "0.0.0.2",
+                "changelog": "- decrease audio fingerprint comparison time\n- analyze two seasons simultaneously",
+                "targetAbi": "10.8.0.0",
+                "sourceUrl": "https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.0.2/intro-skipper-v0.0.2.zip",
+		"checksum": "83c3e3618a6c37c2767e5bfea64ef515",
+		"timestamp": "2022-05-22T00:05:12Z"
             }
         ]
     }

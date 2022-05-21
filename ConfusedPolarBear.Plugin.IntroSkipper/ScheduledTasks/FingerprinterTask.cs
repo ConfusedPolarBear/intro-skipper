@@ -202,7 +202,7 @@ public class FingerprinterTask : IScheduledTask
                 break;
             }
 
-            // FIXME: add retry logic
+            // TODO: add retry logic
             var alreadyDone = Plugin.Instance!.Intros;
             if (alreadyDone.ContainsKey(lhs.EpisodeId) && alreadyDone.ContainsKey(rhs.EpisodeId))
             {
@@ -586,8 +586,11 @@ public class FingerprinterTask : IScheduledTask
 
             var oldDuration = GetIntroDuration(episode.EpisodeId);
 
-            // TODO: remove
-            var shortPath = episode.Path.Substring(episode.Path.Length - 40);
+            var shortPath = episode.Path;
+            if (shortPath.Length > 40)
+            {
+                shortPath = shortPath.Substring(episode.Path.Length - 40);
+            }
 
             // If the episode's intro duration is close enough to the targeted bucket, leave it alone.
             if (Math.Abs(lhsDuration - oldDuration) <= ReanalysisTolerance)
@@ -629,8 +632,7 @@ public class FingerprinterTask : IScheduledTask
                     continue;
                 }
 
-                // TODO: change to debug
-                _logger.LogInformation(
+                _logger.LogDebug(
                     "Reanalysis succeeded for {Path} (was {Initial}, now is {New})",
                     shortPath,
                     oldDuration,
