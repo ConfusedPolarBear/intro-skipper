@@ -15,11 +15,6 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public static class FPCalc
 {
     /// <summary>
-    /// Minimum fpcalc version that can be used.
-    /// </summary>
-    private static Version minimumFPCalcVersion = new Version(1, 4, 3);
-
-    /// <summary>
     /// Gets or sets the logger.
     /// </summary>
     public static ILogger? Logger { get; set; }
@@ -32,29 +27,9 @@ public static class FPCalc
     {
         try
         {
-            var rawVersion = GetOutput("-version", 2000).TrimEnd();
-            if (!rawVersion.StartsWith("fpcalc version", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            Logger?.LogDebug("raw fpcalc version: {Version}", rawVersion);
-
-            var version = Version.Parse(rawVersion.AsSpan(15));
-
-            Logger?.LogDebug("Found fpcalc version {Version}", version);
-
-            var okay = version >= minimumFPCalcVersion;
-
-            if (!okay)
-            {
-                Logger?.LogError(
-                    "installed fpcalc version of {Version} is too old (minimum is {Minimum})",
-                    version,
-                    minimumFPCalcVersion);
-            }
-
-            return okay;
+            var version = GetOutput("-version", 2000).TrimEnd();
+            Logger?.LogInformation("fpcalc -version: {Version}", version);
+            return version.StartsWith("fpcalc version", StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
