@@ -75,6 +75,7 @@
             // first and second episodes to fingerprint & compare
             var lhs = [];
             var rhs = [];
+            var diffCount = [];     // count of bits that are different
 
             // seasons grouped by show
             var shows = {};
@@ -91,8 +92,8 @@
             async function onLoad() {
                 shows = await getJson("Intros/Shows");
 
-                // add all show names to the selects
-                for (var show in shows) {
+                // sort all show names & add to the select
+                for (var show of shows) {
                     addItem(selectShow, show, show);
                 }
 
@@ -232,20 +233,24 @@
                 const y = e.clientY - rect.top;
                 const shift = Number(txtOffset.value);
 
-                let lTime, rTime;
+                let lTime, rTime, diffPos;
                 if (shift < 0) {
                     lTime = y * 0.128;
                     rTime = (y + shift) * 0.128;
+                    diffPos = y + shift;
                 } else {
                     lTime = (y - shift) * 0.128;
                     rTime = y * 0.128;
+                    diffPos = y - shift;
                 }
+
+                diffPos = Math.floor(diffPos);
 
                 lTime = Math.round(lTime * 100) / 100;
                 rTime = Math.round(rTime * 100) / 100;
 
                 const times = document.querySelector("span#timestamps");
-                times.textContent = lTime + ", " + rTime;
+                times.textContent = lTime + ", " + rTime + " similarity is " + diffCount[diffPos];
 
                 times.style.position = "relative";
                 times.style.left = "25px";
@@ -280,16 +285,21 @@
                     }
                 }
 
-                // if rendering the XOR of the fingerprints, log the result
+                // if rendering the XOR of the fingerprints, count how many bits are different at each timecode
                 if (xor) {
+                    diffCount = [];
+
                     for (let i = 0; i < fp.length; i++) {
                         let count = 0;
 
                         for (let j = 0; j < 32; j++) {
-                            count += (fp[i] & (1 << j));
+                            if (fp[i] & (1 << j)) {
+                                count++;
+                            }
                         }
 
-                        console.debug(count);
+                        // push the percentage similarity
+                        diffCount[i] = 100 - (count * 100) / 32;
                     }
                 }
 
