@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <title>Template</title>
 </head>
+
 <body>
-    <div id="TemplateConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div id="TemplateConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
+        data-require="emby-input,emby-button,emby-select,emby-checkbox">
         <div data-role="content">
             <div class="content-primary">
                 <form id="FingerprintConfigForm">
@@ -17,7 +20,8 @@
 
                         <div class="fieldDescription">
                             If checked, will store the fingerprints for all subsequently scanned files to disk.
-                            Caching fingerprints avoids having to re-run fpcalc on each file, at the expense of disk usage.
+                            Caching fingerprints avoids having to re-run fpcalc on each file, at the expense of disk
+                            usage.
                         </div>
                     </div>
 
@@ -44,16 +48,153 @@
                     </div>
                 </form>
             </div>
+
+            <div>
+                <h3>Troubleshooter</h3>
+                <p>Compare the audio fingerprint of two episodes.</p>
+
+                <select id="troubleshooterShow"></select>
+                <select id="troubleshooterSeason"></select>
+                <br />
+
+                <select id="troubleshooterEpisode1"></select>
+                <select id="troubleshooterEpisode2"></select>
+                <br />
+
+                <input type="number" min="-3000" max="3000" value="0" id="offset">
+                <br />
+                <br />
+
+                <canvas id="troubleshooter"></canvas>
+                <span id="timestamps"></span>
+            </div>
         </div>
-        <script type="text/javascript">
-            var TemplateConfig = {
-                pluginUniqueId: 'c83d86bb-a1e0-4c35-a113-e2101cf4ee6b'
-            };
+        <script>
+            const pluginId = "c83d86bb-a1e0-4c35-a113-e2101cf4ee6b";
+
+            // first and second episodes to fingerprint & compare
+            var lhs = [];
+            var rhs = [];
+
+            // seasons grouped by show
+            var shows = {};
+
+            // ui elements
+            const canvas = document.querySelector("canvas#troubleshooter");
+            const selectShow = document.querySelector("select#troubleshooterShow");
+            const selectSeason = document.querySelector("select#troubleshooterSeason");
+            const selectEpisode1 = document.querySelector("select#troubleshooterEpisode1");
+            const selectEpisode2 = document.querySelector("select#troubleshooterEpisode2");
+            const txtOffset = document.querySelector("input#offset");
+
+            // config page loaded, populate show names
+            async function onLoad() {
+                shows = await getJson("Intros/Shows");
+
+                // add all show names to the selects
+                for (var show in shows) {
+                    addItem(selectShow, show, show);
+                }
+
+                selectShow.value = "";
+            }
+
+            // show changed, populate seasons
+            async function showChanged() {
+                clearSelect(selectSeason);
+
+                // add all seasons from this show to the season select
+                for (var season of shows[selectShow.value]) {
+                    addItem(selectSeason, season, season);
+                }
+
+                selectSeason.value = "";
+            }
+
+            // season changed, reload all episodes
+            async function seasonChanged() {
+                const url = "Intros/Show/" + encodeURI(selectShow.value) + "/" + selectSeason.value;
+                const episodes = await getJson(url);
+
+                clearSelect(selectEpisode1);
+                clearSelect(selectEpisode2);
+
+                let i = 1;
+                for (let episode of episodes) {
+                    const strI = i.toLocaleString("en", { minimumIntegerDigits: 2, maximumFractionDigits: 0 });
+                    addItem(selectEpisode1, strI + ": " + episode.Name, episode.Id);
+                    addItem(selectEpisode2, strI + ": " + episode.Name, episode.Id);
+                    i++;
+                }
+
+                selectEpisode1.value = "";
+                selectEpisode2.value = "";
+            }
+
+            // episode changed, get fingerprints & calculate diff
+            async function episodeChanged() {
+                if (!selectEpisode1.value || !selectEpisode2.value) {
+                    return;
+                }
+
+                Dashboard.showLoadingMsg();
+
+                lhs = await getJson("Intros/Fingerprint/" + selectEpisode1.value);
+                rhs = await getJson("Intros/Fingerprint/" + selectEpisode2.value);
+
+                Dashboard.hideLoadingMsg();
+
+                refreshBounds();
+                renderTroubleshooter();
+            }
+
+            // adds an item to a dropdown
+            function addItem(select, text, value) {
+                let item = new Option(text, value);
+                select.add(item);
+            }
+
+            // clear a select of items
+            function clearSelect(select) {
+                let i, L = select.options.length - 1;
+                for (i = L; i >= 0; i--) {
+                    select.remove(i);
+                }
+            }
+
+            // re-render the troubleshooter with the latest offset
+            function renderTroubleshooter() {
+                paintFingerprintDiff(canvas, lhs, rhs, Number(offset.value));
+            }
+
+            // refresh the upper & lower bounds for the offset
+            function refreshBounds() {
+                const len = Math.min(lhs.length, rhs.length) - 1;
+                offset.min = -1 * len;
+                offset.max = len;
+            }
+
+            // make an authenticated GET to the server and parse the response as JSON
+            async function getJson(url) {
+                url = ApiClient.serverAddress() + "/" + url;
+
+                const reqInit = {
+                    headers: {
+                        "Authorization": "MediaBrowser Token=" + ApiClient.accessToken()
+                    }
+                };
+
+                return await
+                    fetch(url, reqInit)
+                        .then(r => {
+                            return r.json();
+                        });
+            }
 
             document.querySelector('#TemplateConfigPage')
-                .addEventListener('pageshow', function() {
+                .addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
-                    ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
 
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
@@ -64,22 +205,137 @@
                 });
 
             document.querySelector('#FingerprintConfigForm')
-                .addEventListener('submit', function() {
-                Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
-                    config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
+                .addEventListener('submit', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
 
-                    config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;
-                    config.HidePromptAdjustment = document.querySelector("#HidePromptAdjustment").value;
+                        config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;
+                        config.HidePromptAdjustment = document.querySelector("#HidePromptAdjustment").value;
 
-                    ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
-                        Dashboard.processPluginConfigurationUpdateResult(result);
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
                     });
+
+                    return false;
                 });
 
-                return false;
+            txtOffset.addEventListener("change", renderTroubleshooter);
+            selectShow.addEventListener("change", showChanged);
+            selectSeason.addEventListener("change", seasonChanged);
+            selectEpisode1.addEventListener("change", episodeChanged);
+            selectEpisode2.addEventListener("change", episodeChanged);
+
+            canvas.addEventListener("mousemove", (e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const shift = Number(txtOffset.value);
+
+                let lTime, rTime;
+                if (shift < 0) {
+                    lTime = y * 0.128;
+                    rTime = (y + shift) * 0.128;
+                } else {
+                    lTime = (y - shift) * 0.128;
+                    rTime = y * 0.128;
+                }
+
+                lTime = Math.round(lTime * 100) / 100;
+                rTime = Math.round(rTime * 100) / 100;
+
+                const times = document.querySelector("span#timestamps");
+                times.textContent = lTime + ", " + rTime;
+
+                times.style.position = "relative";
+                times.style.left = "25px";
+                times.style.top = (-1 * rect.height + y).toString() + "px";
             });
+
+            // TODO: fix
+            setTimeout(onLoad, 250);
+        </script>
+
+        <script>
+            // MIT licensed from https://github.com/dnknth/acoustid-match/blob/ffbf21d8c53c40d3b3b4c92238c35846545d3cd7/fingerprints/static/fingerprints/fputils.js
+            function renderFingerprintData(ctx, fp, xor = false) {
+                const pixels = ctx.createImageData(32, fp.length);
+                let idx = 0;
+
+                for (let i = 0; i < fp.length; i++) {
+                    for (let j = 0; j < 32; j++) {
+                        if (fp[i] & (1 << j)) {
+                            pixels.data[idx + 0] = 255;
+                            pixels.data[idx + 1] = 255;
+                            pixels.data[idx + 2] = 255;
+
+                        } else {
+                            pixels.data[idx + 0] = 0;
+                            pixels.data[idx + 1] = 0;
+                            pixels.data[idx + 2] = 0;
+                        }
+
+                        pixels.data[idx + 3] = 255;
+                        idx += 4;
+                    }
+                }
+
+                // if rendering the XOR of the fingerprints, log the result
+                if (xor) {
+                    for (let i = 0; i < fp.length; i++) {
+                        let count = 0;
+
+                        for (let j = 0; j < 32; j++) {
+                            count += (fp[i] & (1 << j));
+                        }
+
+                        console.debug(count);
+                    }
+                }
+
+                return pixels;
+            }
+
+            function paintFingerprint(canvas, fp) {
+                const ctx = canvas.getContext('2d');
+                const pixels = renderFingerprintData(ctx, fp);
+                canvas.width = pixels.width;
+                canvas.height = pixels.height;
+                ctx.putImageData(pixels, 0, 0);
+            }
+
+            function paintFingerprintDiff(canvas, fp1, fp2, offset) {
+                let leftOffset = 0, rightOffset = 0;
+                if (offset < 0) {
+                    leftOffset -= offset;
+                } else {
+                    rightOffset += offset;
+                }
+
+                let fpDiff = [];
+                fpDiff.length = Math.min(fp1.length, fp2.length) - Math.abs(offset);
+                for (let i = 0; i < fpDiff.length; i++) {
+                    fpDiff[i] = fp1[i + leftOffset] ^ fp2[i + rightOffset];
+                }
+
+                const ctx = canvas.getContext('2d');
+                const pixels1 = renderFingerprintData(ctx, fp1);
+                const pixels2 = renderFingerprintData(ctx, fp2);
+                const pixelsDiff = renderFingerprintData(ctx, fpDiff, true);
+
+                canvas.width = pixels1.width + 2 + pixels2.width + 2 + pixelsDiff.width;
+                canvas.height = Math.max(pixels1.height, pixels2.height) + Math.abs(offset);
+
+                ctx.rect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#C5C5C5";
+                ctx.fill();
+
+                ctx.putImageData(pixels1, 0, rightOffset);
+                ctx.putImageData(pixels2, pixels1.width + 2, leftOffset);
+                ctx.putImageData(pixelsDiff, pixels1.width + 2 + pixels2.width + 2, Math.abs(offset));
+            }
         </script>
     </div>
 </body>
+
 </html>

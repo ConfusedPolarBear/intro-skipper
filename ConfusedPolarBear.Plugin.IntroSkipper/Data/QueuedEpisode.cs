@@ -28,6 +28,11 @@ public class QueuedEpisode
     public string Path { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the name of the episode.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the seconds of media file to fingerprint.
     /// </summary>
     public int FingerprintDuration { get; set; }

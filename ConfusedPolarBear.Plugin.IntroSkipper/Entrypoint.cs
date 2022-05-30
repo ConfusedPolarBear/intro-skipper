@@ -160,6 +160,7 @@ public class Entrypoint : IServerEntryPoint
                 SeriesName = episode.SeriesName,
                 SeasonNumber = episode.AiredSeasonNumber ?? 0,
                 EpisodeId = episode.Id,
+                Name = episode.Name,
                 Path = episode.Path,
                 FingerprintDuration = Convert.ToInt32(duration)
             });
