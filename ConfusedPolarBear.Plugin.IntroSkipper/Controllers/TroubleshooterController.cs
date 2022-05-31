@@ -11,7 +11,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper.Controllers;
 /// <summary>
 /// Intro skipper troubleshooting controller. Allows browsing fingerprints on a per episode basis.
 /// </summary>
-[Authorize]
+[Authorize(Policy = "RequiresElevation")]
 [ApiController]
 [Produces(MediaTypeNames.Application.Json)]
 [Route("Intros")]

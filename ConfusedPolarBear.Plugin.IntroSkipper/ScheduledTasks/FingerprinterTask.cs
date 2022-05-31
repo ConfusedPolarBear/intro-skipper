@@ -21,13 +21,14 @@ public class FingerprinterTask : IScheduledTask
 
     /// <summary>
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
+    /// 8 bits means the audio must be at least 75% similar (1 - 8 / 32).
     /// </summary>
-    private const double MaximumDifferences = 3;
+    private const double MaximumDifferences = 8;
 
     /// <summary>
     /// Maximum time (in seconds) permitted between timestamps before they are considered non-contiguous.
     /// </summary>
-    private const double MaximumDistance = 3.25;
+    private const double MaximumDistance = 2.5;
 
     /// <summary>
     /// Seconds of audio in one fingerprint point. This value is defined by the Chromaprint library and should not be changed.
@@ -192,7 +193,7 @@ public class FingerprinterTask : IScheduledTask
             var rhs = episodes[i + 1];
 
             // TODO: make configurable
-            if (!everFoundIntro && failures >= 6)
+            if (!everFoundIntro && failures >= 20)
             {
                 _logger.LogWarning(
                     "Failed to find an introduction in {Series} season {Season}",
@@ -312,7 +313,7 @@ public class FingerprinterTask : IScheduledTask
         // If no valid ranges were found, re-analyze the episodes considering all possible shifts.
         if (lhsRanges.Count == 0)
         {
-            _logger.LogDebug("quick scan unsuccessful, falling back to full scan");
+            _logger.LogDebug("quick scan unsuccessful, falling back to full scan (±{Limit})", limit);
 
             (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
             lhsRanges.AddRange(lhsContiguous);

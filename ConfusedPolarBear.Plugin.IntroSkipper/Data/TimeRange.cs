@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
+// Supress CA1036: Override methods on comparable types.
+#pragma warning disable CA1036
+
 /// <summary>
 /// Range of contiguous time.
 /// </summary>
@@ -54,97 +57,22 @@ public class TimeRange : IComparable
     public double Duration => End - Start;
 
     /// <summary>
-    /// Comparison operator.
+    /// Compare TimeRange durations.
     /// </summary>
-    /// <param name="left">Left TimeRange.</param>
-    /// <param name="right">Right TimeRange.</param>
-    public static bool operator ==(TimeRange left, TimeRange right)
-    {
-        return left.Equals(right);
-    }
-
-    /// <summary>
-    /// Comparison operator.
-    /// </summary>
-    /// <param name="left">Left TimeRange.</param>
-    /// <param name="right">Right TimeRange.</param>
-    public static bool operator !=(TimeRange left, TimeRange right)
-    {
-        return !left.Equals(right);
-    }
-
-    /// <summary>
-    /// Comparison operator.
-    /// </summary>
-    /// <param name="left">Left TimeRange.</param>
-    /// <param name="right">Right TimeRange.</param>
-    public static bool operator <=(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) <= 0;
-    }
-
-    /// <summary>
-    /// Comparison operator.
-    /// </summary>
-    /// <param name="left">Left TimeRange.</param>
-    /// <param name="right">Right TimeRange.</param>
-    public static bool operator <(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) < 0;
-    }
-
-    /// <summary>
-    /// Comparison operator.
-    /// </summary>
-    /// <param name="left">Left TimeRange.</param>
-    /// <param name="right">Right TimeRange.</param>
-    public static bool operator >=(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) >= 0;
-    }
-
-    /// <summary>
-    /// Comparison operator.
-    /// </summary>
-    /// <param name="left">Left TimeRange.</param>
-    /// <param name="right">Right TimeRange.</param>
-    public static bool operator >(TimeRange left, TimeRange right)
-    {
-        return left.CompareTo(right) > 0;
-    }
-
-    /// <summary>
-    /// Compares this TimeRange to another TimeRange.
-    /// </summary>
-    /// <param name="obj">Other object to compare against.</param>
-    /// <returns>A signed integer that indicates whether this instance precedes, follows, or appears in the same position in the sort order as the obj parameter.</returns>
+    /// <param name="obj">Object to compare with.</param>
+    /// <returns>int.</returns>
     public int CompareTo(object? obj)
     {
-        if (obj is not TimeRange tr)
+        if (!(obj is TimeRange tr))
         {
-            return 0;
+            throw new ArgumentException("obj must be a TimeRange");
         }
 
-        return this.Duration.CompareTo(tr.Duration);
-    }
-
-    /// <inheritdoc/>
-    public override bool Equals(object? obj)
-    {
-        if (obj is null || obj is not TimeRange tr)
-        {
-            return false;
-        }
-
-        return this.Start == tr.Start && this.Duration == tr.Duration;
-    }
-
-    /// <inheritdoc/>
-    public override int GetHashCode()
-    {
-        return this.Start.GetHashCode() + this.Duration.GetHashCode();
+        return tr.Duration.CompareTo(Duration);
     }
 }
+
+#pragma warning restore CA1036
 
 /// <summary>
 /// Time range helpers.
@@ -167,7 +95,7 @@ public static class TimeRangeHelpers
         Array.Sort(times);
 
         var ranges = new List<TimeRange>();
-        var currentRange = new TimeRange(times[0], 0);
+        var currentRange = new TimeRange(times[0], times[0]);
 
         // For all provided timestamps, check if it is contiguous with its neighbor.
         for (var i = 0; i < times.Length - 1; i++)
@@ -182,7 +110,7 @@ public static class TimeRangeHelpers
             }
 
             ranges.Add(new TimeRange(currentRange));
-            currentRange.Start = next;
+            currentRange = new TimeRange(next, next);
         }
 
         // Find and return the longest contiguous range.
