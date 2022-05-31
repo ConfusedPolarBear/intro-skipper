@@ -3,16 +3,16 @@ using System;
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
-/// Episode name and internal ID as returned by the troubleshooter.
+/// Episode name and internal ID as returned by the visualization controller.
 /// </summary>
-public class TroubleshooterEpisode
+public class EpisodeVisualization
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="TroubleshooterEpisode"/> class.
+    /// Initializes a new instance of the <see cref="EpisodeVisualization"/> class.
     /// </summary>
     /// <param name="id">Episode id.</param>
     /// <param name="name">Episode name.</param>
-    public TroubleshooterEpisode(Guid id, string name)
+    public EpisodeVisualization(Guid id, string name)
     {
         Id = id;
         Name = name;

@@ -9,18 +9,18 @@ using Microsoft.AspNetCore.Mvc;
 namespace ConfusedPolarBear.Plugin.IntroSkipper.Controllers;
 
 /// <summary>
-/// Intro skipper troubleshooting controller. Allows browsing fingerprints on a per episode basis.
+/// Audio fingerprint visualization controller. Allows browsing fingerprints on a per episode basis.
 /// </summary>
 [Authorize(Policy = "RequiresElevation")]
 [ApiController]
 [Produces(MediaTypeNames.Application.Json)]
 [Route("Intros")]
-public class TroubleshooterController : ControllerBase
+public class VisualizationController : ControllerBase
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="TroubleshooterController"/> class.
+    /// Initializes a new instance of the <see cref="VisualizationController"/> class.
     /// </summary>
-    public TroubleshooterController()
+    public VisualizationController()
     {
     }
 
@@ -60,11 +60,11 @@ public class TroubleshooterController : ControllerBase
     /// <param name="season">Season name.</param>
     /// <returns>List of episode titles.</returns>
     [HttpGet("Show/{Series}/{Season}")]
-    public ActionResult<List<TroubleshooterEpisode>> GetSeasonEpisodes(
+    public ActionResult<List<EpisodeVisualization>> GetSeasonEpisodes(
         [FromRoute] string series,
         [FromRoute] string season)
     {
-        var episodes = new List<TroubleshooterEpisode>();
+        var episodes = new List<EpisodeVisualization>();
 
         foreach (var queuedEpisodes in Plugin.Instance!.AnalysisQueue)
         {
@@ -81,7 +81,7 @@ public class TroubleshooterController : ControllerBase
 
             foreach (var queuedEpisode in queuedEpisodes.Value)
             {
-                episodes.Add(new TroubleshooterEpisode(queuedEpisode.EpisodeId, queuedEpisode.Name));
+                episodes.Add(new EpisodeVisualization(queuedEpisode.EpisodeId, queuedEpisode.Name));
             }
         }
 
