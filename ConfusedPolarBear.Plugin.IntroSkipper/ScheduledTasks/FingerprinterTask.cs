@@ -23,12 +23,12 @@ public class FingerprinterTask : IScheduledTask
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
     /// 8 bits means the audio must be at least 75% similar (1 - 8 / 32).
     /// </summary>
-    private const double MaximumDifferences = 8;
+    private const double MaximumDifferences = 6;
 
     /// <summary>
     /// Maximum time (in seconds) permitted between timestamps before they are considered non-contiguous.
     /// </summary>
-    private const double MaximumDistance = 2.5;
+    private const double MaximumDistance = 3.5;
 
     /// <summary>
     /// Seconds of audio in one fingerprint point. This value is defined by the Chromaprint library and should not be changed.
@@ -457,7 +457,7 @@ public class FingerprinterTask : IScheduledTask
             lContiguous.End -= 2 * MaximumDistance;
             rContiguous.End -= 2 * MaximumDistance;
         }
-        else if (lContiguous.Duration >= 35)
+        else if (lContiguous.Duration >= 30)
         {
             lContiguous.End -= MaximumDistance;
             rContiguous.End -= MaximumDistance;
