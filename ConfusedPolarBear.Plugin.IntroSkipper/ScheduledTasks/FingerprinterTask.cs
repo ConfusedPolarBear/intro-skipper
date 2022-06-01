@@ -21,7 +21,7 @@ public class FingerprinterTask : IScheduledTask
 
     /// <summary>
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
-    /// 8 bits means the audio must be at least 75% similar (1 - 8 / 32).
+    /// 6 bits means the audio must be at least 81% similar (1 - 6 / 32).
     /// </summary>
     private const double MaximumDifferences = 6;
 

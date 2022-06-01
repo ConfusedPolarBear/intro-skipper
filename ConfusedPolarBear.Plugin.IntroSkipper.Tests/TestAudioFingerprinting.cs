@@ -70,11 +70,11 @@ public class TestFPCalc
 
         Assert.True(lhs.Valid);
         Assert.Equal(0, lhs.IntroStart);
-        Assert.Equal(17.92, lhs.IntroEnd);
+        Assert.Equal(17.792, lhs.IntroEnd);
 
         Assert.True(rhs.Valid);
         Assert.Equal(0, rhs.IntroStart);
-        Assert.Equal(22.784, rhs.IntroEnd);
+        Assert.Equal(22.656, rhs.IntroEnd);
     }
 
     private QueuedEpisode queueEpisode(string path)
