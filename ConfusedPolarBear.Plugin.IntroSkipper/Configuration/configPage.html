@@ -55,7 +55,7 @@
                 <p>
                     Interactively compare the audio fingerprints of two episodes. <br />
                     The blue and red bar to the right of the fingerprint diff turns blue
-                    when the corresponding fingerprint points are at least 75% similar.
+                    when the corresponding fingerprint points are at least 80% similar.
                 </p>
                 <table>
                     <thead>
@@ -103,7 +103,10 @@
                 <br />
 
                 <canvas id="troubleshooter"></canvas>
-                <span id="timestamps"></span>
+                <span id="timestampContainer">
+                    <span id="timestamps"></span> <br />
+                    <span id="intros"></span>
+                </span>
             </details>
         </div>
         <script>
@@ -111,9 +114,9 @@
             var lhs = [];
             var rhs = [];
 
-            // fingerprint point comparison & miminum similarity threshold
+            // fingerprint point comparison & miminum similarity threshold (at most 6 bits out of 32 can be different)
             var fprDiffs = [];
-            var fprDiffMinimum = 75.0;
+            var fprDiffMinimum = (1 - 6 / 32) * 100;
 
             // seasons grouped by show
             var shows = {};
@@ -125,6 +128,7 @@
             const selectEpisode1 = document.querySelector("select#troubleshooterEpisode1");
             const selectEpisode2 = document.querySelector("select#troubleshooterEpisode2");
             const txtOffset = document.querySelector("input#offset");
+            const timeContainer = document.querySelector("span#timestampContainer");
 
             // config page loaded, populate show names
             async function onLoad() {
@@ -210,6 +214,7 @@
             // re-render the troubleshooter with the latest offset
             function renderTroubleshooter() {
                 paintFingerprintDiff(canvas, lhs, rhs, Number(offset.value));
+                findIntros();
             }
 
             // refresh the upper & lower bounds for the offset
@@ -288,6 +293,80 @@
                 e.preventDefault();
             }
 
+            function findIntros() {
+                let times = [];
+
+                // get the times of all similar fingerprint points
+                for (var i in fprDiffs) {
+                    if (fprDiffs[i] > fprDiffMinimum) {
+                        times.push(i * 0.128);
+                    }
+                }
+
+                // always close the last range
+                times.push(Number.MAX_VALUE);
+
+                let last = times[0];
+                let start = last;
+                let end = last;
+                var ranges = [];
+
+                for (var t of times) {
+                    const diff = t - last;
+
+                    if (diff <= 3.5) {
+                        end = t;
+                        last = t;
+                        continue;
+                    }
+
+                    const dur = Math.round(end - start);
+                    if (dur >= 15) {
+                        ranges.push({
+                            "start": start,
+                            "end": end,
+                            "duration": dur
+                        });
+                    }
+
+                    start = t;
+                    end = t;
+                    last = t;
+                }
+
+                const introsLog = document.querySelector("span#intros");
+                introsLog.style.position = "relative";
+                introsLog.style.left = "115px";
+                introsLog.innerHTML = "";
+
+                const offset = Number(txtOffset.value) * 0.128;
+                for (let r of ranges) {
+                    let lStart, lEnd, rStart, rEnd;
+
+                    if (offset < 0) {
+                        // negative offset, the diff is aligned with the RHS
+                        lStart = r.start - offset;
+                        lEnd = r.end - offset;
+                        rStart = r.start;
+                        rEnd = r.end;
+
+                    } else {
+                        // positive offset, the diff is aligned with the LHS
+                        lStart = r.start;
+                        lEnd = r.end;
+                        rStart = r.start + offset;
+                        rEnd = r.end + offset;
+                    }
+
+                    const lTitle = selectEpisode1.options[selectEpisode1.selectedIndex].text;
+                    const rTitle = selectEpisode2.options[selectEpisode2.selectedIndex].text;
+                    introsLog.innerHTML += "<span>" + lTitle + ": " +
+                        secondsToString(lStart) + " - " + secondsToString(lEnd) + "</span> <br />";
+                    introsLog.innerHTML += "<span>" + rTitle + ": " +
+                        secondsToString(rStart) + " - " + secondsToString(rEnd) + "</span> <br />";
+                }
+            }
+
             // converts seconds to a readable timestamp (i.e. 127 becomes "02:07").
             function secondsToString(seconds) {
                 return new Date(seconds * 1000).toISOString().substr(14, 5);
@@ -351,10 +430,10 @@
                 const times = document.querySelector("span#timestamps");
 
                 if (!diff) {
-                    times.style.display = "none";
+                    timeContainer.style.display = "none";
                     return;
                 } else {
-                    times.style.display = "unset";
+                    timeContainer.style.display = "unset";
                 }
 
                 // LHS timestamp, RHS timestamp, percent similarity
@@ -363,9 +442,9 @@
                     secondsToString(rTime) + ", " +
                     Math.round(diff) + "%";
 
-                times.style.position = "relative";
-                times.style.left = "25px";
-                times.style.top = (-1 * rect.height + y).toString() + "px";
+                timeContainer.style.position = "relative";
+                timeContainer.style.left = "25px";
+                timeContainer.style.top = (-1 * rect.height + y).toString() + "px";
             });
 
             // TODO: fix
