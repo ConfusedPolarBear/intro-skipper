@@ -122,13 +122,13 @@
             var shows = {};
 
             // ui elements
-            const canvas = document.querySelector("canvas#troubleshooter");
-            const selectShow = document.querySelector("select#troubleshooterShow");
-            const selectSeason = document.querySelector("select#troubleshooterSeason");
-            const selectEpisode1 = document.querySelector("select#troubleshooterEpisode1");
-            const selectEpisode2 = document.querySelector("select#troubleshooterEpisode2");
-            const txtOffset = document.querySelector("input#offset");
-            const timeContainer = document.querySelector("span#timestampContainer");
+            var canvas = document.querySelector("canvas#troubleshooter");
+            var selectShow = document.querySelector("select#troubleshooterShow");
+            var selectSeason = document.querySelector("select#troubleshooterSeason");
+            var selectEpisode1 = document.querySelector("select#troubleshooterEpisode1");
+            var selectEpisode2 = document.querySelector("select#troubleshooterEpisode2");
+            var txtOffset = document.querySelector("input#offset");
+            var timeContainer = document.querySelector("span#timestampContainer");
 
             // config page loaded, populate show names
             async function onLoad() {
@@ -297,7 +297,7 @@
                 let times = [];
 
                 // get the times of all similar fingerprint points
-                for (var i in fprDiffs) {
+                for (let i in fprDiffs) {
                     if (fprDiffs[i] > fprDiffMinimum) {
                         times.push(i * 0.128);
                     }
@@ -309,9 +309,9 @@
                 let last = times[0];
                 let start = last;
                 let end = last;
-                var ranges = [];
+                let ranges = [];
 
-                for (var t of times) {
+                for (let t of times) {
                     const diff = t - last;
 
                     if (diff <= 3.5) {
@@ -427,14 +427,14 @@
 
                 const diff = fprDiffs[Math.floor(diffPos)];
 
-                const times = document.querySelector("span#timestamps");
-
                 if (!diff) {
                     timeContainer.style.display = "none";
                     return;
                 } else {
                     timeContainer.style.display = "unset";
                 }
+
+                const times = document.querySelector("span#timestamps");
 
                 // LHS timestamp, RHS timestamp, percent similarity
                 times.textContent =
@@ -545,7 +545,7 @@
 
                 // draw the fingerprint diff similarity indicator
                 // https://davidmathlogic.com/colorblind/#%23EA3535-%232C92EF
-                for (var i in fprDiffs) {
+                for (let i in fprDiffs) {
                     const j = Number(i);
                     const y = Math.abs(offset) + j;
                     ctx.fillStyle = fprDiffs[j] >= fprDiffMinimum ? "#2C92EF" : "#EA3535";
