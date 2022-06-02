@@ -129,6 +129,7 @@
             var selectEpisode2 = document.querySelector("select#troubleshooterEpisode2");
             var txtOffset = document.querySelector("input#offset");
             var timeContainer = document.querySelector("span#timestampContainer");
+            var windowHashInterval = 0;
 
             // config page loaded, populate show names
             async function onLoad() {
@@ -367,6 +368,17 @@
                 }
             }
 
+            // check that the user is still on the configuration page
+            function checkWindowHash() {
+                if (location.hash === "#!/configurationpage?name=Intro%20Skipper") {
+                    return;
+                }
+
+                console.debug("navigated away from intro skipper configuration page");
+                document.removeEventListener("keydown", keyDown);
+                clearInterval(windowHashInterval);
+            }
+
             // converts seconds to a readable timestamp (i.e. 127 becomes "02:07").
             function secondsToString(seconds) {
                 return new Date(seconds * 1000).toISOString().substr(14, 5);
@@ -386,7 +398,7 @@
                 });
 
             document.querySelector('#FingerprintConfigForm')
-                .addEventListener('submit', function () {
+                .addEventListener('submit', function (e) {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
@@ -399,6 +411,7 @@
                         });
                     });
 
+                    e.preventDefault();
                     return false;
                 });
 
@@ -407,7 +420,8 @@
             selectSeason.addEventListener("change", seasonChanged);
             selectEpisode1.addEventListener("change", episodeChanged);
             selectEpisode2.addEventListener("change", episodeChanged);
-            document.addEventListener("keydown", keyDown);      // TODO: remove document wide listener when the user exits the page
+            document.addEventListener("keydown", keyDown);
+            windowHashInterval = setInterval(checkWindowHash, 2500);
 
             canvas.addEventListener("mousemove", (e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -500,6 +514,10 @@
             }
 
             function paintFingerprintDiff(canvas, fp1, fp2, offset) {
+                if (fp1.length == 0) {
+                    return;
+                }
+
                 let leftOffset = 0, rightOffset = 0;
                 if (offset < 0) {
                     leftOffset -= offset;
