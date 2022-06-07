@@ -50,4 +50,18 @@ public class SkipIntroController : ControllerBase
 
         return intro;
     }
+
+    /// <summary>
+    /// Erases all previously discovered introduction timestamps.
+    /// </summary>
+    /// <response code="204">Operation successful.</response>
+    /// <returns>No content.</returns>
+    [Authorize(Policy = "RequiresElevation")]
+    [HttpPost("Intros/EraseTimestamps")]
+    public ActionResult ResetIntroTimestamps()
+    {
+        Plugin.Instance!.Intros.Clear();
+        Plugin.Instance!.SaveTimestamps();
+        return NoContent();
+    }
 }

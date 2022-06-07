@@ -35,7 +35,7 @@
 
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="AnInteger">Hide skip prompt at</label>
-                        <input id="HidePromptAdjustment" type="number" is="emby-input" min="0" />
+                        <input id="HidePromptAdjustment" type="number" is="emby-input" min="2" />
                         <div class="fieldDescription">
                             Seconds after the introduction starts to hide the skip prompt at.
                         </div>
@@ -45,6 +45,16 @@
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                             <span>Save</span>
                         </button>
+                        <br />
+
+                        <button id="btnEraseTimestamps" is="emby-button" class="raised block emby-button">
+                            <span>Erase introduction timestamps</span>
+                        </button>
+
+                        <p>
+                            Erasing introduction timestamps is only necessary after upgrading the plugin if specifically
+                            requested to do so in the plugin's changelog.
+                        </p>
                     </div>
                 </form>
             </div>
@@ -129,6 +139,7 @@
             var selectEpisode2 = document.querySelector("select#troubleshooterEpisode2");
             var txtOffset = document.querySelector("input#offset");
             var timeContainer = document.querySelector("span#timestampContainer");
+            var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
             var windowHashInterval = 0;
 
             // config page loaded, populate show names
@@ -226,10 +237,11 @@
             }
 
             // make an authenticated GET to the server and parse the response as JSON
-            async function getJson(url) {
+            async function getJson(url, method = "GET") {
                 url = ApiClient.serverAddress() + "/" + url;
 
                 const reqInit = {
+                    method: method,
                     headers: {
                         "Authorization": "MediaBrowser Token=" + ApiClient.accessToken()
                     }
@@ -370,7 +382,8 @@
 
             // check that the user is still on the configuration page
             function checkWindowHash() {
-                if (location.hash === "#!/configurationpage?name=Intro%20Skipper") {
+                const h = location.hash;
+                if (h === "#!/configurationpage?name=Intro%20Skipper" || h.includes("#!/dialog")) {
                     return;
                 }
 
@@ -420,6 +433,21 @@
             selectSeason.addEventListener("change", seasonChanged);
             selectEpisode1.addEventListener("change", episodeChanged);
             selectEpisode2.addEventListener("change", episodeChanged);
+            btnEraseTimestamps.addEventListener("click", (e) => {
+                Dashboard.confirm(
+                    "Are you sure you want to erase all previously discovered introduction timestamps?",
+                    "Confirm timestamp erasure",
+                    (result) => {
+                        if (!result) {
+                            return;
+                        }
+
+                        // reset all intro timestamps on the server so a new fingerprint comparison algorithm can be tested
+                        getJson("Intros/EraseTimestamps", "POST");
+                    });
+
+                e.preventDefault();
+            });
             document.addEventListener("keydown", keyDown);
             windowHashInterval = setInterval(checkWindowHash, 2500);
 
