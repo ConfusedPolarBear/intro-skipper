@@ -14,6 +14,19 @@
                 <form id="FingerprintConfigForm">
                     <div class="checkboxContainer checkboxContainer-withDescription">
                         <label class="emby-checkbox-label">
+                            <input id="AutoSkip" type="checkbox" is="emby-checkbox" />
+                            <span>Automatically skip intros</span>
+                        </label>
+
+                        <div class="fieldDescription">
+                            If checked, intros will be automatically skipped. Will only work if web
+                            sockets are configured correctly.<br />
+                            <strong>Jellyfin must be restarted after changing this setting.</strong>
+                        </div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
                             <input id="CacheFingerprints" type="checkbox" is="emby-checkbox" />
                             <span>Cache fingerprints to disk</span>
                         </label>
@@ -34,7 +47,7 @@
                     </div>
 
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Hide skip prompt at</label>
+                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Hide skip prompt after</label>
                         <input id="HidePromptAdjustment" type="number" is="emby-input" min="2" />
                         <div class="fieldDescription">
                             Seconds after the introduction starts to hide the skip prompt at.
@@ -53,7 +66,7 @@
 
                         <p>
                             Erasing introduction timestamps is only necessary after upgrading the plugin if specifically
-                            requested to do so in the plugin's changelog.
+                            requested to do so in the plugin's changelog. After the timestamps are erased, run the Analyze episodes scheduled task to re-analyze all media on the server.
                         </p>
                     </div>
                 </form>
@@ -401,6 +414,7 @@
                 .addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
+                        document.querySelector('#AutoSkip').checked = config.AutoSkip;
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
 
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
@@ -414,6 +428,7 @@
                 .addEventListener('submit', function (e) {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
+                        config.AutoSkip = document.querySelector('#AutoSkip').checked;
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
 
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;

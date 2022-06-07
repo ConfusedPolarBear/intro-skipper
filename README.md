@@ -10,7 +10,9 @@ Installing this plugin (along with a modified web interface and `fpcalc`) will r
 
 ![Skip intro button](images/skip-button.png)
 
-This plugin **will not work** until both the modified web interface and `fpcalc` are installed. The easiest way to do this is to follow the steps below.
+If you use Jellyfin clients that do not use the web interface provided by the server, the plugin can be configured to automatically skip intros.
+
+This plugin **will not work** without installing `fpcalc`. The easiest way to do this is to follow the steps below.
 
 ## Introduction requirements
 

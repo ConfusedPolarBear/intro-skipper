@@ -20,6 +20,11 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool CacheFingerprints { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether introductions should be automatically skipped.
+    /// </summary>
+    public bool AutoSkip { get; set; }
+
+    /// <summary>
     /// Gets or sets the seconds before the intro starts to show the skip prompt at.
     /// </summary>
     public int ShowPromptAdjustment { get; set; } = 5;
