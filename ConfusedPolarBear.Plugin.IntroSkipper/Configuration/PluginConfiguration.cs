@@ -17,7 +17,7 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>
     /// Gets or sets a value indicating whether the output of fpcalc should be cached to the filesystem.
     /// </summary>
-    public bool CacheFingerprints { get; set; }
+    public bool CacheFingerprints { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether introductions should be automatically skipped.
