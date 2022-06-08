@@ -149,17 +149,30 @@ public class AutoSkip : IServerEntryPoint
                 continue;
             }
 
+            // Notify the user that an introduction is being skipped for them.
+            _sessionManager.SendMessageCommand(
+                session.Id,
+                session.Id,
+                new MessageCommand()
+                {
+                    Text = "Automatically skipped intro",
+                    TimeoutMs = 2000,
+                },
+                CancellationToken.None);
+
             // Send the seek command
             _logger.LogDebug("Sending seek command to {Session}", deviceId);
 
-            var seekCommand = new PlaystateRequest
-            {
-                Command = PlaystateCommand.Seek,
-                ControllingUserId = session.UserId.ToString("N"),
-                SeekPositionTicks = (long)intro.IntroEnd * TimeSpan.TicksPerSecond,
-            };
-
-            _sessionManager.SendPlaystateCommand(session.Id, session.Id, seekCommand, CancellationToken.None);
+            _sessionManager.SendPlaystateCommand(
+                session.Id,
+                session.Id,
+                new PlaystateRequest
+                {
+                    Command = PlaystateCommand.Seek,
+                    ControllingUserId = session.UserId.ToString("N"),
+                    SeekPositionTicks = (long)intro.IntroEnd * TimeSpan.TicksPerSecond,
+                },
+                CancellationToken.None);
 
             // Flag that we've sent the seek command so that it's not sent repeatedly
             lock (_sentSeekCommandLock)
