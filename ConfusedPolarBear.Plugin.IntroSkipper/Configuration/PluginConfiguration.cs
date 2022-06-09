@@ -15,7 +15,7 @@ public class PluginConfiguration : BasePluginConfiguration
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the output of fpcalc should be cached to the filesystem.
+    /// Gets or sets a value indicating whether the episode's fingerprint should be cached to the filesystem.
     /// </summary>
     public bool CacheFingerprints { get; set; } = true;
 

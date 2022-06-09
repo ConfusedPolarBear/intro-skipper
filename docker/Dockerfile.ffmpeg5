@@ -1,0 +1,10 @@
+FROM jellyfin/jellyfin:10.8.0-beta3
+
+RUN curl -Lo jellyfin-ffmpeg5.deb \
+    https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/v5.0.1-5/jellyfin-ffmpeg5_5.0.1-5-bullseye_amd64.deb
+
+RUN apt update
+RUN apt install -y libxcb-randr0
+RUN dpkg -i jellyfin-ffmpeg5.deb
+
+COPY dist/ /jellyfin/jellyfin-web/

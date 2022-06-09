@@ -104,6 +104,12 @@ public class FingerprinterTask : IScheduledTask
         var queue = Plugin.Instance!.AnalysisQueue;
         var totalProcessed = 0;
 
+        if (queue.Count == 0)
+        {
+            throw new FingerprintException(
+                "No episodes to analyze: either no show libraries are defined or ffmpeg is not properly installed");
+        }
+
         // TODO: make configurable
         var options = new ParallelOptions();
         options.MaxDegreeOfParallelism = 2;

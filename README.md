@@ -1,18 +1,16 @@
-# Intro Skipper (ALPHA)
+# Intro Skipper (beta)
 
 <div align="center">
 <img alt="Plugin Banner" src="https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png" />
 </div>
 
-Analyzes the audio of television episodes to detect and skip over intros. Currently in alpha.
+Analyzes the audio of television episodes to detect and skip over intros. Jellyfin must use a version of `ffmpeg` that has been compiled with `--enable-chromaprint` (`jellyfin-ffmpeg` versions 5.0.1-5 and later will work).
 
-Installing this plugin (along with a modified web interface and `fpcalc`) will result in a skip intro button displaying in the video player, like this:
+If you use the custom web interface on your server, you will be able to click a skip button to skip intros, like this:
 
 ![Skip intro button](images/skip-button.png)
 
-If you use Jellyfin clients that do not use the web interface provided by the server, the plugin can be configured to automatically skip intros.
-
-This plugin **will not work** without installing `fpcalc`. The easiest way to do this is to follow the steps below.
+However, if you use Jellyfin clients that do not use the web interface provided by the server, the plugin can be configured to automatically skip intros.
 
 ## Introduction requirements
 
@@ -21,7 +19,8 @@ Show introductions will only be detected if they are:
 * Located within the first 25% of an episode, or the first 10 minutes, whichever is smaller
 * At least 20 seconds long
 
-## Step 1: Install the modified web interface + fpcalc
+## Step 1: Install the modified web interface (optional)
+This step is only necessary if you do not use the automatic skip feature.
 1. Run the `ghcr.io/confusedpolarbear/jellyfin-intro-skipper` container just as you would any other Jellyfin container
     1. If you reuse the configuration data from another container, **make sure to create a backup first**.
 2. Follow the plugin installation steps below
