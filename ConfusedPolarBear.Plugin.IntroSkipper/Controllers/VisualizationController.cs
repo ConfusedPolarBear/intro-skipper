@@ -105,7 +105,7 @@ public class VisualizationController : ControllerBase
             {
                 if (needle.EpisodeId == id)
                 {
-                    return FPCalc.Fingerprint(needle);
+                    return Chromaprint.Fingerprint(needle);
                 }
             }
         }

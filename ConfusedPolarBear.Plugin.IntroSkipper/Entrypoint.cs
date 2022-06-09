@@ -49,10 +49,10 @@ public class Entrypoint : IServerEntryPoint
     /// <returns>Task.</returns>
     public Task RunAsync()
     {
-        FPCalc.Logger = _logger;
+        Chromaprint.Logger = _logger;
 
         // Assert that ffmpeg with chromaprint is installed
-        if (!FPCalc.CheckFFmpegVersion())
+        if (!Chromaprint.CheckFFmpegVersion())
         {
             _logger.LogError("ffmpeg with chromaprint is not installed on this system - episodes will not be analyzed");
             return Task.CompletedTask;

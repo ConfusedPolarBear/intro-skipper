@@ -7,14 +7,12 @@ using System.IO;
 using System.Text;
 using Microsoft.Extensions.Logging;
 
-// TODO: rename
-
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
 /// Wrapper for libchromaprint.
 /// </summary>
-public static class FPCalc
+public static class Chromaprint
 {
     /// <summary>
     /// Gets or sets the logger.

@@ -7,14 +7,12 @@ using Microsoft.Extensions.Logging;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper.Tests;
 
-// TODO: rename
-
-public class TestFPCalc
+public class TestAudioFingerprinting
 {
     [Fact]
     public void TestInstallationCheck()
     {
-        Assert.True(FPCalc.CheckFFmpegVersion());
+        Assert.True(Chromaprint.CheckFFmpegVersion());
     }
 
     [Theory]
@@ -58,7 +56,7 @@ public class TestFPCalc
             3472417825, 3395841056, 3458735136, 3341420624, 1076496560, 1076501168, 1076501136, 1076497024
         };
 
-        var actual = FPCalc.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
+        var actual = Chromaprint.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
 
         Assert.Equal(expected, actual);
     }
