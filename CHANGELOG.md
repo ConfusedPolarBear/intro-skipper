@@ -1,8 +1,8 @@
 # Changelog
 
-## Next release
+## v0.1.5.0 (unreleased)
 * Use `ffmpeg` to generate audio fingerprints instead of `fpcalc`
-  * Requires the installed version of `ffmpeg`:
+  * Requires that the installed version of `ffmpeg`:
     * Was compiled with the `--enable-chromaprint` option
     * Understands the `-fp_format raw` flag
   * `jellyfin-ffmpeg 5.0.1-5` meets both of these requirements
