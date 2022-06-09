@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Session;
@@ -96,7 +97,7 @@ public class AutoSkip : IServerEntryPoint
                 return;
             }
         }
-        catch (NullReferenceException)
+        catch (Exception ex) when (ex is NullReferenceException || ex is ResourceNotFoundException)
         {
             return;
         }
