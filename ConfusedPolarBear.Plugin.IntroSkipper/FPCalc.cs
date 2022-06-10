@@ -69,7 +69,7 @@ public static class FPCalc
         if (lines.Length < 2)
         {
             Logger?.LogTrace("fpcalc output is {Raw}", raw);
-            throw new FingerprintException("fpcalc output was malformed");
+            throw new FingerprintException("fpcalc output for " + episode.Path + " was malformed");
         }
 
         // Remove the "FINGERPRINT=" prefix and split into an array of numbers.
