@@ -20,6 +20,11 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool CacheFingerprints { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the max degree of parallelism used when analyzing episodes.
+    /// </summary>
+    public int MaxParallelism { get; set; } = 2;
+
+    /// <summary>
     /// Gets or sets a value indicating whether introductions should be automatically skipped.
     /// </summary>
     public bool AutoSkip { get; set; }

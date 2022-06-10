@@ -110,10 +110,10 @@ public class FingerprinterTask : IScheduledTask
         }
 
         var totalProcessed = 0;
-
-        // TODO: make configurable
-        var options = new ParallelOptions();
-        options.MaxDegreeOfParallelism = 2;
+        var options = new ParallelOptions()
+        {
+            MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
+        };
 
         Parallel.ForEach(queue, options, (season) =>
         {
@@ -199,7 +199,6 @@ public class FingerprinterTask : IScheduledTask
             var lhs = episodes[i];
             var rhs = episodes[i + 1];
 
-            // TODO: make configurable
             if (!everFoundIntro && failures >= 20)
             {
                 _logger.LogWarning(

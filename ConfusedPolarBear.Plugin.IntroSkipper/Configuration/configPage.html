@@ -12,47 +12,69 @@
         <div data-role="content">
             <div class="content-primary">
                 <form id="FingerprintConfigForm">
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="AutoSkip" type="checkbox" is="emby-checkbox" />
-                            <span>Automatically skip intros</span>
-                        </label>
+                    <fieldset class="verticalSection-extrabottompadding">
+                        <legend>Analysis</legend>
 
-                        <div class="fieldDescription">
-                            If checked, intros will be automatically skipped. Will only work if web
-                            sockets are configured correctly.<br />
-                            <strong>Jellyfin must be restarted after changing this setting.</strong>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="CacheFingerprints" type="checkbox" is="emby-checkbox" />
+                                <span>Cache fingerprints to disk</span>
+                            </label>
+
+                            <div class="fieldDescription">
+                                If checked, will store the audio fingerprints for all subsequently scanned files to
+                                disk. Caching fingerprints avoids having to re-run fpcalc on each file, at the expense
+                                of disk usage.
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="CacheFingerprints" type="checkbox" is="emby-checkbox" />
-                            <span>Cache fingerprints to disk</span>
-                        </label>
-
-                        <div class="fieldDescription">
-                            If checked, will store the fingerprints for all subsequently scanned files to disk.
-                            Caching fingerprints avoids having to re-run fpcalc on each file, at the expense of disk
-                            usage.
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">
+                                Maximum degree of parallelism
+                            </label>
+                            <input id="MaxParallelism" type="number" is="emby-input" min="1" />
+                            <div class="fieldDescription">
+                                Maximum degree of parallelism to use when analyzing episodes.
+                            </div>
                         </div>
-                    </div>
+                    </fieldset>
 
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Show skip prompt at</label>
-                        <input id="ShowPromptAdjustment" type="number" is="emby-input" min="0" />
-                        <div class="fieldDescription">
-                            Seconds before the introduction starts to display the skip prompt at.
-                        </div>
-                    </div>
+                    <fieldset class="verticalSection-extrabottompadding">
+                        <legend>Playback</legend>
 
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Hide skip prompt after</label>
-                        <input id="HidePromptAdjustment" type="number" is="emby-input" min="2" />
-                        <div class="fieldDescription">
-                            Seconds after the introduction starts to hide the skip prompt at.
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="AutoSkip" type="checkbox" is="emby-checkbox" />
+                                <span>Automatically skip intros</span>
+                            </label>
+
+                            <div class="fieldDescription">
+                                If checked, intros will be automatically skipped. Will only work if web
+                                sockets are configured correctly.<br />
+                                <strong>Jellyfin must be restarted after changing this setting.</strong>
+                            </div>
                         </div>
-                    </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="ShowPromptAdjustment">
+                                Show skip prompt at
+                            </label>
+                            <input id="ShowPromptAdjustment" type="number" is="emby-input" min="0" />
+                            <div class="fieldDescription">
+                                Seconds before the introduction starts to display the skip prompt at.
+                            </div>
+                        </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="HidePromptAdjustment">
+                                Hide skip prompt after
+                            </label>
+                            <input id="HidePromptAdjustment" type="number" is="emby-input" min="2" />
+                            <div class="fieldDescription">
+                                Seconds after the introduction starts to hide the skip prompt at.
+                            </div>
+                        </div>
+                    </fieldset>
 
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
@@ -66,7 +88,8 @@
 
                         <p>
                             Erasing introduction timestamps is only necessary after upgrading the plugin if specifically
-                            requested to do so in the plugin's changelog. After the timestamps are erased, run the Analyze episodes scheduled task to re-analyze all media on the server.
+                            requested to do so in the plugin's changelog. After the timestamps are erased, run the
+                            Analyze episodes scheduled task to re-analyze all media on the server.
                         </p>
                     </div>
                 </form>
@@ -415,8 +438,9 @@
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         document.querySelector('#AutoSkip').checked = config.AutoSkip;
-                        document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
+                        document.querySelector('#MaxParallelism').value = config.MaxParallelism;
 
+                        document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
                         document.querySelector('#HidePromptAdjustment').value = config.HidePromptAdjustment;
 
@@ -429,8 +453,9 @@
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         config.AutoSkip = document.querySelector('#AutoSkip').checked;
-                        config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
+                        config.MaxParallelism = document.querySelector('#MaxParallelism').value;
 
+                        config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;
                         config.HidePromptAdjustment = document.querySelector("#HidePromptAdjustment").value;
 
