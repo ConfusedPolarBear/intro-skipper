@@ -22,14 +22,21 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Update repositories
-      run: sudo apt-get update
-
     - name: Install fpcalc
-      run: sudo apt-get install -y libchromaprint-tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libchromaprint-tools
 
     - name: Test
       run: dotnet test --verbosity normal
 
     - name: Build
       run: dotnet build --no-restore
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: intro-skipper-${{ github.sha }}.dll
+        path: ConfusedPolarBear.Plugin.IntroSkipper/bin/Debug/net6.0/ConfusedPolarBear.Plugin.IntroSkipper.dll
+        if-no-files-found: error
+  
