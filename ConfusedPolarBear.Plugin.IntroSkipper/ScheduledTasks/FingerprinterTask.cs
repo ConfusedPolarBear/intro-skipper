@@ -102,6 +102,13 @@ public class FingerprinterTask : IScheduledTask
     public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
         var queue = Plugin.Instance!.AnalysisQueue;
+
+        if (queue.Count == 0)
+        {
+            throw new FingerprintException(
+                "No episodes to analyze: either no show libraries are defined or ffmpeg is not properly installed");
+        }
+
         var totalProcessed = 0;
 
         // TODO: make configurable
