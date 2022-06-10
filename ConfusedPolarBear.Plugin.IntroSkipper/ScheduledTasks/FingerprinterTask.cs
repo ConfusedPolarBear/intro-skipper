@@ -106,7 +106,7 @@ public class FingerprinterTask : IScheduledTask
         if (queue.Count == 0)
         {
             throw new FingerprintException(
-                "No episodes to analyze: either no show libraries are defined or ffmpeg is not properly installed");
+                "No episodes to analyze: either no show libraries are defined or fpcalc is not properly installed");
         }
 
         var totalProcessed = 0;
