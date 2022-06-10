@@ -1,4 +1,4 @@
-name: .NET
+name: 'Build Plugin'
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Install fpcalc
-      run: apt install -y libchromaprint-tools
+      run: sudo apt install -y libchromaprint-tools
     - name: Test
       run: dotnet test --no-build --verbosity normal
     - name: Build
