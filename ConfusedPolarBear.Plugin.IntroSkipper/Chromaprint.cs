@@ -10,9 +10,9 @@ using Microsoft.Extensions.Logging;
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
-/// Wrapper for the fpcalc utility.
+/// Wrapper for libchromaprint.
 /// </summary>
-public static class FPCalc
+public static class Chromaprint
 {
     /// <summary>
     /// Gets or sets the logger.
@@ -20,16 +20,16 @@ public static class FPCalc
     public static ILogger? Logger { get; set; }
 
     /// <summary>
-    /// Check that the fpcalc utility is installed.
+    /// Check that the installed version of ffmpeg supports chromaprint.
     /// </summary>
-    /// <returns>true if fpcalc is installed, false on any error.</returns>
-    public static bool CheckFPCalcInstalled()
+    /// <returns>true if a compatible version of ffmpeg is installed, false on any error.</returns>
+    public static bool CheckFFmpegVersion()
     {
         try
         {
-            var version = GetOutput("-version", 2000).TrimEnd();
-            Logger?.LogInformation("fpcalc -version: {Version}", version);
-            return version.StartsWith("fpcalc version", StringComparison.OrdinalIgnoreCase);
+            var version = Encoding.UTF8.GetString(GetOutput("-version", 2000));
+            Logger?.LogDebug("ffmpeg version: {Version}", version);
+            return version.Contains("--enable-chromaprint", StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -44,7 +44,7 @@ public static class FPCalc
     /// <returns>Numerical fingerprint points.</returns>
     public static ReadOnlyCollection<uint> Fingerprint(QueuedEpisode episode)
     {
-        // Try to load this episode from cache before running fpcalc.
+        // Try to load this episode from cache before running ffmpeg.
         if (LoadCachedFingerprint(episode, out ReadOnlyCollection<uint> cachedFingerprint))
         {
             Logger?.LogDebug("Fingerprint cache hit on {File}", episode.Path);
@@ -53,32 +53,24 @@ public static class FPCalc
 
         Logger?.LogDebug("Fingerprinting {Duration} seconds from {File}", episode.FingerprintDuration, episode.Path);
 
-        // FIXME: revisit escaping
-        var path = "\"" + episode.Path + "\"";
-        var duration = episode.FingerprintDuration.ToString(CultureInfo.InvariantCulture);
-        var args = " -raw -length " + duration + " " + path;
+        var args = string.Format(
+            CultureInfo.InvariantCulture,
+            "-i \"{0}\" -to {1} -ac 2 -f chromaprint -fp_format raw -",
+            episode.Path,
+            episode.FingerprintDuration);
 
-        /* Returns output similar to the following:
-         * DURATION=123
-         * FINGERPRINT=123456789,987654321,123456789,987654321,123456789,987654321
-        */
-
-        var raw = GetOutput(args);
-        var lines = raw.Split("\n");
-
-        if (lines.Length < 2)
+        // Returns all fingerprint points as raw 32 bit unsigned integers (little endian).
+        var rawPoints = GetOutput(args);
+        if (rawPoints.Length == 0 || rawPoints.Length % 4 != 0)
         {
-            Logger?.LogTrace("fpcalc output is {Raw}", raw);
-            throw new FingerprintException("fpcalc output for " + episode.Path + " was malformed");
+            throw new FingerprintException("chromaprint output for " + episode.Path + " was malformed");
         }
 
-        // Remove the "FINGERPRINT=" prefix and split into an array of numbers.
-        var fingerprint = lines[1].Substring(12).Split(",");
-
         var results = new List<uint>();
-        foreach (var rawNumber in fingerprint)
+        for (var i = 0; i < rawPoints.Length; i += 4)
         {
-            results.Add(Convert.ToUInt32(rawNumber, CultureInfo.InvariantCulture));
+            var rawPoint = rawPoints.Slice(i, 4);
+            results.Add(BitConverter.ToUInt32(rawPoint));
         }
 
         // Try to cache this fingerprint.
@@ -88,23 +80,43 @@ public static class FPCalc
     }
 
     /// <summary>
-    /// Runs fpcalc and returns standard output.
+    /// Runs ffmpeg and returns standard output.
     /// </summary>
-    /// <param name="args">Arguments to pass to fpcalc.</param>
-    /// <param name="timeout">Timeout (in seconds) to wait for fpcalc to exit.</param>
-    private static string GetOutput(string args, int timeout = 60 * 1000)
+    /// <param name="args">Arguments to pass to ffmpeg.</param>
+    /// <param name="timeout">Timeout (in seconds) to wait for ffmpeg to exit.</param>
+    private static ReadOnlySpan<byte> GetOutput(string args, int timeout = 60 * 1000)
     {
-        var info = new ProcessStartInfo("fpcalc", args);
-        info.CreateNoWindow = true;
-        info.RedirectStandardOutput = true;
+        var ffmpegPath = Plugin.Instance?.FFmpegPath ?? "ffmpeg";
 
-        var fpcalc = new Process();
-        fpcalc.StartInfo = info;
+        var info = new ProcessStartInfo(ffmpegPath, args)
+        {
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
 
-        fpcalc.Start();
-        fpcalc.WaitForExit(timeout);
+        var ffmpeg = new Process
+        {
+            StartInfo = info
+        };
 
-        return fpcalc.StandardOutput.ReadToEnd();
+        ffmpeg.Start();
+        ffmpeg.WaitForExit(timeout);
+
+        using (MemoryStream ms = new MemoryStream())
+        {
+            var buf = new byte[4096];
+            var bytesRead = 0;
+
+            do
+            {
+                bytesRead = ffmpeg.StandardOutput.BaseStream.Read(buf, 0, buf.Length);
+                ms.Write(buf, 0, bytesRead);
+            }
+            while (bytesRead > 0);
+
+            return ms.ToArray().AsSpan();
+        }
     }
 
     /// <summary>

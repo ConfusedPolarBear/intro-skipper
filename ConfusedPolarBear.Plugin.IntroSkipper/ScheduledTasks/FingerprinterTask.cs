@@ -106,7 +106,7 @@ public class FingerprinterTask : IScheduledTask
         if (queue.Count == 0)
         {
             throw new FingerprintException(
-                "No episodes to analyze: either no show libraries are defined or fpcalc is not properly installed");
+                "No episodes to analyze: either no show libraries are defined or ffmpeg could not be found");
         }
 
         var totalProcessed = 0;
@@ -274,8 +274,8 @@ public class FingerprinterTask : IScheduledTask
     /// <returns>Intros for the first and second episodes.</returns>
     public (Intro Lhs, Intro Rhs) FingerprintEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
     {
-        var lhsFingerprint = FPCalc.Fingerprint(lhsEpisode);
-        var rhsFingerprint = FPCalc.Fingerprint(rhsEpisode);
+        var lhsFingerprint = Chromaprint.Fingerprint(lhsEpisode);
+        var rhsFingerprint = Chromaprint.Fingerprint(rhsEpisode);
 
         // Cache the fingerprints for quicker recall in the second pass (if one is needed).
         lock (_fingerprintCacheLock)

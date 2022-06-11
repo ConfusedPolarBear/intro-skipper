@@ -5,6 +5,7 @@ using System.IO;
 using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
@@ -23,7 +24,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// </summary>
     /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
     /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
-    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+    /// <param name="serverConfiguration">Server configuration manager.</param>
+    public Plugin(
+        IApplicationPaths applicationPaths,
+        IXmlSerializer xmlSerializer,
+        IServerConfigurationManager serverConfiguration)
         : base(applicationPaths, xmlSerializer)
     {
         _xmlSerializer = xmlSerializer;
@@ -36,6 +41,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         }
 
         _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
+
+        // Get the path to FFmpeg.
+        FFmpegPath = serverConfiguration.GetEncodingOptions().EncoderAppPathDisplay;
 
         Intros = new Dictionary<Guid, Intro>();
         AnalysisQueue = new Dictionary<Guid, List<QueuedEpisode>>();
@@ -63,6 +71,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// Gets the directory to cache fingerprints in.
     /// </summary>
     public string FingerprintCachePath { get; private set; }
+
+    /// <summary>
+    /// Gets the full path to FFmpeg.
+    /// </summary>
+    public string FFmpegPath { get; private set; }
 
     /// <inheritdoc />
     public override string Name => "Intro Skipper";

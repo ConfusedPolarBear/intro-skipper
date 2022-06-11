@@ -1,14 +1,18 @@
+/* These tests require that the host system has a version of FFmpeg installed
+ * which supports both chromaprint and the "-fp_format raw" flag.
+ */
+
 using Xunit;
 using Microsoft.Extensions.Logging;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper.Tests;
 
-public class TestFPCalc
+public class TestAudioFingerprinting
 {
     [Fact]
     public void TestInstallationCheck()
     {
-        Assert.True(FPCalc.CheckFPCalcInstalled());
+        Assert.True(Chromaprint.CheckFFmpegVersion());
     }
 
     [Theory]
@@ -43,7 +47,7 @@ public class TestFPCalc
             3416816715, 3404331257, 3395844345, 3395836155, 3408464089, 3374975369, 1282036360, 1290457736,
             1290400440, 1290314408, 1281925800, 1277727404, 1277792932, 1278785460, 1561962388, 1426698196,
             3607924711, 4131892839, 4140215815, 4292259591, 3218515717, 3209938229, 3171964197, 3171956013,
-            4229117295, 4229312879, 4242407935, 4238016959, 4239987133, 4239990013, 3703060732, 1547188252,
+            4229117295, 4229312879, 4242407935, 4240114111, 4239987133, 4239990013, 3703060732, 1547188252,
             1278748677, 1278748935, 1144662786, 1148854786, 1090388802, 1090388962, 1086260130, 1085940098,
             1102709122, 45811586, 44634002, 44596656, 44592544, 1122527648, 1109944736, 1109977504, 1111030243,
             1111017762, 1109969186, 1126721826, 1101556002, 1084844322, 1084979506, 1084914450, 1084914449,
@@ -52,7 +56,7 @@ public class TestFPCalc
             3472417825, 3395841056, 3458735136, 3341420624, 1076496560, 1076501168, 1076501136, 1076497024
         };
 
-        var actual = FPCalc.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
+        var actual = Chromaprint.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
 
         Assert.Equal(expected, actual);
     }
