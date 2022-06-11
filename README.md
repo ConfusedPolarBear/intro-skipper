@@ -4,13 +4,15 @@
 <img alt="Plugin Banner" src="https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png" />
 </div>
 
-Analyzes the audio of television episodes to detect and skip over intros. Jellyfin must use a version of `ffmpeg` that has been compiled with `--enable-chromaprint` (`jellyfin-ffmpeg` versions 5.0.1-5 and later will work).
+Analyzes the audio of television episodes to detect and skip over intros.
 
 If you use the custom web interface on your server, you will be able to click a skip button to skip intros, like this:
 
 ![Skip intro button](images/skip-button.png)
 
 However, if you use Jellyfin clients that do not use the web interface provided by the server, the plugin can be configured to automatically skip intros.
+
+Plugin versions older than v0.1.5.0 require `fpcalc` to be installed.
 
 ## Introduction requirements
 
