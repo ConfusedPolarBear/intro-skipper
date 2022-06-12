@@ -1,0 +1,40 @@
+# How to enable plugin debug logs
+
+1. Browse to your Jellyfin config folder
+2. Make a backup copy of `config/logging.default.json` before editing it
+2. Open `config/logging.default.json` with a text editor. The top lines should look something like this:
+
+```jsonc
+{
+    "Serilog": {
+        "MinimumLevel": {
+            "Default": "Information",
+            "Override": {
+                "Microsoft": "Warning",
+                "System": "Warning"
+            }
+        },
+        // rest of file ommited for brevity
+    }
+}
+```
+
+3. Inside the `Override` section, add a new entry for `ConfusedPolarBear` and set it to `Debug`. The modified file should now look like this:
+
+```jsonc
+{
+    "Serilog": {
+        "MinimumLevel": {
+            "Default": "Information",
+            "Override": {
+                "Microsoft": "Warning",
+                "System": "Warning",                // be sure to add the trailing comma after "Warning",
+                "ConfusedPolarBear": "Debug"        // newly added line
+            }
+        },
+        // rest of file ommited for brevity
+    }
+}
+```
+
+4. Save the file and restart Jellyfin
