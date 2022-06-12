@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
@@ -50,6 +51,10 @@ public class Entrypoint : IServerEntryPoint
     public Task RunAsync()
     {
         Chromaprint.Logger = _logger;
+
+        #if DEBUG
+        LogVersion();
+        #endif
 
         // Assert that ffmpeg with chromaprint is installed
         if (!Chromaprint.CheckFFmpegVersion())
@@ -194,6 +199,40 @@ public class Entrypoint : IServerEntryPoint
 
         throw new FingerprintException("Unable to find an administrator on this server.");
     }
+
+    #if DEBUG
+    /// <summary>
+    /// Logs the exact commit that created this version of the plugin. Only used in unstable builds.
+    /// </summary>
+    private void LogVersion()
+    {
+        var assembly = GetType().Assembly;
+        var path = GetType().Namespace + ".Configuration.version.txt";
+
+        using (var stream = assembly.GetManifestResourceStream(path))
+        {
+            if (stream is null)
+            {
+                _logger.LogWarning("Unable to read embedded version information");
+                return;
+            }
+
+            var version = string.Empty;
+            using (var reader = new StreamReader(stream))
+            {
+                version = reader.ReadToEnd().TrimEnd();
+            }
+
+            if (version == "unknown")
+            {
+                _logger.LogTrace("Embedded version information was not valid, ignoring");
+                return;
+            }
+
+            _logger.LogInformation("Unstable version built from commit {Version}", version);
+        }
+    }
+    #endif
 
     /// <summary>
     /// Dispose.
