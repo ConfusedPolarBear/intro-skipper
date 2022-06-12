@@ -58,23 +58,30 @@ public class Entrypoint : IServerEntryPoint
             return Task.CompletedTask;
         }
 
-        // As soon as a new episode is added, queue it for later analysis.
-        _libraryManager.ItemAdded += ItemAdded;
-
-        // For all TV show libraries, enqueue all contained items.
-        foreach (var folder in _libraryManager.GetVirtualFolders())
+        try
         {
-            if (folder.CollectionType != CollectionTypeOptions.TvShows)
+            // As soon as a new episode is added, queue it for later analysis.
+            _libraryManager.ItemAdded += ItemAdded;
+
+            // For all TV show libraries, enqueue all contained items.
+            foreach (var folder in _libraryManager.GetVirtualFolders())
             {
-                continue;
+                if (folder.CollectionType != CollectionTypeOptions.TvShows)
+                {
+                    continue;
+                }
+
+                _logger.LogInformation(
+                    "Running startup enqueue of items in library {Name} ({ItemId})",
+                    folder.Name,
+                    folder.ItemId);
+
+                QueueLibraryContents(folder.ItemId);
             }
-
-            _logger.LogInformation(
-                "Running startup enqueue of items in library {Name} ({ItemId})",
-                folder.Name,
-                folder.ItemId);
-
-            QueueLibraryContents(folder.ItemId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Unable to run startup enqueue: {Exception}", ex);
         }
 
         return Task.CompletedTask;
