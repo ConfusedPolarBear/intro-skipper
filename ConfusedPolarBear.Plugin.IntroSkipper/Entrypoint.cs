@@ -102,7 +102,16 @@ public class Entrypoint : IServerEntryPoint
         };
 
         // Get all items from this library. Since intros may change within a season, sort the items before adding them.
+        _logger.LogTrace("Constructing user view folder");
         var folder = _userViewManager.GetUserViews(query)[0];
+
+        if (folder is null)
+        {
+            _logger.LogError("Folder was null");
+            return;
+        }
+
+        _logger.LogTrace("Getting items in folder");
         var items = folder.GetItems(new InternalItemsQuery()
         {
             ParentId = Guid.Parse(rawId),
@@ -111,7 +120,14 @@ public class Entrypoint : IServerEntryPoint
             Recursive = true,
         });
 
+        if (items is null)
+        {
+            _logger.LogError("Folder items were null");
+            return;
+        }
+
         // Queue all episodes on the server for fingerprinting.
+        _logger.LogTrace("Iterating through folder contents");
         foreach (var item in items.Items)
         {
             if (item is not Episode episode)
@@ -122,6 +138,8 @@ public class Entrypoint : IServerEntryPoint
 
             QueueEpisode(episode);
         }
+
+        _logger.LogTrace("Queued {Count} episodes", items.Items.Count);
     }
 
     /// <summary>
@@ -188,8 +206,11 @@ public class Entrypoint : IServerEntryPoint
     {
         foreach (var user in _userManager.Users)
         {
+            _logger.LogTrace("Checking access of user {Username}", user.Username);
+
             if (!user.HasPermission(Jellyfin.Data.Enums.PermissionKind.IsAdministrator))
             {
+                _logger.LogTrace("User {Username} does not have the required access, continuing", user.Username);
                 continue;
             }
 
