@@ -102,7 +102,7 @@ public class Entrypoint : IServerEntryPoint
         };
 
         // Get all items from this library. Since intros may change within a season, sort the items before adding them.
-        _logger.LogTrace("Constructing user view folder");
+        _logger.LogDebug("Constructing user view folder");
         var folder = _userViewManager.GetUserViews(query)[0];
 
         if (folder is null)
@@ -111,7 +111,7 @@ public class Entrypoint : IServerEntryPoint
             return;
         }
 
-        _logger.LogTrace("Getting items in folder");
+        _logger.LogDebug("Getting items in folder");
         var items = folder.GetItems(new InternalItemsQuery()
         {
             ParentId = Guid.Parse(rawId),
@@ -127,7 +127,7 @@ public class Entrypoint : IServerEntryPoint
         }
 
         // Queue all episodes on the server for fingerprinting.
-        _logger.LogTrace("Iterating through folder contents");
+        _logger.LogDebug("Iterating through folder contents");
         foreach (var item in items.Items)
         {
             if (item is not Episode episode)
@@ -139,7 +139,7 @@ public class Entrypoint : IServerEntryPoint
             QueueEpisode(episode);
         }
 
-        _logger.LogTrace("Queued {Count} episodes", items.Items.Count);
+        _logger.LogDebug("Queued {Count} episodes", items.Items.Count);
     }
 
     /// <summary>
@@ -206,11 +206,11 @@ public class Entrypoint : IServerEntryPoint
     {
         foreach (var user in _userManager.Users)
         {
-            _logger.LogTrace("Checking access of user {Username}", user.Username);
+            _logger.LogDebug("Checking access of user {Username}", user.Username);
 
             if (!user.HasPermission(Jellyfin.Data.Enums.PermissionKind.IsAdministrator))
             {
-                _logger.LogTrace("User {Username} does not have the required access, continuing", user.Username);
+                _logger.LogDebug("User {Username} does not have the required access, continuing", user.Username);
                 continue;
             }
 

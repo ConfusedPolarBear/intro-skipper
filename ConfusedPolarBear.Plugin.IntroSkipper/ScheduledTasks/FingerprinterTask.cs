@@ -213,7 +213,7 @@ public class FingerprinterTask : IScheduledTask
             var alreadyDone = Plugin.Instance!.Intros;
             if (alreadyDone.ContainsKey(lhs.EpisodeId) && alreadyDone.ContainsKey(rhs.EpisodeId))
             {
-                _logger.LogDebug(
+                _logger.LogTrace(
                     "Episodes {LHS} and {RHS} have both already been fingerprinted",
                     lhs.EpisodeId,
                     rhs.EpisodeId);
@@ -223,7 +223,7 @@ public class FingerprinterTask : IScheduledTask
 
             try
             {
-                _logger.LogDebug("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
+                _logger.LogTrace("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
 
                 var (lhsIntro, rhsIntro) = FingerprintEpisodes(lhs, rhs);
 
@@ -319,7 +319,7 @@ public class FingerprinterTask : IScheduledTask
         // If no valid ranges were found, re-analyze the episodes considering all possible shifts.
         if (lhsRanges.Count == 0)
         {
-            _logger.LogDebug("quick scan unsuccessful, falling back to full scan (±{Limit})", limit);
+            _logger.LogTrace("quick scan unsuccessful, falling back to full scan (±{Limit})", limit);
 
             (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
             lhsRanges.AddRange(lhsContiguous);
@@ -327,12 +327,12 @@ public class FingerprinterTask : IScheduledTask
         }
         else
         {
-            _logger.LogDebug("quick scan successful");
+            _logger.LogTrace("quick scan successful");
         }
 
         if (lhsRanges.Count == 0)
         {
-            _logger.LogDebug(
+            _logger.LogTrace(
                 "Unable to find a shared introduction sequence between {LHS} and {RHS}",
                 lhsId,
                 rhsId);
@@ -504,7 +504,7 @@ public class FingerprinterTask : IScheduledTask
         }
 
         var percentValid = (validCount * 100) / totalCount;
-        _logger.LogDebug("Found intros in {Valid}/{Total} ({Percent}%) of episodes", validCount, totalCount, percentValid);
+        _logger.LogTrace("Found intros in {Valid}/{Total} ({Percent}%) of episodes", validCount, totalCount, percentValid);
         if (percentValid < 50)
         {
             return;
@@ -549,7 +549,7 @@ public class FingerprinterTask : IScheduledTask
 
         // Ensure that the most frequently seen bucket has a majority
         percentValid = (maxBucket.Count * 100) / validCount;
-        _logger.LogDebug(
+        _logger.LogTrace(
             "Intro duration {Duration} appeared {Frequency} times ({Percent}%)",
             maxDuration,
             maxBucket.Count,
@@ -560,7 +560,7 @@ public class FingerprinterTask : IScheduledTask
             return;
         }
 
-        _logger.LogDebug("Second pass is processing {Count} episodes", totalCount - maxBucket.Count);
+        _logger.LogTrace("Second pass is processing {Count} episodes", totalCount - maxBucket.Count);
 
         // Calculate a range of intro durations that are most likely to be correct.
         var maxEpisode = episodes.Find(x => x.EpisodeId == maxBucket.Episodes[0]);
@@ -602,7 +602,7 @@ public class FingerprinterTask : IScheduledTask
             // If the episode's intro duration is close enough to the targeted bucket, leave it alone.
             if (Math.Abs(lhsDuration - oldDuration) <= ReanalysisTolerance)
             {
-                _logger.LogDebug(
+                _logger.LogTrace(
                     "Not reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
                     shortPath,
                     Math.Round(oldDuration, 2),
@@ -611,7 +611,7 @@ public class FingerprinterTask : IScheduledTask
                 continue;
             }
 
-            _logger.LogDebug(
+            _logger.LogTrace(
                 "Reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
                 shortPath,
                 Math.Round(oldDuration, 2),
@@ -630,7 +630,7 @@ public class FingerprinterTask : IScheduledTask
                 var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);
                 if (newDuration < oldDuration || newDuration < lowTargetDuration || newDuration > highTargetDuration)
                 {
-                    _logger.LogDebug(
+                    _logger.LogTrace(
                         "Ignoring reanalysis for {Path} (was {Initial}, now is {New})",
                         shortPath,
                         oldDuration,
@@ -639,7 +639,7 @@ public class FingerprinterTask : IScheduledTask
                     continue;
                 }
 
-                _logger.LogDebug(
+                _logger.LogTrace(
                     "Reanalysis succeeded for {Path} (was {Initial}, now is {New})",
                     shortPath,
                     oldDuration,
