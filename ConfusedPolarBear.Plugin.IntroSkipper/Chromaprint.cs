@@ -27,9 +27,33 @@ public static class Chromaprint
     {
         try
         {
-            var version = Encoding.UTF8.GetString(GetOutput("-version", 2000));
-            Logger?.LogDebug("ffmpeg version: {Version}", version);
-            return version.Contains("--enable-chromaprint", StringComparison.OrdinalIgnoreCase);
+            // First, validate that the installed version of ffmpeg supports chromaprint at all.
+            var muxers = Encoding.UTF8.GetString(GetOutput("-muxers", 2000));
+            Logger?.LogTrace("ffmpeg muxers: {Muxers}", muxers);
+
+            if (!muxers.Contains("chromaprint", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger?.LogError("The installed version of ffmpeg does not support chromaprint");
+                return false;
+            }
+
+            // Second, validate that ffmpeg understands the "-fp_format raw" option.
+            var muxerHelp = Encoding.UTF8.GetString(GetOutput("-h muxer=chromaprint", 2000));
+            Logger?.LogTrace("ffmpeg chromaprint help: {MuxerHelp}", muxerHelp);
+
+            if (!muxerHelp.Contains("-fp_format", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger?.LogError("The installed version of ffmpeg does not support the -fp_format flag");
+                return false;
+            }
+            else if (!muxerHelp.Contains("binary raw fingerprint", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger?.LogError("The installed version of ffmpeg does not support raw binary fingerprints");
+                return false;
+            }
+
+            Logger?.LogDebug("Installed version of ffmpeg meets fingerprinting requirements");
+            return true;
         }
         catch
         {
