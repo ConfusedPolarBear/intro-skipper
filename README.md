@@ -37,3 +37,7 @@ This step is only necessary if you do not use the automatic skip feature.
 
 ## Containerless installation
 If you do not run Jellyfin as a container, you will need to follow the [native installation](docs/native.md) instructions.
+
+## Documentation
+
+Documentation about how the API works can be found in [api.md](docs/api.md).
