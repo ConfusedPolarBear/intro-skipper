@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -63,5 +64,17 @@ public class SkipIntroController : ControllerBase
         Plugin.Instance!.Intros.Clear();
         Plugin.Instance!.SaveTimestamps();
         return NoContent();
+    }
+
+    /// <summary>
+    /// Get all introductions. Only used by the end to end testing script.
+    /// </summary>
+    /// <response code="200">All introductions have been returned.</response>
+    /// <returns>Dictionary of Intro objects.</returns>
+    [Authorize(Policy = "RequiresElevation")]
+    [HttpGet("Intros/All")]
+    public ActionResult<Dictionary<Guid, Intro>> GetAllIntros()
+    {
+        return Plugin.Instance!.Intros;
     }
 }
