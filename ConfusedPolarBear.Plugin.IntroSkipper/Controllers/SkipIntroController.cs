@@ -21,24 +21,19 @@ public class SkipIntroController : ControllerBase
     }
 
     /// <summary>
-    /// Returns the timestamps of the introduction in a television episode.
+    /// Returns the timestamps of the introduction in a television episode. Responses are in API version 1 format.
     /// </summary>
     /// <param name="id">ID of the episode. Required.</param>
     /// <response code="200">Episode contains an intro.</response>
     /// <response code="404">Failed to find an intro in the provided episode.</response>
     /// <returns>Detected intro.</returns>
     [HttpGet("Episode/{id}/IntroTimestamps")]
+    [HttpGet("Episode/{id}/IntroTimestamps/v1")]
     public ActionResult<Intro> GetIntroTimestamps([FromRoute] Guid id)
     {
-        if (!Plugin.Instance!.Intros.ContainsKey(id))
-        {
-            return NotFound();
-        }
+        var intro = GetIntro(id);
 
-        var intro = Plugin.Instance!.Intros[id];
-
-        // Check that the episode was analyzed successfully.
-        if (!intro.Valid)
+        if (intro is null || !intro.Valid)
         {
             return NotFound();
         }
@@ -49,6 +44,19 @@ public class SkipIntroController : ControllerBase
         intro.HideSkipPromptAt = intro.IntroStart + config.HidePromptAdjustment;
 
         return intro;
+    }
+
+    /// <summary>Lookup and return the intro timestamps for the provided item.</summary>
+    /// <param name="id">Unique identifier of this episode.</param>
+    /// <returns>Intro object if the provided item has an intro, null otherwise.</returns>
+    private Intro? GetIntro(Guid id)
+    {
+        if (!Plugin.Instance!.Intros.ContainsKey(id))
+        {
+            return null;
+        }
+
+        return Plugin.Instance!.Intros[id];
     }
 
     /// <summary>
