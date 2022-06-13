@@ -1,4 +1,4 @@
-import argparse, json, os, time
+import argparse, json, os, random, time
 import requests
 
 # Server address
@@ -38,6 +38,13 @@ def parse_args():
         dest="expected",
         default="expected/dev.json",
         metavar="FILENAME",
+    )
+
+    parser.add_argument(
+        "--skip-analysis",
+        help="Skip reanalyzing episodes and just validate timestamps and API versioning",
+        dest="skip",
+        action="store_true",
     )
 
     return parser.parse_args()
@@ -81,7 +88,7 @@ def close_enough(expected, actual):
     return abs(expected - actual) <= 2
 
 
-# Validate that all episodes in actual have a similar entry in expected.
+# Validate that all episodes in expected have a similar entry in actual.
 def validate(expected, actual):
     good = 0
     bad = 0
@@ -142,13 +149,17 @@ def main():
 
     print(f"[+] Found {len(expected)} expected timestamps\n")
 
-    # Erase old intro timestamps
-    print("[+] Erasing previously discovered introduction timestamps")
-    send("/Intros/EraseTimestamps", "POST")
+    if not args.skip:
+        # Erase old intro timestamps
+        print("[+] Erasing previously discovered introduction timestamps")
+        send("/Intros/EraseTimestamps", "POST")
 
-    # Run analyze episodes task
-    print("[+] Starting episode analysis task")
-    send(f"/ScheduledTasks/Running/{taskId}", "POST")
+        # Run analyze episodes task
+        print("[+] Starting episode analysis task")
+        send(f"/ScheduledTasks/Running/{taskId}", "POST")
+    else:
+        print("[+] Not running episode analysis")
+        args.frequency = 0
 
     # Poll for completion
     print("[+] Waiting for analysis task to complete")
@@ -190,8 +201,28 @@ def main():
 
     validate(expected, actual)
 
-    # TODO: Pick 5 random intros and verify deeply equal to v1
-    # this should be done by getting the versioned endpoint and non-versioned
+    # Select some episodes to validate
+    keys = []
+    for i in expected:
+        keys.append(i)
+    keys = random.choices(keys, k=min(len(keys), 10))
+
+    # Validate API version 1 (both implicitly and explicitly versioned)
+    for version in ["v1 (implicit)", "v1 (explicit)"]:
+        print()
+        print(f"[+] Validating API version: {version} with {len(keys)} episodes")
+
+        if version.find("implicit") != -1:
+            version = ""
+        else:
+            version = "v1"
+
+        for episode in keys:
+            ac = send(
+                f"/Episode/{episode}/IntroTimestamps/{version}", "GET", False
+            ).json()
+
+            print(ac)
 
 
 main()
