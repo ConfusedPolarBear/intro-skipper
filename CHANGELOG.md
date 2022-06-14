@@ -6,6 +6,13 @@
     * Was compiled with the `--enable-chromaprint` option
     * Understands the `-fp_format raw` flag
   * `jellyfin-ffmpeg 5.0.1-5` meets both of these requirements
+* Version API endpoints
+  * See [api.md](docs/api.md) for detailed documentation on how clients can work with this plugin
+* Add commit hash to unstable builds
+* Log media paths that are unable to be fingerprinted
+* Report failure to the UI if the episode analysis queue is empty
+* Allow customizing degrees of parallelism
+  * Warning: Using a value that is too high will result in system instability
 
 ## v0.1.0.0 (2022-06-09)
 * Add option to automatically skip intros
