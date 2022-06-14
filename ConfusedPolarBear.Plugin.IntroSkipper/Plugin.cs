@@ -49,8 +49,15 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         AnalysisQueue = new Dictionary<Guid, List<QueuedEpisode>>();
         Instance = this;
 
+        ConfigurationChanged += OnConfigurationChanged;
+
         RestoreTimestamps();
     }
+
+    /// <summary>
+    /// Fired after configuration has been saved so the auto skip timer can be stopped or started.
+    /// </summary>
+    public event EventHandler? AutoSkipChanged;
 
     /// <summary>
     /// Gets the results of fingerprinting all episodes.
@@ -133,5 +140,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
                 EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace)
             }
         };
+    }
+
+    private void OnConfigurationChanged(object? sender, BasePluginConfiguration e)
+    {
+        AutoSkipChanged?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -50,21 +50,25 @@ public class AutoSkip : IServerEntryPoint
     /// <returns>Task.</returns>
     public Task RunAsync()
     {
-        if (!Plugin.Instance!.Configuration.AutoSkip)
-        {
-            _logger.LogDebug("Not setting up automatic skipping");
-            return Task.CompletedTask;
-        }
-
         _logger.LogDebug("Setting up automatic skipping");
 
         _userDataManager.UserDataSaved += UserDataManager_UserDataSaved;
+        Plugin.Instance!.AutoSkipChanged += AutoSkipChanged;
 
+        // Make the timer restart automatically and set enabled to match the configuration value.
         _playbackTimer.AutoReset = true;
         _playbackTimer.Elapsed += PlaybackTimer_Elapsed;
-        _playbackTimer.Start();
+
+        AutoSkipChanged(null, EventArgs.Empty);
 
         return Task.CompletedTask;
+    }
+
+    private void AutoSkipChanged(object? sender, EventArgs e)
+    {
+        var newState = Plugin.Instance!.Configuration.AutoSkip;
+        _logger.LogDebug("Setting playback timer enabled to {NewState}", newState);
+        _playbackTimer.Enabled = newState;
     }
 
     private void UserDataManager_UserDataSaved(object? sender, UserDataSaveEventArgs e)
