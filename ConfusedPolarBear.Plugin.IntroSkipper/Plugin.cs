@@ -6,6 +6,7 @@ using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
@@ -17,6 +18,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
     private IXmlSerializer _xmlSerializer;
+    private ILibraryManager _libraryManager;
     private string _introPath;
 
     /// <summary>
@@ -25,13 +27,16 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
     /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
     /// <param name="serverConfiguration">Server configuration manager.</param>
+    /// <param name="libraryManager">Library manager.</param>
     public Plugin(
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
-        IServerConfigurationManager serverConfiguration)
+        IServerConfigurationManager serverConfiguration,
+        ILibraryManager libraryManager)
         : base(applicationPaths, xmlSerializer)
     {
         _xmlSerializer = xmlSerializer;
+        _libraryManager = libraryManager;
 
         // Create the base & cache directories (if needed).
         FingerprintCachePath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "cache");
@@ -127,6 +132,16 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             Plugin.Instance!.Intros[intro.EpisodeId] = intro;
         }
+    }
+
+    /// <summary>
+    /// Gets the full path for an item.
+    /// </summary>
+    /// <param name="id">Item id.</param>
+    /// <returns>Full path to item.</returns>
+    internal string GetItemPath(Guid id)
+    {
+        return _libraryManager.GetItemById(id).Path;
     }
 
     /// <inheritdoc />

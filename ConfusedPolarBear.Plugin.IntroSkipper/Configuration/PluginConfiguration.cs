@@ -14,6 +14,8 @@ public class PluginConfiguration : BasePluginConfiguration
     {
     }
 
+    // ===== Analysis settings =====
+
     /// <summary>
     /// Gets or sets a value indicating whether the episode's fingerprint should be cached to the filesystem.
     /// </summary>
@@ -23,6 +25,13 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the max degree of parallelism used when analyzing episodes.
     /// </summary>
     public int MaxParallelism { get; set; } = 2;
+
+    /// <summary>
+    /// Gets or sets a value indicating the action to write to created EDL files.
+    /// </summary>
+    public EdlAction EdlAction { get; set; } = EdlAction.None;
+
+    // ===== Playback settings =====
 
     /// <summary>
     /// Gets or sets a value indicating whether introductions should be automatically skipped.

@@ -88,6 +88,8 @@ public class FingerprinterTask : IScheduledTask
         _queueLogger = loggerFactory.CreateLogger<QueueManager>();
 
         _fingerprintCache = new Dictionary<Guid, ReadOnlyCollection<uint>>();
+
+        EdlManager.Initialize(_logger);
     }
 
     /// <summary>
@@ -146,6 +148,7 @@ public class FingerprinterTask : IScheduledTask
         Parallel.ForEach(queue, options, (season) =>
         {
             var first = season.Value[0];
+            var writeEdl = false;
 
             try
             {
@@ -153,6 +156,7 @@ public class FingerprinterTask : IScheduledTask
                 // (instead of just using the number of episodes in the current season).
                 var analyzed = AnalyzeSeason(season, cancellationToken);
                 Interlocked.Add(ref totalProcessed, analyzed);
+                writeEdl = analyzed > 0;
             }
             catch (FingerprintException ex)
             {
@@ -180,6 +184,12 @@ public class FingerprinterTask : IScheduledTask
                 }
             }
 
+            if (writeEdl && Plugin.Instance!.Configuration.EdlAction != EdlAction.None)
+            {
+                EdlManager.UpdateEDLFiles(season.Value.AsReadOnly());
+            }
+
+            totalProcessed += season.Value.Count;
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
         });
 

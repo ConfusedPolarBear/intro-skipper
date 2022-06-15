@@ -68,4 +68,22 @@ public class Intro
     /// Gets or sets the recommended time to hide the skip intro prompt.
     /// </summary>
     public double HideSkipPromptAt { get; set; }
+
+    /// <summary>
+    /// Convert this Intro object to a Kodi compatible EDL entry.
+    /// </summary>
+    /// <param name="action">User specified configuration EDL action.</param>
+    /// <returns>String.</returns>
+    public string ToEdl(EdlAction action)
+    {
+        if (action == EdlAction.None)
+        {
+            throw new ArgumentException("Cannot serialize an EdlAction of None");
+        }
+
+        var start = Math.Round(IntroStart, 2);
+        var end = Math.Round(IntroEnd, 2);
+
+        return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} {2}", start, end, (int)action);
+    }
 }

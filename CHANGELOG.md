@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.6.0
+## v0.1.6.0 (unreleased)
 * Write EDL files with intro timestamps
 * Restore per season status updates
 
