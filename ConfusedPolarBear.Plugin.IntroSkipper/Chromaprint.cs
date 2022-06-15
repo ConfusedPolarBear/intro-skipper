@@ -114,9 +114,14 @@ public static class Chromaprint
 
         var info = new ProcessStartInfo(ffmpegPath, args)
         {
+            WindowStyle = ProcessWindowStyle.Hidden,
             CreateNoWindow = true,
+            UseShellExecute = false,
+            ErrorDialog = false,
+
+            // We only consume standardOutput.
             RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardError = false
         };
 
         var ffmpeg = new Process
@@ -125,7 +130,6 @@ public static class Chromaprint
         };
 
         ffmpeg.Start();
-        ffmpeg.WaitForExit(timeout);
 
         using (MemoryStream ms = new MemoryStream())
         {
@@ -138,6 +142,8 @@ public static class Chromaprint
                 ms.Write(buf, 0, bytesRead);
             }
             while (bytesRead > 0);
+
+            ffmpeg.WaitForExit(timeout);
 
             return ms.ToArray().AsSpan();
         }
