@@ -52,9 +52,9 @@ public class Entrypoint : IServerEntryPoint
     {
         Chromaprint.Logger = _logger;
 
-        #if DEBUG
+#if DEBUG
         LogVersion();
-        #endif
+#endif
 
         // Assert that ffmpeg with chromaprint is installed
         if (!Chromaprint.CheckFFmpegVersion())
@@ -81,7 +81,14 @@ public class Entrypoint : IServerEntryPoint
                     folder.Name,
                     folder.ItemId);
 
-                QueueLibraryContents(folder.ItemId);
+                try
+                {
+                    QueueLibraryContents(folder.ItemId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to enqueue items from library {Name}: {Exception}", folder.Name, ex);
+                }
             }
         }
         catch (Exception ex)
@@ -89,46 +96,37 @@ public class Entrypoint : IServerEntryPoint
             _logger.LogError("Unable to run startup enqueue: {Exception}", ex);
         }
 
+        _logger.LogDebug("Total enqueued seasons: {Count}", Plugin.Instance!.AnalysisQueue.Count);
+
         return Task.CompletedTask;
     }
 
     private void QueueLibraryContents(string rawId)
     {
-        // FIXME: don't do this
+        _logger.LogDebug("Constructing anonymous internal query");
 
-        var query = new UserViewQuery()
-        {
-            UserId = GetAdministrator(),
-        };
-
-        // Get all items from this library. Since intros may change within a season, sort the items before adding them.
-        _logger.LogDebug("Constructing user view folder");
-        var folder = _userViewManager.GetUserViews(query)[0];
-
-        if (folder is null)
-        {
-            _logger.LogError("Folder was null");
-            return;
-        }
-
-        _logger.LogDebug("Getting items in folder");
-        var items = folder.GetItems(new InternalItemsQuery()
+        var query = new InternalItemsQuery()
         {
             ParentId = Guid.Parse(rawId),
             OrderBy = new[] { ("SortName", SortOrder.Ascending) },
             IncludeItemTypes = new BaseItemKind[] { BaseItemKind.Episode },
             Recursive = true,
-        });
+        };
+
+        _logger.LogDebug("Getting items");
+
+        var items = _libraryManager.GetItemList(query, false);
 
         if (items is null)
         {
-            _logger.LogError("Folder items were null");
+            _logger.LogError("Library query result is null");
             return;
         }
 
         // Queue all episodes on the server for fingerprinting.
-        _logger.LogDebug("Iterating through folder contents");
-        foreach (var item in items.Items)
+        _logger.LogDebug("Iterating through library items");
+
+        foreach (var item in items)
         {
             if (item is not Episode episode)
             {
@@ -139,7 +137,7 @@ public class Entrypoint : IServerEntryPoint
             QueueEpisode(episode);
         }
 
-        _logger.LogDebug("Queued {Count} episodes", items.Items.Count);
+        _logger.LogDebug("Queued {Count} episodes", items.Count);
     }
 
     /// <summary>
@@ -199,29 +197,7 @@ public class Entrypoint : IServerEntryPoint
         }
     }
 
-    /// <summary>
-    /// FIXME: don't do this.
-    /// </summary>
-    private Guid GetAdministrator()
-    {
-        foreach (var user in _userManager.Users)
-        {
-            _logger.LogDebug("Checking access of user {Username}", user.Username);
-
-            if (!user.HasPermission(Jellyfin.Data.Enums.PermissionKind.IsAdministrator))
-            {
-                _logger.LogDebug("User {Username} does not have the required access, continuing", user.Username);
-                continue;
-            }
-
-            _logger.LogDebug("Accessing libraries as {Username}", user.Username);
-            return user.Id;
-        }
-
-        throw new FingerprintException("Unable to find an administrator on this server.");
-    }
-
-    #if DEBUG
+#if DEBUG
     /// <summary>
     /// Logs the exact commit that created this version of the plugin. Only used in unstable builds.
     /// </summary>
@@ -253,7 +229,7 @@ public class Entrypoint : IServerEntryPoint
             _logger.LogInformation("Unstable version built from commit {Version}", version);
         }
     }
-    #endif
+#endif
 
     /// <summary>
     /// Dispose.
