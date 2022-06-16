@@ -1,8 +1,13 @@
-name: Rebuild container
+name: Publish container
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+  
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: jellyfin-intro-skipper
 
 jobs:
   build:
@@ -20,21 +25,58 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         
+    - name: Get npm cache directory
+      id: npm-cache-dir
+      run: |
+        echo "::set-output name=dir::$(npm config get cache)"
+
+    - name: Configure npm cache
+      uses: actions/cache@v3
+      id: npm-cache # use this to check for `cache-hit` ==> if: steps.npm-cache.outputs.cache-hit != 'true'
+      with:
+        path: ${{ steps.npm-cache-dir.outputs.dir }}
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+        
     - name: Checkout modified web interface
       uses: actions/checkout@v3
       with:
-        repository: https://github.com/ConfusedPolarBear/jellyfin-web
+        repository: ConfusedPolarBear/jellyfin-web
         ref: intros
         path: web
+        
+    - name: Store commit of web interface
+      id: web-commit
+      run: |
+        cd web
+        echo "::set-output name=commit::$(git log -1 --format='%H' | cut -c -10)"
 
     - name: Build and copy web interface
       run: |
         cd web
         npm install
         cp -r dist ../docker/
-        
-    - name: Build container
+        tar czf dist.tar.gz dist
+
+    - name: Upload web interface
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: jellyfin-web-10.8.0+${{ steps.web-commit.outputs.commit }}.tar.gz
+        path: web/dist.tar.gz
+        if-no-files-found: error
+
+    - name: Login to GHCR
+      uses: docker/login-action@v2.0.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish container
       uses: docker/build-push-action@v3.0.0
       with:
         file: docker/Dockerfile
         context: docker/
+        push: true
+        tags: ConfusedPolarBear/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
