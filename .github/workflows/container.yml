@@ -1,0 +1,40 @@
+name: Rebuild container
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Checkout modified web interface
+      uses: actions/checkout@v3
+      with:
+        repository: https://github.com/ConfusedPolarBear/jellyfin-web
+        ref: intros
+        path: web
+
+    - name: Build and copy web interface
+      run: |
+        cd web
+        npm install
+        cp -r dist ../docker/
+        
+    - name: Build container
+      uses: docker/build-push-action@v3.0.0
+      with:
+        file: docker/Dockerfile
+        context: docker/
