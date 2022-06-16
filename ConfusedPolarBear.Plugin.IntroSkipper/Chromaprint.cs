@@ -112,7 +112,9 @@ public static class Chromaprint
     {
         var ffmpegPath = Plugin.Instance?.FFmpegPath ?? "ffmpeg";
 
-        var info = new ProcessStartInfo(ffmpegPath, args)
+        // Prepend some flags to prevent FFmpeg from logging it's banner and progress information
+        // for each file that is fingerprinted.
+        var info = new ProcessStartInfo(ffmpegPath, args.Insert(0, "-hide_banner -loglevel warning "))
         {
             WindowStyle = ProcessWindowStyle.Hidden,
             CreateNoWindow = true,
