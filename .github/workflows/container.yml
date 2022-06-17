@@ -7,11 +7,12 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: jellyfin-intro-skipper
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
 
     strategy:
       matrix:
@@ -19,6 +20,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    
+    - name: Login to GHCR
+      uses: docker/login-action@v2.0.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
@@ -32,7 +40,7 @@ jobs:
 
     - name: Configure npm cache
       uses: actions/cache@v3
-      id: npm-cache # use this to check for `cache-hit` ==> if: steps.npm-cache.outputs.cache-hit != 'true'
+      id: npm-cache
       with:
         path: ${{ steps.npm-cache-dir.outputs.dir }}
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -66,17 +74,10 @@ jobs:
         path: web/dist.tar.gz
         if-no-files-found: error
 
-    - name: Login to GHCR
-      uses: docker/login-action@v2.0.0
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Publish container
       uses: docker/build-push-action@v3.0.0
       with:
         file: docker/Dockerfile
         context: docker/
         push: true
-        tags: confusedpolarbear/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
+        tags: ${{ env.REGISTRY}}/confusedpolarbear/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
