@@ -164,6 +164,12 @@ public class Entrypoint : IServerEntryPoint
             throw new InvalidOperationException("plugin instance was null");
         }
 
+        if (string.IsNullOrEmpty(episode.Path))
+        {
+            _logger.LogWarning("Not queuing episode {Id} as no path was provided by Jellyfin", episode.Id);
+            return;
+        }
+
         lock (_queueLock)
         {
             var queue = Plugin.Instance.AnalysisQueue;

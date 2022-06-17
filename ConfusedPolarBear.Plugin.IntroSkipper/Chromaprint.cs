@@ -75,7 +75,12 @@ public static class Chromaprint
             return cachedFingerprint;
         }
 
-        Logger?.LogDebug("Fingerprinting {Duration} seconds from {File}", episode.FingerprintDuration, episode.Path);
+        Logger?.LogDebug(
+            "Fingerprinting {Duration} seconds from \"{File}\" (length {Length}, id {Id})",
+            episode.FingerprintDuration,
+            episode.Path,
+            episode.Path.Length,
+            episode.EpisodeId);
 
         var args = string.Format(
             CultureInfo.InvariantCulture,
@@ -87,7 +92,8 @@ public static class Chromaprint
         var rawPoints = GetOutput(args);
         if (rawPoints.Length == 0 || rawPoints.Length % 4 != 0)
         {
-            throw new FingerprintException("chromaprint output for " + episode.Path + " was malformed");
+            Logger?.LogWarning("Chromaprint returned {Count} points for \"{Path}\"", rawPoints.Length, episode.Path);
+            throw new FingerprintException("chromaprint output for \"" + episode.Path + "\" was malformed");
         }
 
         var results = new List<uint>();
@@ -131,6 +137,7 @@ public static class Chromaprint
             StartInfo = info
         };
 
+        Logger?.LogDebug("Starting ffmpeg with the following arguments: {Arguments}", ffmpeg.StartInfo.Arguments);
         ffmpeg.Start();
 
         using (MemoryStream ms = new MemoryStream())
