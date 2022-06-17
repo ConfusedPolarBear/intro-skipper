@@ -13,6 +13,10 @@
 * Report failure to the UI if the episode analysis queue is empty
 * Allow customizing degrees of parallelism
   * Warning: Using a value that is too high will result in system instability
+* Remove restart requirement to change auto skip setting
+* Rewrite startup enqueue
+* Fix deadlock issue on Windows (nyanmisaka)
+* Improve skip intro button styling & positioning (Fallenbagel)
 
 ## v0.1.0.0 (2022-06-09)
 * Add option to automatically skip intros

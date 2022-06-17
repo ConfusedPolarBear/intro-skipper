@@ -8,7 +8,7 @@
 ## Instructions
 
 1. Download the latest modified web interface from the releases tab and either:
-    1. Serve the web interface directly from your Jellyfin server, or
-    2. Serve the web interface using an external web server
-    3. The corresponding source code can be found in this [fork](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros)
+    1. Serve the web interface using an external web server, or
+    2. Serve the web interface directly from your Jellyfin server (**make a backup** of the original version first)
+        1. On Linux, the web interface is located in `/usr/share/jellyfin/web/`
 2. Follow the plugin installation steps from the readme
