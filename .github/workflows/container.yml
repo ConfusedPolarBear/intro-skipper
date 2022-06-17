@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-  
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: jellyfin-intro-skipper
@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         node-version: [14.x]
-    
+
     steps:
     - uses: actions/checkout@v3
 
@@ -24,7 +24,7 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-        
+
     - name: Get npm cache directory
       id: npm-cache-dir
       run: |
@@ -38,14 +38,14 @@ jobs:
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
-        
+
     - name: Checkout modified web interface
       uses: actions/checkout@v3
       with:
         repository: ConfusedPolarBear/jellyfin-web
         ref: intros
         path: web
-        
+
     - name: Store commit of web interface
       id: web-commit
       run: |
@@ -79,4 +79,4 @@ jobs:
         file: docker/Dockerfile
         context: docker/
         push: true
-        tags: ConfusedPolarBear/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
+        tags: confusedpolarbear/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
