@@ -1,7 +1,7 @@
 # Using the modified web interface
 
-If you run Jellyfin as a container, there are two ways of using the modified web interface:
-1. Mounting the new interface to your existing Jellyfin container
+If you run Jellyfin as a container, there are two different ways to use the modified web interface:
+1. Mounting the new web interface to your existing Jellyfin container, or
 2. Switching container images
 
 If you do not run Jellyfin as a container, you can follow the [native installation](native.md) instructions.
