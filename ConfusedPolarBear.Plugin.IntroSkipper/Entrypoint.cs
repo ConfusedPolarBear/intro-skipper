@@ -107,8 +107,14 @@ public class Entrypoint : IServerEntryPoint
 
         var query = new InternalItemsQuery()
         {
+            // Order by series name, season, and then episode number so that status updates are logged in order
             ParentId = Guid.Parse(rawId),
-            OrderBy = new[] { ("IndexNumber", SortOrder.Ascending) },
+            OrderBy = new[]
+            {
+                ("SeriesSortName", SortOrder.Ascending),
+                ("ParentIndexNumber", SortOrder.Ascending),
+                ("IndexNumber", SortOrder.Ascending),
+            },
             IncludeItemTypes = new BaseItemKind[] { BaseItemKind.Episode },
             Recursive = true,
         };
