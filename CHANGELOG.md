@@ -15,8 +15,10 @@
   * Warning: Using a value that is too high will result in system instability
 * Remove restart requirement to change auto skip setting
 * Rewrite startup enqueue
-* Fix deadlock issue on Windows (nyanmisaka)
-* Improve skip intro button styling & positioning (Fallenbagel)
+* Fix deadlock issue on Windows (#23 by @nyanmisaka)
+* Improve skip intro button styling & positioning (ConfusedPolarBear/jellyfin-web#91 by @Fallenbagel)
+* Order episodes by `IndexNumber` (#25 reported by @Flo56958)
+
 
 ## v0.1.0.0 (2022-06-09)
 * Add option to automatically skip intros

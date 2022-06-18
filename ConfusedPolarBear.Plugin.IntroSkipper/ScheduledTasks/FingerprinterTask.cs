@@ -173,7 +173,7 @@ public class FingerprinterTask : IScheduledTask
             return;
         }
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             "Analyzing {Count} episodes from {Name} season {Season}",
             season.Value.Count,
             first.SeriesName,

@@ -108,7 +108,7 @@ public class Entrypoint : IServerEntryPoint
         var query = new InternalItemsQuery()
         {
             ParentId = Guid.Parse(rawId),
-            OrderBy = new[] { ("SortName", SortOrder.Ascending) },
+            OrderBy = new[] { ("IndexNumber", SortOrder.Ascending) },
             IncludeItemTypes = new BaseItemKind[] { BaseItemKind.Episode },
             Recursive = true,
         };
