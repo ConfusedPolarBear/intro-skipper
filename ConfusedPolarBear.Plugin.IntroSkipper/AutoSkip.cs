@@ -160,6 +160,7 @@ public class AutoSkip : IServerEntryPoint
                 session.Id,
                 new MessageCommand()
                 {
+                    Header = string.Empty,      // some clients require header to be a string instead of null
                     Text = "Automatically skipped intro",
                     TimeoutMs = 2000,
                 },
