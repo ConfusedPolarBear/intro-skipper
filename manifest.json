@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png",
         "versions": [
             {
+            "version": "0.1.5.0",
+            "changelog": "- use ffmpeg instead of fpcalc\n- version API endpoints\n- see CHANGELOG.md for full list of changes",
+            "targetAbi": "10.8.0.0",
+            "sourceUrl": "https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.1.5/intro-skipper-v0.1.5.zip",
+            "checksum": "cdb5baa20a37af1559d85a4aeb4760fa",
+            "timestamp": "2022-06-18T03:01:21Z"
+            },
+            {
                 "version": "0.1.0.0",
                 "changelog": "- add automatic intro skip\n- cache audio fingerprints by default\n- switch to new fingerprint comparison algorithm",
                 "targetAbi": "10.8.0.0",

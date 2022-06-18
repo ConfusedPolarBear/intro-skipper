@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.5.0 (unreleased)
+## v0.1.5.0 (2022-06-17)
 * Use `ffmpeg` to generate audio fingerprints instead of `fpcalc`
   * Requires that the installed version of `ffmpeg`:
     * Was compiled with the `--enable-chromaprint` option
