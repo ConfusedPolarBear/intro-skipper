@@ -7,16 +7,15 @@
 
 ## Release plugin
 
-1. Update and commit latest changelog and manifest
-2. Tag latest commit **without pushing**
-3. Build release DLL with `dotnet build -c Release`
-4. Zip release DLL
-5. Test plugin manifest
+1. Build release DLL with `dotnet build -c Release`
+2. Zip release DLL
+3. Update and commit latest changelog and manifest
+4. Test plugin manifest
    1. Replace manifest URL with local IP address
    2. Serve release ZIP and manifest with `python3 -m http.server`
    3. Test updating plugin
-6. Push tag
-7. Create release on GitHub with the following files:
+5. Tag and push latest commit
+6. Create release on GitHub with the following files:
    1. Archived plugin DLL
    2. Latest web interface
 

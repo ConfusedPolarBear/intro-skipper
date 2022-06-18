@@ -8,7 +8,7 @@ If you do not run Jellyfin as a container, you can follow the [native installati
 
 ## Method 1: mounting the new web interface
 
-1. Download the latest compiled version of the web interface from [the releases tab](https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.0.1/jellyfin-web_10.8.0+3522b61.tar.gz) (or compile [from source](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros))
+1. Download the latest compiled version of the web interface from [the releases tab](https://github.com/ConfusedPolarBear/intro-skipper/releases) (or compile [from source](https://github.com/ConfusedPolarBear/jellyfin-web/tree/intros))
 2. Extract the archive somewhere on your server and make note of the full path to the `dist` folder
 3. Mount the `dist` folder to your container as `/jellyfin/jellyfin-web`. Example docker-compose snippet:
 ```yaml
