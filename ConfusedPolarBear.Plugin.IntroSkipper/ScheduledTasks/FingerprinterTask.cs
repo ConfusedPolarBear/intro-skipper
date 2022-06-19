@@ -188,11 +188,11 @@ public class FingerprinterTask : IScheduledTask
 
         if (unanalyzed)
         {
-        _logger.LogInformation(
-            "Analyzing {Count} episodes from {Name} season {Season}",
-            season.Value.Count,
-            first.SeriesName,
-            first.SeasonNumber);
+            _logger.LogInformation(
+                "Analyzing {Count} episodes from {Name} season {Season}",
+                season.Value.Count,
+                first.SeriesName,
+                first.SeasonNumber);
         }
         else
         {
@@ -234,8 +234,7 @@ public class FingerprinterTask : IScheduledTask
             }
 
             // TODO: add retry logic
-            var alreadyDone = Plugin.Instance!.Intros;
-            if (alreadyDone.ContainsKey(lhs.EpisodeId) && alreadyDone.ContainsKey(rhs.EpisodeId))
+            if (Plugin.Instance!.Intros.ContainsKey(lhs.EpisodeId) && Plugin.Instance!.Intros.ContainsKey(rhs.EpisodeId))
             {
                 _logger.LogTrace(
                     "Episodes {LHS} and {RHS} have both already been fingerprinted",
@@ -513,15 +512,13 @@ public class FingerprinterTask : IScheduledTask
     /// <param name="episodes">List of episodes that was just analyzed.</param>
     private void RunSecondPass(List<QueuedEpisode> episodes)
     {
-        var intros = Plugin.Instance!.Intros;
-
         // First, assert that at least half of the episodes in this season have an intro.
         var validCount = 0;
         var totalCount = episodes.Count;
 
         foreach (var episode in episodes)
         {
-            if (intros[episode.EpisodeId].Valid)
+            if (Plugin.Instance!.Intros[episode.EpisodeId].Valid)
             {
                 validCount++;
             }
@@ -604,7 +601,29 @@ public class FingerprinterTask : IScheduledTask
         var goodFingerprints = new List<ReadOnlyCollection<uint>>();
         foreach (var id in maxBucket.Episodes)
         {
-            goodFingerprints.Add(_fingerprintCache[id]);
+            // Sometimes an episode isn't in the fingerprint cache. When this occurs, it has to be fingerprinted again.
+            _logger.LogTrace("Second pass: searching cache for {Id}", id);
+
+            if (_fingerprintCache.ContainsKey(id))
+            {
+                _logger.LogTrace("Second pass: cache hit for {Id}", id);
+                goodFingerprints.Add(_fingerprintCache[id]);
+            }
+            else
+            {
+                _logger.LogTrace("Second pass: cache miss for {Id}", id);
+
+                var fullEp = episodes.Find((e) => { return e.EpisodeId == id; });
+
+                if (fullEp is not null)
+                {
+                    goodFingerprints.Add(Chromaprint.Fingerprint(fullEp));
+                }
+                else
+                {
+                    _logger.LogTrace("Second pass: unable to find episode {Id}", id);
+                }
+            }
         }
 
         foreach (var episode in episodes)
