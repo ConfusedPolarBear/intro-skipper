@@ -173,14 +173,38 @@ public class FingerprinterTask : IScheduledTask
             return;
         }
 
+        var episodes = season.Value;
+        var unanalyzed = false;
+
+        // Only log an analysis message if there are unanalyzed episodes in this season.
+        foreach (var episode in episodes)
+        {
+            if (!Plugin.Instance!.Intros.ContainsKey(episode.EpisodeId))
+            {
+                unanalyzed = true;
+                break;
+            }
+        }
+
+        if (unanalyzed)
+        {
         _logger.LogInformation(
             "Analyzing {Count} episodes from {Name} season {Season}",
             season.Value.Count,
             first.SeriesName,
             first.SeasonNumber);
+        }
+        else
+        {
+            _logger.LogDebug(
+                "All episodes from {Name} season {Season} have already been analyzed",
+                first.SeriesName,
+                first.SeasonNumber);
+
+            return;
+        }
 
         // Ensure there are an even number of episodes
-        var episodes = season.Value;
         if (episodes.Count % 2 != 0)
         {
             episodes.Add(episodes[episodes.Count - 2]);

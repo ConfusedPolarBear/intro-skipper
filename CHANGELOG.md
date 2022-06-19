@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.6.0
+* Write EDL files with intro timestamps
+* Restore per season status updates
+
 ## v0.1.5.0 (2022-06-17)
 * Use `ffmpeg` to generate audio fingerprints instead of `fpcalc`
   * Requires that the installed version of `ffmpeg`:
