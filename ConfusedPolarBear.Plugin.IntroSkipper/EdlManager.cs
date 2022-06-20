@@ -26,6 +26,7 @@ public static class EdlManager
     /// <param name="episodes">Episodes to update EDL files for.</param>
     public static void UpdateEDLFiles(ReadOnlyCollection<QueuedEpisode> episodes)
     {
+        var overwrite = Plugin.Instance!.Configuration.OverwriteExistingEdlFiles;
         var action = Plugin.Instance!.Configuration.EdlAction;
         if (action == EdlAction.None)
         {
@@ -42,6 +43,12 @@ public static class EdlManager
             var edlPath = GetEdlPath(Plugin.Instance!.GetItemPath(id));
 
             _logger?.LogTrace("Episode {Id} has EDL path {Path}", id, edlPath);
+
+            if (!overwrite && File.Exists(edlPath))
+            {
+                _logger?.LogTrace("Refusing to overwrite existing EDL file {Path}", edlPath);
+                continue;
+            }
 
             File.WriteAllText(edlPath, intro.ToEdl(action));
         }

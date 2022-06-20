@@ -70,10 +70,20 @@
                                 If set to a value other than None, specifies which action to write to
                                 <a href="https://kodi.wiki/view/Edit_decision_list">MPlayer compatible EDL files</a>
                                 alongside your episode files. <br />
-                                <strong>
-                                    If this value is changed from None, the plugin will overwrite any EDL files
-                                    associated with your episode files.
-                                </strong>
+
+                                If this value is changed after EDL files are generated, you must either manually delete
+                                the EDL files or check the "Overwrite existing EDL files" checkbox below.
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="OverwriteEdl" type="checkbox" is="emby-checkbox" />
+                                <span>Overwrite existing EDL files</span>
+                            </label>
+
+                            <div class="fieldDescription">
+                                If checked, the plugin will overwrite any EDL files associated with your episode files.
                             </div>
                         </div>
                     </fieldset>
@@ -477,7 +487,9 @@
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         document.querySelector('#AutoSkip').checked = config.AutoSkip;
                         document.querySelector('#MaxParallelism').value = config.MaxParallelism;
+
                         document.querySelector('#EdlAction').value = config.EdlAction;
+                        document.querySelector('#OverwriteEdl').checked = config.OverwriteExistingEdlFiles;
 
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
@@ -493,15 +505,18 @@
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         config.AutoSkip = document.querySelector('#AutoSkip').checked;
                         config.MaxParallelism = document.querySelector('#MaxParallelism').value;
+
                         config.EdlAction = document.querySelector('#EdlAction').value;
+                        config.OverwriteExistingEdlFiles = document.querySelector('#OverwriteEdl').checked;
 
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;
                         config.HidePromptAdjustment = document.querySelector("#HidePromptAdjustment").value;
 
-                        ApiClient.updatePluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b", config).then(function (result) {
-                            Dashboard.processPluginConfigurationUpdateResult(result);
-                        });
+                        ApiClient.updatePluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b", config)
+                            .then(function (result) {
+                                Dashboard.processPluginConfigurationUpdateResult(result);
+                            });
                     });
 
                     e.preventDefault();

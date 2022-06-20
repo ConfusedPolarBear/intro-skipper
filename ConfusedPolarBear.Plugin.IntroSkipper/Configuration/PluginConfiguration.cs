@@ -31,6 +31,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public EdlAction EdlAction { get; set; } = EdlAction.None;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether or not to overwrite existing EDL files.
+    /// </summary>
+    public bool OverwriteExistingEdlFiles { get; set; } = false;
+
     // ===== Playback settings =====
 
     /// <summary>
