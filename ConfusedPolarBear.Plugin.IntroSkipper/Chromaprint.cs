@@ -188,9 +188,23 @@ public static class Chromaprint
 
         // Read each stringified uint.
         result.EnsureCapacity(raw.Length);
-        foreach (var rawNumber in raw)
+
+        try
         {
-            result.Add(Convert.ToUInt32(rawNumber, CultureInfo.InvariantCulture));
+            foreach (var rawNumber in raw)
+            {
+                result.Add(Convert.ToUInt32(rawNumber, CultureInfo.InvariantCulture));
+            }
+        }
+        catch (FormatException)
+        {
+            // Occurs when the cached fingerprint is corrupt.
+            Logger?.LogDebug(
+                "Cached fingerprint for {Path} ({Id}) is corrupt, ignoring cache",
+                episode.Path,
+                episode.EpisodeId);
+
+            return false;
         }
 
         fingerprint = result.AsReadOnly();
