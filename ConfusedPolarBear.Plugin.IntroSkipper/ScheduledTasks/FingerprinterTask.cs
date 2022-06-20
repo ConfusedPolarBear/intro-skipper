@@ -109,7 +109,9 @@ public class FingerprinterTask : IScheduledTask
                 "No episodes to analyze: either no show libraries are defined or ffmpeg could not be found");
         }
 
-        var totalProcessed = 0;
+        // Include the previously processed episodes in the percentage reported to the UI.
+        var totalProcessed = CountProcessedEpisodes();
+
         var options = new ParallelOptions()
         {
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
@@ -121,7 +123,10 @@ public class FingerprinterTask : IScheduledTask
 
             try
             {
-                AnalyzeSeason(season, cancellationToken);
+                // Increment totalProcessed by the number of episodes in this season that were actually analyzed
+                // (instead of just using the number of episodes in the current season).
+                var analyzed = AnalyzeSeason(season, cancellationToken);
+                Interlocked.Add(ref totalProcessed, analyzed);
             }
             catch (FingerprintException ex)
             {
@@ -149,20 +154,49 @@ public class FingerprinterTask : IScheduledTask
                 }
             }
 
-            totalProcessed += season.Value.Count;
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
         });
 
         return Task.CompletedTask;
     }
 
-    private void AnalyzeSeason(
+    /// <summary>
+    /// Count the number of previously processed episodes to ensure the reported progress is correct.
+    /// </summary>
+    /// <returns>Number of previously processed episodes.</returns>
+    private int CountProcessedEpisodes()
+    {
+        var previous = 0;
+
+        foreach (var season in Plugin.Instance!.AnalysisQueue)
+        {
+            foreach (var episode in season.Value)
+            {
+                if (!Plugin.Instance!.Intros.TryGetValue(episode.EpisodeId, out var intro) || !intro.Valid)
+                {
+                    continue;
+                }
+
+                previous++;
+            }
+        }
+
+        return previous;
+    }
+
+    /// <summary>
+    /// Fingerprints all episodes in the provided season and stores the timestamps of all introductions.
+    /// </summary>
+    /// <param name="season">Pairing of season GUID to a list of QueuedEpisode objects.</param>
+    /// <param name="cancellationToken">Cancellation token provided by the scheduled task.</param>
+    /// <returns>Number of episodes from the provided season that were analyzed.</returns>
+    private int AnalyzeSeason(
         KeyValuePair<Guid, List<QueuedEpisode>> season,
         CancellationToken cancellationToken)
     {
         var seasonIntros = new Dictionary<Guid, Intro>();
-
-        var first = season.Value[0];
+        var episodes = season.Value;
+        var first = episodes[0];
 
         /* Don't analyze specials or seasons with an insufficient number of episodes.
          * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
@@ -170,10 +204,9 @@ public class FingerprinterTask : IScheduledTask
          */
         if (season.Value.Count < 2 || first.SeasonNumber == 0)
         {
-            return;
+            return episodes.Count;
         }
 
-        var episodes = season.Value;
         var unanalyzed = false;
 
         // Only log an analysis message if there are unanalyzed episodes in this season.
@@ -201,7 +234,7 @@ public class FingerprinterTask : IScheduledTask
                 first.SeriesName,
                 first.SeasonNumber);
 
-            return;
+            return 0;
         }
 
         // Ensure there are an even number of episodes
@@ -287,6 +320,8 @@ public class FingerprinterTask : IScheduledTask
         {
             Plugin.Instance!.SaveTimestamps();
         }
+
+        return episodes.Count;
     }
 
     /// <summary>
