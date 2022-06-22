@@ -12,7 +12,11 @@ If you use the custom web interface on your server, you will be able to click a 
 
 However, if you want to use an unmodified installation of Jellyfin 10.8.0 or use clients that do not use the web interface provided by the server, the plugin can be configured to automatically skip intros.
 
-Plugin versions older than v0.1.5.0 require `fpcalc` to be installed.
+## System requirements
+
+Plugin versions v0.1.5 and newer require `jellyfin-ffmpeg 5.0.1-5` to be installed. This is installed by default in the official Jellyfin 10.8.0 container and available as `jellyfin-ffmpeg5` on Debian Linux based systems.
+
+Plugin versions v0.1.0 and older require `fpcalc` to be installed.
 
 ## Introduction requirements
 
