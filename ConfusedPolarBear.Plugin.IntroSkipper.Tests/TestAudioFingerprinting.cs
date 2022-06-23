@@ -64,8 +64,7 @@ public class TestAudioFingerprinting
     [Fact]
     public void TestIntroDetection()
     {
-        var logger = new Logger<FingerprinterTask>(new LoggerFactory());
-        var task = new FingerprinterTask(logger);
+        var task = new FingerprinterTask(new LoggerFactory());
 
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");

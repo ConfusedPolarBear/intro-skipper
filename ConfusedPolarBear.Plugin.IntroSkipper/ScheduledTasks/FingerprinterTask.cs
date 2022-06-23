@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -47,6 +48,10 @@ public class FingerprinterTask : IScheduledTask
 
     private readonly ILogger<FingerprinterTask> _logger;
 
+    private readonly ILogger<QueueManager> _queueLogger;
+
+    private readonly ILibraryManager? _libraryManager;
+
     /// <summary>
     /// Lock which guards the fingerprint cache dictionary.
     /// </summary>
@@ -66,10 +71,22 @@ public class FingerprinterTask : IScheduledTask
     /// <summary>
     /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
     /// </summary>
-    /// <param name="logger">Logger.</param>
-    public FingerprinterTask(ILogger<FingerprinterTask> logger)
+    /// <param name="loggerFactory">Logger factory.</param>
+    /// <param name="libraryManager">Library manager.</param>
+    public FingerprinterTask(ILoggerFactory loggerFactory, ILibraryManager libraryManager) : this(loggerFactory)
     {
-        _logger = logger;
+        _libraryManager = libraryManager;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
+    /// </summary>
+    /// <param name="loggerFactory">Logger factory.</param>
+    public FingerprinterTask(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger<FingerprinterTask>();
+        _queueLogger = loggerFactory.CreateLogger<QueueManager>();
+
         _fingerprintCache = new Dictionary<Guid, ReadOnlyCollection<uint>>();
     }
 
@@ -94,13 +111,22 @@ public class FingerprinterTask : IScheduledTask
     public string Key => "CPBIntroSkipperRunFingerprinter";
 
     /// <summary>
-    /// Analyze all episodes in the queue.
+    /// Analyze all episodes in the queue. Only one instance of this task should be run at a time.
     /// </summary>
     /// <param name="progress">Task progress.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Task.</returns>
     public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
+        if (_libraryManager is null)
+        {
+            throw new InvalidOperationException("Library manager must not be null");
+        }
+
+        // Make sure the analysis queue matches what's currently in Jellyfin.
+        var queueManager = new QueueManager(_queueLogger, _libraryManager);
+        queueManager.EnqueueAllEpisodes();
+
         var queue = Plugin.Instance!.AnalysisQueue;
 
         if (queue.Count == 0)
