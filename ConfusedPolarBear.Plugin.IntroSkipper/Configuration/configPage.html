@@ -71,19 +71,18 @@
                                 <a href="https://kodi.wiki/view/Edit_decision_list">MPlayer compatible EDL files</a>
                                 alongside your episode files. <br />
 
-                                If this value is changed after EDL files are generated, you must either manually delete
-                                the EDL files or check the "Overwrite existing EDL files" checkbox below.
+                                If this value is changed after EDL files are generated, you must check the "Regenerate EDL files" checkbox below.
                             </div>
                         </div>
 
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
-                                <input id="OverwriteEdl" type="checkbox" is="emby-checkbox" />
-                                <span>Overwrite existing EDL files</span>
+                                <input id="RegenerateEdl" type="checkbox" is="emby-checkbox" />
+                                <span>Regenerate EDL files during next scan</span>
                             </label>
 
                             <div class="fieldDescription">
-                                If checked, the plugin will overwrite any EDL files associated with your episode files.
+                                If checked, the plugin will <strong>overwrite all EDL files</strong> associated with your episodes with the currently discovered introduction timestamps and EDL action.
                             </div>
                         </div>
                     </fieldset>
@@ -489,7 +488,7 @@
                         document.querySelector('#MaxParallelism').value = config.MaxParallelism;
 
                         document.querySelector('#EdlAction').value = config.EdlAction;
-                        document.querySelector('#OverwriteEdl').checked = config.OverwriteExistingEdlFiles;
+                        document.querySelector('#RegenerateEdl').checked = config.RegenerateEdlFiles;
 
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
@@ -507,7 +506,7 @@
                         config.MaxParallelism = document.querySelector('#MaxParallelism').value;
 
                         config.EdlAction = document.querySelector('#EdlAction').value;
-                        config.OverwriteExistingEdlFiles = document.querySelector('#OverwriteEdl').checked;
+                        config.RegenerateEdlFiles = document.querySelector('#RegenerateEdl').checked;
 
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;

@@ -137,6 +137,9 @@ public class FingerprinterTask : IScheduledTask
                 "No episodes to analyze: either no show libraries are defined or ffmpeg could not be found");
         }
 
+        // Log EDL settings
+        EdlManager.LogConfiguration();
+
         // Include the previously processed episodes in the percentage reported to the UI.
         var totalProcessed = CountProcessedEpisodes();
 
@@ -145,6 +148,7 @@ public class FingerprinterTask : IScheduledTask
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
         };
 
+        // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
             var first = season.Value[0];
@@ -156,7 +160,7 @@ public class FingerprinterTask : IScheduledTask
                 // (instead of just using the number of episodes in the current season).
                 var analyzed = AnalyzeSeason(season, cancellationToken);
                 Interlocked.Add(ref totalProcessed, analyzed);
-                writeEdl = analyzed > 0;
+                writeEdl = analyzed > 0 || Plugin.Instance!.Configuration.RegenerateEdlFiles;
             }
             catch (FingerprintException ex)
             {
@@ -192,6 +196,14 @@ public class FingerprinterTask : IScheduledTask
             totalProcessed += season.Value.Count;
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
         });
+
+        // Turn the regenerate EDL flag off after the scan completes.
+        if (Plugin.Instance!.Configuration.RegenerateEdlFiles)
+        {
+            _logger.LogInformation("Turning EDL file regeneration flag off");
+            Plugin.Instance!.Configuration.RegenerateEdlFiles = false;
+            Plugin.Instance!.SaveConfiguration();
+        }
 
         return Task.CompletedTask;
     }

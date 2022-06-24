@@ -1,5 +1,6 @@
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using Microsoft.Extensions.Logging;
@@ -21,12 +22,34 @@ public static class EdlManager
     }
 
     /// <summary>
+    /// Logs the configuration that will be used during EDL file creation.
+    /// </summary>
+    public static void LogConfiguration()
+    {
+        if (_logger is null)
+        {
+            throw new InvalidOperationException("Logger must not be null");
+        }
+
+        var config = Plugin.Instance!.Configuration;
+
+        if (config.EdlAction == EdlAction.None)
+        {
+            _logger.LogDebug("EDL action: None - taking no further action");
+            return;
+        }
+
+        _logger.LogDebug("EDL action: {Action}", config.EdlAction);
+        _logger.LogDebug("Regenerate EDL files: {Regenerate}", config.RegenerateEdlFiles);
+    }
+
+    /// <summary>
     /// If the EDL action is set to a value other than None, update EDL files for the provided episodes.
     /// </summary>
     /// <param name="episodes">Episodes to update EDL files for.</param>
     public static void UpdateEDLFiles(ReadOnlyCollection<QueuedEpisode> episodes)
     {
-        var overwrite = Plugin.Instance!.Configuration.OverwriteExistingEdlFiles;
+        var regenerate = Plugin.Instance!.Configuration.RegenerateEdlFiles;
         var action = Plugin.Instance!.Configuration.EdlAction;
         if (action == EdlAction.None)
         {
@@ -39,12 +62,18 @@ public static class EdlManager
         foreach (var episode in episodes)
         {
             var id = episode.EpisodeId;
-            var intro = Plugin.Instance!.Intros[id];
+
+            if (!Plugin.Instance!.Intros.TryGetValue(id, out var intro))
+            {
+                _logger?.LogDebug("Episode {Id} did not have an introduction, skipping", id);
+                continue;
+            }
+
             var edlPath = GetEdlPath(Plugin.Instance!.GetItemPath(id));
 
             _logger?.LogTrace("Episode {Id} has EDL path {Path}", id, edlPath);
 
-            if (!overwrite && File.Exists(edlPath))
+            if (!regenerate && File.Exists(edlPath))
             {
                 _logger?.LogTrace("Refusing to overwrite existing EDL file {Path}", edlPath);
                 continue;

@@ -32,9 +32,11 @@ public class PluginConfiguration : BasePluginConfiguration
     public EdlAction EdlAction { get; set; } = EdlAction.None;
 
     /// <summary>
-    /// Gets or sets a value indicating whether or not to overwrite existing EDL files.
+    /// Gets or sets a value indicating whether to regenerate all EDL files during the next scan.
+    /// By default, EDL files are only written for a season if the season had at least one newly analyzed episode.
+    /// If this is set, all EDL files will be regenerated and overwrite any existing EDL file.
     /// </summary>
-    public bool OverwriteExistingEdlFiles { get; set; } = false;
+    public bool RegenerateEdlFiles { get; set; } = false;
 
     // ===== Playback settings =====
 
