@@ -68,6 +68,11 @@ public static class EdlManager
                 _logger?.LogDebug("Episode {Id} did not have an introduction, skipping", id);
                 continue;
             }
+            else if (!intro.Valid)
+            {
+                _logger?.LogDebug("Episode {Id} did not have a valid introduction, skipping", id);
+                continue;
+            }
 
             var edlPath = GetEdlPath(Plugin.Instance!.GetItemPath(id));
 
