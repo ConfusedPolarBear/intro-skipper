@@ -579,7 +579,7 @@ public class FingerprinterTask : IScheduledTask
 
         foreach (var episode in episodes)
         {
-            if (Plugin.Instance!.Intros[episode.EpisodeId].Valid)
+            if (Plugin.Instance!.Intros.TryGetValue(episode.EpisodeId, out var intro) && intro.Valid)
             {
                 validCount++;
             }
@@ -761,7 +761,11 @@ public class FingerprinterTask : IScheduledTask
 
     private double GetIntroDuration(Guid id)
     {
-        var episode = Plugin.Instance!.Intros[id];
+        if (!Plugin.Instance!.Intros.TryGetValue(id, out var episode))
+        {
+            return 0;
+        }
+
         return episode.Valid ? Math.Round(episode.IntroEnd - episode.IntroStart, 2) : 0;
     }
 
