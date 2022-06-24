@@ -14,7 +14,7 @@ However, if you want to use an unmodified installation of Jellyfin 10.8.0 or use
 
 ## System requirements
 
-Plugin versions v0.1.5 and newer require `jellyfin-ffmpeg 5.0.1-5` to be installed. This is installed by default in the official Jellyfin 10.8.0 container and available as `jellyfin-ffmpeg5` on Debian Linux based systems.
+Plugin versions v0.1.5 and newer require `jellyfin-ffmpeg >= 5.0.1-5` to be installed. This is installed by default in the official Jellyfin 10.8.0 container and available as `jellyfin-ffmpeg5` on Debian Linux based systems.
 
 Plugin versions v0.1.0 and older require `fpcalc` to be installed.
 
