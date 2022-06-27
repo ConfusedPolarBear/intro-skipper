@@ -37,6 +37,17 @@
                                 Maximum degree of parallelism to use when analyzing episodes.
                             </div>
                         </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="SelectedLibraries">
+                                Limit analysis to the following libraries
+                            </label>
+                            <input id="SelectedLibraries" type="text" is="emby-input" />
+                            <div class="fieldDescription">
+                                Enter the names of libraries to analyze, separated by commas. If this field is left
+                                blank, all libraries on the server containing television episodes will be analyzed.
+                            </div>
+                        </div>
                     </fieldset>
 
                     <fieldset class="verticalSection-extrabottompadding">
@@ -438,6 +449,7 @@
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         document.querySelector('#AutoSkip').checked = config.AutoSkip;
                         document.querySelector('#MaxParallelism').value = config.MaxParallelism;
+                        document.querySelector('#SelectedLibraries').value = config.SelectedLibraries;
 
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
@@ -453,6 +465,7 @@
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         config.AutoSkip = document.querySelector('#AutoSkip').checked;
                         config.MaxParallelism = document.querySelector('#MaxParallelism').value;
+                        config.SelectedLibraries = document.querySelector('#SelectedLibraries').value;
 
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;

@@ -2,6 +2,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -42,11 +43,32 @@ public class QueueManager
 
         Plugin.Instance!.AnalysisQueue.Clear();
 
-        // For all TV show libraries, enqueue all contained items.
+        // Get the list of library names which have been selected for analysis, ignoring whitespace and empty entries.
+        var selected = Plugin.Instance!.Configuration.SelectedLibraries
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        if (selected.Count > 0)
+        {
+            _logger.LogInformation("Limiting analysis to the following libraries: {Selected}", selected);
+        }
+        else
+        {
+            _logger.LogDebug("Not limiting analysis by library name");
+        }
+
+        // For all selected TV show libraries, enqueue all contained items.
         foreach (var folder in _libraryManager.GetVirtualFolders())
         {
             if (folder.CollectionType != CollectionTypeOptions.TvShows)
             {
+                continue;
+            }
+
+            // If libraries have been selected for analysis, ensure this library was selected.
+            if (selected.Count > 0 && !selected.Contains(folder.Name))
+            {
+                _logger.LogDebug("Not analyzing library \"{Name}\"", folder.Name);
                 continue;
             }
 

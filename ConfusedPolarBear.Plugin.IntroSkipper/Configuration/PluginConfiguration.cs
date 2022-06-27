@@ -25,6 +25,11 @@ public class PluginConfiguration : BasePluginConfiguration
     public int MaxParallelism { get; set; } = 2;
 
     /// <summary>
+    /// Gets or sets the comma separated list of library names to analyze. If empty, all libraries will be analyzed.
+    /// </summary>
+    public string SelectedLibraries { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether introductions should be automatically skipped.
     /// </summary>
     public bool AutoSkip { get; set; }

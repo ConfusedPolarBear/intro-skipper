@@ -132,7 +132,7 @@ public class FingerprinterTask : IScheduledTask
         if (queue.Count == 0)
         {
             throw new FingerprintException(
-                "No episodes to analyze: either no show libraries are defined or ffmpeg could not be found");
+                "No episodes to analyze. If you are limiting the list of libraries to analyze, check that all library names have been spelled correctly.");
         }
 
         // Include the previously processed episodes in the percentage reported to the UI.
