@@ -23,6 +23,7 @@ Plugin versions v0.1.0 and older require `fpcalc` to be installed.
 Show introductions will only be detected if they are:
 
 * Located within the first 25% of an episode, or the first 10 minutes, whichever is smaller
+  * Both of these settings are customizable
 * At least 20 seconds long
 
 ## Step 1: Optional: use the modified web interface

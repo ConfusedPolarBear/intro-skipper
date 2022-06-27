@@ -37,6 +37,45 @@
                                 Maximum degree of parallelism to use when analyzing episodes.
                             </div>
                         </div>
+
+                        <details>
+                            <summary>Modify introduction requirements</summary>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">
+                                    Percent of audio to analyze
+                                </label>
+                                <input id="AnalysisPercent" type="number" is="emby-input" min="1" max="90" />
+                                <div class="fieldDescription">
+                                    Analysis will be limited to this percentage of each episode's audio. For example, a
+                                    value of 25 (the default) will limit analysis to the first quarter of each episode.
+                                </div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">
+                                    Maximum runtime of audio to analyze (in minutes)
+                                </label>
+                                <input id="AnalysisLengthLimit" type="number" is="emby-input" min="1" />
+                                <div class="fieldDescription">
+                                    Analysis will be limited to this amount of each episode's audio. For example, a
+                                    value of 10 (the default) will limit analysis to the first 10 minutes of each
+                                    episode.
+                                </div>
+                            </div>
+
+                            <p>
+                                The amount of each episode's audio that will be analyzed is determined by these two
+                                settings. The minimum of (episode duration * percent, maximum runtime) is the amount of
+                                audio that will be analyzed. <br />
+
+                                If these settings are changed after analyzing your media, the cached fingerprints and
+                                introduction timestamps for each season you want to analyze with the modified settings
+                                will have to be deleted.
+                            </p>
+
+                            <strong>Increasing these settings will cause episode analysis to take much longer.</strong>
+                        </details>
                     </fieldset>
 
                     <fieldset class="verticalSection-extrabottompadding">
@@ -439,6 +478,9 @@
                         document.querySelector('#AutoSkip').checked = config.AutoSkip;
                         document.querySelector('#MaxParallelism').value = config.MaxParallelism;
 
+                        document.querySelector('#AnalysisPercent').value = config.AnalysisPercent;
+                        document.querySelector('#AnalysisLengthLimit').value = config.AnalysisLengthLimit;
+
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
                         document.querySelector('#HidePromptAdjustment').value = config.HidePromptAdjustment;
@@ -453,6 +495,9 @@
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         config.AutoSkip = document.querySelector('#AutoSkip').checked;
                         config.MaxParallelism = document.querySelector('#MaxParallelism').value;
+
+                        config.AnalysisPercent = document.querySelector('#AnalysisPercent').value;
+                        config.AnalysisLengthLimit = document.querySelector('#AnalysisLengthLimit').value;
 
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;

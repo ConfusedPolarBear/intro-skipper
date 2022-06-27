@@ -17,6 +17,8 @@ public class QueueManager
     private ILibraryManager _libraryManager;
     private ILogger<QueueManager> _logger;
 
+    private double analysisPercent;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueManager"/> class.
     /// </summary>
@@ -41,6 +43,18 @@ public class QueueManager
         }
 
         Plugin.Instance!.AnalysisQueue.Clear();
+
+        // If analysis settings have been changed from the default, log the modified settings.
+        var config = Plugin.Instance!.Configuration;
+        analysisPercent = Convert.ToDouble(config.AnalysisPercent) / 100;
+
+        if (config.AnalysisLengthLimit != 10 || config.AnalysisPercent != 25)
+        {
+            _logger.LogDebug(
+                "Introduction scan is limited to the first {Percent}% or the first {Minutes} minutes of each episode (whichever is smaller)",
+                config.AnalysisPercent,
+                config.AnalysisLengthLimit);
+        }
 
         // For all TV show libraries, enqueue all contained items.
         foreach (var folder in _libraryManager.GetVirtualFolders())
@@ -132,14 +146,17 @@ public class QueueManager
             Plugin.Instance.AnalysisQueue[episode.SeasonId] = new List<QueuedEpisode>();
         }
 
-        // Only fingerprint up to 25% of the episode and at most 10 minutes.
+        var config = Plugin.Instance!.Configuration;
+
+        // Limit analysis to the first X% of the episode and at most Y minutes.
+        // X and Y default to 25% and 10 minutes.
         var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
         if (duration >= 5 * 60)
         {
-            duration /= 4;
+            duration *= analysisPercent;
         }
 
-        duration = Math.Min(duration, 10 * 60);
+        duration = Math.Min(duration, 60 * config.AnalysisLengthLimit);
 
         Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode()
         {
