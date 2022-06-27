@@ -42,6 +42,7 @@ public class QueueManager
         }
 
         Plugin.Instance!.AnalysisQueue.Clear();
+        Plugin.Instance!.TotalQueued = 0;
 
         // Get the list of library names which have been selected for analysis, ignoring whitespace and empty entries.
         var selected = Plugin.Instance!.Configuration.SelectedLibraries
