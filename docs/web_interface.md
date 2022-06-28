@@ -19,7 +19,7 @@ services:
             - '8096:8096'
         volumes:
             - '/full/path/to/extracted/archive/dist:/jellyfin/jellyfin-web:ro' # <== add this line if using the official docker image
-            - '/full/path/to/extracted/archive/dist:/usr/share/jellyfin/web # <== add this line if using the linuxserver docker image
+            - '/full/path/to/extracted/archive/dist:/usr/share/jellyfin/web' # <== add this line if using the linuxserver docker image
             - '/config:/config'
             - '/media:/media:ro'
         image: 'jellyfin/jellyfin:10.8.0'
