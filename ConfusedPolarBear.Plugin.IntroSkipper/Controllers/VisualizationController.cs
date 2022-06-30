@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper.Controllers;
 
@@ -17,11 +18,15 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper.Controllers;
 [Route("Intros")]
 public class VisualizationController : ControllerBase
 {
+    private readonly ILogger<VisualizationController> _logger;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="VisualizationController"/> class.
     /// </summary>
-    public VisualizationController()
+    /// <param name="logger">Logger.</param>
+    public VisualizationController(ILogger<VisualizationController> logger)
     {
+        _logger = logger;
     }
 
     /// <summary>
@@ -31,23 +36,36 @@ public class VisualizationController : ControllerBase
     [HttpGet("Shows")]
     public ActionResult<Dictionary<string, HashSet<string>>> GetShowSeasons()
     {
+        _logger.LogDebug("Returning season names by series");
+
         var showSeasons = new Dictionary<string, HashSet<string>>();
 
-        // Loop through all episodes in the analysis queue
-        foreach (var episodes in Plugin.Instance!.AnalysisQueue)
+        // Loop through all seasons in the analysis queue
+        foreach (var kvp in Plugin.Instance!.AnalysisQueue)
         {
-            foreach (var episode in episodes.Value)
+            // Check that this season contains at least one episode.
+            var episodes = kvp.Value;
+            if (episodes is null || episodes.Count == 0)
             {
-                // Add each season's name to the series hashset
-                var series = episode.SeriesName;
-
-                if (!showSeasons.ContainsKey(series))
-                {
-                    showSeasons[series] = new HashSet<string>();
-                }
-
-                showSeasons[series].Add(GetSeasonName(episode));
+                _logger.LogDebug("Skipping season {Id} (null or empty)", kvp.Key);
+                continue;
             }
+
+            // Peek at the top episode from this season and store the series name and season number.
+            var first = episodes[0];
+            var series = first.SeriesName;
+            var season = GetSeasonName(first);
+
+            // Validate the series and season before attempting to store it.
+            if (string.IsNullOrWhiteSpace(series) || string.IsNullOrWhiteSpace(season))
+            {
+                _logger.LogDebug("Skipping season {Id} (no name or number)", kvp.Key);
+                continue;
+            }
+
+            // TryAdd is used when adding the HashSet since it is a no-op if one was already created for this series.
+            showSeasons.TryAdd(series, new HashSet<string>());
+            showSeasons[series].Add(season);
         }
 
         return showSeasons;

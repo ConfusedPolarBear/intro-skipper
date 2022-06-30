@@ -105,7 +105,7 @@
                 </form>
             </div>
 
-            <details>
+            <details id="visualizer">
                 <summary>Fingerprint Visualizer</summary>
 
                 <p>
@@ -178,6 +178,7 @@
             var shows = {};
 
             // ui elements
+            var visualizer = document.querySelector("details#visualizer");
             var canvas = document.querySelector("canvas#troubleshooter");
             var selectShow = document.querySelector("select#troubleshooterShow");
             var selectSeason = document.querySelector("select#troubleshooterSeason");
@@ -188,8 +189,14 @@
             var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
             var windowHashInterval = 0;
 
-            // config page loaded, populate show names
-            async function onLoad() {
+            // when the fingerprint visualizer opens, populate show names
+            async function visualizerToggled() {
+                if (!visualizer.open) {
+                    return;
+                }
+
+                Dashboard.showLoadingMsg();
+
                 shows = await getJson("Intros/Shows");
 
                 var sorted = [];
@@ -201,6 +208,8 @@
                 }
 
                 selectShow.value = "";
+
+                Dashboard.hideLoadingMsg();
             }
 
             // show changed, populate seasons
@@ -480,6 +489,7 @@
                     return false;
                 });
 
+            visualizer.addEventListener("toggle", visualizerToggled);
             txtOffset.addEventListener("change", renderTroubleshooter);
             selectShow.addEventListener("change", showChanged);
             selectSeason.addEventListener("change", seasonChanged);
@@ -540,9 +550,6 @@
                 timeContainer.style.left = "25px";
                 timeContainer.style.top = (-1 * rect.height + y).toString() + "px";
             });
-
-            // TODO: fix
-            setTimeout(onLoad, 250);
         </script>
 
         <script>
