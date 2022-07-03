@@ -127,7 +127,7 @@ public class AutoSkip : IServerEntryPoint
             // Don't send the seek command more than once in the same session.
             lock (_sentSeekCommandLock)
             {
-                if (_sentSeekCommand[deviceId])
+                if (_sentSeekCommand.TryGetValue(deviceId, out var sent) && sent)
                 {
                     _logger.LogTrace("Already sent seek command for session {Session}", deviceId);
                     continue;

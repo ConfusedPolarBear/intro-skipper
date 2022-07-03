@@ -147,14 +147,6 @@ public class QueueManager
             return;
         }
 
-        var queue = Plugin.Instance.AnalysisQueue;
-
-        // Allocate a new list for each new season
-        if (!queue.ContainsKey(episode.SeasonId))
-        {
-            Plugin.Instance.AnalysisQueue[episode.SeasonId] = new List<QueuedEpisode>();
-        }
-
         // Only fingerprint up to 25% of the episode and at most 10 minutes.
         var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
         if (duration >= 5 * 60)
@@ -164,6 +156,10 @@ public class QueueManager
 
         duration = Math.Min(duration, 10 * 60);
 
+        // Allocate a new list for each new season
+        Plugin.Instance!.AnalysisQueue.TryAdd(episode.SeasonId, new List<QueuedEpisode>());
+
+        // Queue the episode for analysis
         Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode()
         {
             SeriesName = episode.SeriesName,

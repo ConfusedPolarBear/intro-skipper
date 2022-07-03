@@ -724,11 +724,17 @@ public class FingerprinterTask : IScheduledTask
             // Analyze the episode again, ignoring whatever is returned for the known good episode.
             foreach (var lhsFingerprint in goodFingerprints)
             {
+                if (!_fingerprintCache.TryGetValue(episode.EpisodeId, out var fp))
+                {
+                    _logger.LogTrace("Unable to get cached fingerprint for {Id}, skipping", episode.EpisodeId);
+                    continue;
+                }
+
                 var (_, newRhs) = FingerprintEpisodes(
                     maxEpisode.EpisodeId,
                     lhsFingerprint,
                     episode.EpisodeId,
-                    _fingerprintCache[episode.EpisodeId]);
+                    fp);
 
                 // Ensure that the new intro duration is within the targeted bucket and longer than what was found previously.
                 var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);

@@ -52,12 +52,7 @@ public class SkipIntroController : ControllerBase
     /// <returns>Intro object if the provided item has an intro, null otherwise.</returns>
     private Intro? GetIntro(Guid id)
     {
-        if (!Plugin.Instance!.Intros.ContainsKey(id))
-        {
-            return null;
-        }
-
-        return Plugin.Instance!.Intros[id];
+        return Plugin.Instance!.Intros.TryGetValue(id, out var intro) ? intro : null;
     }
 
     /// <summary>
