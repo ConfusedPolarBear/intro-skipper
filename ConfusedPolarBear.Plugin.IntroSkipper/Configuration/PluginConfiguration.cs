@@ -36,6 +36,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public int AnalysisLengthLimit { get; set; } = 10;
 
+    /// <summary>
+    /// Gets or sets the minimum length of similar audio that will be considered an introduction.
+    /// </summary>
+    public int MinimumIntroDuration { get; set; } = 15;
+
     // ===== Playback settings =====
 
     /// <summary>

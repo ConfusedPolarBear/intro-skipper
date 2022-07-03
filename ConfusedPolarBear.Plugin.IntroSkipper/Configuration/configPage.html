@@ -64,17 +64,32 @@
                                 </div>
                             </div>
 
-                            <p>
-                                The amount of each episode's audio that will be analyzed is determined by these two
-                                settings. The minimum of (episode duration * percent, maximum runtime) is the amount of
-                                audio that will be analyzed. <br />
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MinimumDuration">
+                                    Minimum introduction duration (in seconds)
+                                </label>
+                                <input id="MinimumDuration" type="number" is="emby-input" min="1" />
+                                <div class="fieldDescription">
+                                    Similar sounding audio which is shorter than this duration will not be considered an
+                                    introduction.
+                                </div>
+                            </div>
 
-                                If these settings are changed after analyzing your media, the cached fingerprints and
-                                introduction timestamps for each season you want to analyze with the modified settings
+                            <p>
+                                The amount of each episode's audio that will be analyzed is determined using both
+                                the percentage of audio and maximum runtime of audio to analyze. The minimum of
+                                (episode duration * percent, maximum runtime) is the amount of audio that will
+                                be analyzed. <br />
+
+                                If the audio percentage or maximum runtime settings are changed after analyzing your
+                                media, the cached fingerprints and introduction timestamps for each season you want to
+                                analyze with the modified settings
                                 will have to be deleted.
                             </p>
 
-                            <strong>Increasing these settings will cause episode analysis to take much longer.</strong>
+                            <strong>
+                                Increasing either of these settings will cause episode analysis to take much longer.
+                            </strong>
                         </details>
                     </fieldset>
 
@@ -480,6 +495,7 @@
 
                         document.querySelector('#AnalysisPercent').value = config.AnalysisPercent;
                         document.querySelector('#AnalysisLengthLimit').value = config.AnalysisLengthLimit;
+                        document.querySelector('#MinimumDuration').value = config.MinimumIntroDuration;
 
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
@@ -498,6 +514,7 @@
 
                         config.AnalysisPercent = document.querySelector('#AnalysisPercent').value;
                         config.AnalysisLengthLimit = document.querySelector('#AnalysisLengthLimit').value;
+                        config.MinimumIntroDuration = document.querySelector('#MinimumDuration').value;
 
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;

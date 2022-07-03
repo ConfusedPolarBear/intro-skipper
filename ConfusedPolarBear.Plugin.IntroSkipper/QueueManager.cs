@@ -48,12 +48,13 @@ public class QueueManager
         var config = Plugin.Instance!.Configuration;
         analysisPercent = Convert.ToDouble(config.AnalysisPercent) / 100;
 
-        if (config.AnalysisLengthLimit != 10 || config.AnalysisPercent != 25)
+        if (config.AnalysisLengthLimit != 10 || config.AnalysisPercent != 25 || config.MinimumIntroDuration != 15)
         {
             _logger.LogDebug(
-                "Introduction scan is limited to the first {Percent}% or the first {Minutes} minutes of each episode (whichever is smaller)",
+                "Analysis settings have been changed to: {Percent}%/{Minutes}m and a minimum of {Minimum}s",
                 config.AnalysisPercent,
-                config.AnalysisLengthLimit);
+                config.AnalysisLengthLimit,
+                config.MinimumIntroDuration);
         }
 
         // For all TV show libraries, enqueue all contained items.
