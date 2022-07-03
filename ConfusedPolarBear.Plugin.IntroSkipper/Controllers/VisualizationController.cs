@@ -82,28 +82,19 @@ public class VisualizationController : ControllerBase
         [FromRoute] string series,
         [FromRoute] string season)
     {
-        var episodes = new List<EpisodeVisualization>();
+        var visualEpisodes = new List<EpisodeVisualization>();
 
-        foreach (var queuedEpisodes in Plugin.Instance!.AnalysisQueue)
+        if (!LookupSeasonByName(series, season, out var episodes))
         {
-            var first = queuedEpisodes.Value[0];
-            var firstSeasonName = GetSeasonName(first);
-
-            // Assert that the queued episode series and season are equal to what was requested
-            if (
-                !string.Equals(first.SeriesName, series, StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(firstSeasonName, season, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            foreach (var queuedEpisode in queuedEpisodes.Value)
-            {
-                episodes.Add(new EpisodeVisualization(queuedEpisode.EpisodeId, queuedEpisode.Name));
-            }
+            return NotFound();
         }
 
-        return episodes;
+        foreach (var e in episodes)
+        {
+            visualEpisodes.Add(new EpisodeVisualization(e.EpisodeId, e.Name));
+        }
+
+        return visualEpisodes;
     }
 
     /// <summary>
@@ -134,5 +125,35 @@ public class VisualizationController : ControllerBase
     private string GetSeasonName(QueuedEpisode episode)
     {
         return "Season " + episode.SeasonNumber.ToString(CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Lookup a named season of a series and return all queued episodes.
+    /// </summary>
+    /// <param name="series">Series name.</param>
+    /// <param name="season">Season name.</param>
+    /// <param name="episodes">Episodes.</param>
+    /// <returns>Boolean indicating if the requested season was found.</returns>
+    private bool LookupSeasonByName(string series, string season, out List<QueuedEpisode> episodes)
+    {
+        foreach (var queuedEpisodes in Plugin.Instance!.AnalysisQueue)
+        {
+            var first = queuedEpisodes.Value[0];
+            var firstSeasonName = GetSeasonName(first);
+
+            // Assert that the queued episode series and season are equal to what was requested
+            if (
+                !string.Equals(first.SeriesName, series, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(firstSeasonName, season, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            episodes = queuedEpisodes.Value;
+            return true;
+        }
+
+        episodes = new List<QueuedEpisode>();
+        return false;
     }
 }
