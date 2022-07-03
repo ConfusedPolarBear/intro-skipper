@@ -158,6 +158,12 @@
                 <br />
                 <br />
 
+                <button id="btnEraseSeasonTimestamps" type="button">
+                    Erase Season Timestamps
+                </button>
+                <br />
+                <br />
+
                 <canvas id="troubleshooter"></canvas>
                 <span id="timestampContainer">
                     <span id="timestamps"></span> <br />
@@ -177,16 +183,20 @@
             // seasons grouped by show
             var shows = {};
 
-            // ui elements
+            // settings elements
             var visualizer = document.querySelector("details#visualizer");
+            var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
+
+            // visualizer elements
             var canvas = document.querySelector("canvas#troubleshooter");
             var selectShow = document.querySelector("select#troubleshooterShow");
             var selectSeason = document.querySelector("select#troubleshooterSeason");
             var selectEpisode1 = document.querySelector("select#troubleshooterEpisode1");
             var selectEpisode2 = document.querySelector("select#troubleshooterEpisode2");
             var txtOffset = document.querySelector("input#offset");
+            var btnSeasonEraseTimestamps = document.querySelector("button#btnEraseSeasonTimestamps");
             var timeContainer = document.querySelector("span#timestampContainer");
-            var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
+
             var windowHashInterval = 0;
 
             // when the fingerprint visualizer opens, populate show names
@@ -509,6 +519,15 @@
                     });
 
                 e.preventDefault();
+            });
+            btnSeasonEraseTimestamps.addEventListener("click", () => {
+                const show = selectShow.value;
+                const season = selectSeason.value;
+
+                const url = "Intros/Show/" + encodeURIComponent(show) + "/" + encodeURIComponent(season);
+                getJson(url, "DELETE");
+
+                Dashboard.alert("Erased timestamps for " + season + " of " + show);
             });
             document.addEventListener("keydown", keyDown);
             windowHashInterval = setInterval(checkWindowHash, 2500);

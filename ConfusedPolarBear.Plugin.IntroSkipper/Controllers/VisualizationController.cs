@@ -122,6 +122,34 @@ public class VisualizationController : ControllerBase
         return NotFound();
     }
 
+    /// <summary>
+    /// Erases all timestamps for the provided season.
+    /// </summary>
+    /// <param name="series">Show name.</param>
+    /// <param name="season">Season name.</param>
+    /// <response code="204">Season timestamps erased.</response>
+    /// <response code="404">Unable to find season in provided series.</response>
+    /// <returns>No content.</returns>
+    [HttpDelete("Show/{Series}/{Season}")]
+    public ActionResult EraseSeason([FromRoute] string series, [FromRoute] string season)
+    {
+        if (!LookupSeasonByName(series, season, out var episodes))
+        {
+            return NotFound();
+        }
+
+        _logger.LogInformation("Erasing timestamps for {Series} {Season} at user request", series, season);
+
+        foreach (var e in episodes)
+        {
+            Plugin.Instance!.Intros.Remove(e.EpisodeId);
+        }
+
+        Plugin.Instance!.SaveTimestamps();
+
+        return NoContent();
+    }
+
     private string GetSeasonName(QueuedEpisode episode)
     {
         return "Season " + episode.SeasonNumber.ToString(CultureInfo.InvariantCulture);
