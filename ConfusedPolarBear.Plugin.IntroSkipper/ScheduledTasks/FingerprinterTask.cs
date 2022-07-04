@@ -69,6 +69,11 @@ public class FingerprinterTask : IScheduledTask
     private Dictionary<Guid, ReadOnlyCollection<uint>> _fingerprintCache;
 
     /// <summary>
+    /// Statistics for the currently running analysis task.
+    /// </summary>
+    private AnalysisStatistics analysisStatistics = new AnalysisStatistics();
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
@@ -137,14 +142,18 @@ public class FingerprinterTask : IScheduledTask
 
         // Include the previously processed episodes in the percentage reported to the UI.
         var totalProcessed = CountProcessedEpisodes();
-
         var options = new ParallelOptions()
         {
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
         };
 
+        var taskStart = DateTime.Now;
+        analysisStatistics = new AnalysisStatistics();
+        analysisStatistics.TotalQueuedEpisodes = Plugin.Instance!.TotalQueued;
+
         Parallel.ForEach(queue, options, (season) =>
         {
+            var workerStart = DateTime.Now;
             var first = season.Value[0];
 
             try
@@ -181,7 +190,13 @@ public class FingerprinterTask : IScheduledTask
             }
 
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
+
+            analysisStatistics.TotalCPUTime.AddDuration(workerStart);
+            Plugin.Instance!.AnalysisStatistics = analysisStatistics;
         });
+
+        analysisStatistics.TotalTaskTime.AddDuration(taskStart);
+        Plugin.Instance!.AnalysisStatistics = analysisStatistics;
 
         return Task.CompletedTask;
     }
@@ -292,7 +307,6 @@ public class FingerprinterTask : IScheduledTask
                 break;
             }
 
-            // TODO: add retry logic
             if (Plugin.Instance!.Intros.ContainsKey(lhs.EpisodeId) && Plugin.Instance!.Intros.ContainsKey(rhs.EpisodeId))
             {
                 _logger.LogTrace(
@@ -308,9 +322,9 @@ public class FingerprinterTask : IScheduledTask
                 _logger.LogTrace("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
 
                 var (lhsIntro, rhsIntro) = FingerprintEpisodes(lhs, rhs);
-
                 seasonIntros[lhsIntro.EpisodeId] = lhsIntro;
                 seasonIntros[rhsIntro.EpisodeId] = rhsIntro;
+                analysisStatistics.TotalAnalyzedEpisodes.Add(2);
 
                 if (!lhsIntro.Valid)
                 {
@@ -338,8 +352,12 @@ public class FingerprinterTask : IScheduledTask
         // Only run the second pass if the user hasn't requested cancellation and we found an intro
         if (!cancellationToken.IsCancellationRequested && everFoundIntro)
         {
+            var start = DateTime.Now;
+
             // Run a second pass over this season to remove outliers and fix episodes that failed in the first pass.
             RunSecondPass(season.Value);
+
+            analysisStatistics.SecondPassCPUTime.AddDuration(start);
         }
 
         lock (_introsLock)
@@ -358,8 +376,10 @@ public class FingerprinterTask : IScheduledTask
     /// <returns>Intros for the first and second episodes.</returns>
     public (Intro Lhs, Intro Rhs) FingerprintEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
     {
+        var start = DateTime.Now;
         var lhsFingerprint = Chromaprint.Fingerprint(lhsEpisode);
         var rhsFingerprint = Chromaprint.Fingerprint(rhsEpisode);
+        analysisStatistics.FingerprintCPUTime.AddDuration(start);
 
         // Cache the fingerprints for quicker recall in the second pass (if one is needed).
         lock (_fingerprintCacheLock)
@@ -389,6 +409,7 @@ public class FingerprinterTask : IScheduledTask
         Guid rhsId,
         ReadOnlyCollection<uint> rhsPoints)
     {
+        var start = DateTime.Now;
         var lhsRanges = new List<TimeRange>();
         var rhsRanges = new List<TimeRange>();
 
@@ -404,6 +425,7 @@ public class FingerprinterTask : IScheduledTask
         if (lhsRanges.Count == 0)
         {
             _logger.LogTrace("quick scan unsuccessful, falling back to full scan (±{Limit})", limit);
+            analysisStatistics.FullScans.Increment();
 
             (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
             lhsRanges.AddRange(lhsContiguous);
@@ -412,6 +434,7 @@ public class FingerprinterTask : IScheduledTask
         else
         {
             _logger.LogTrace("quick scan successful");
+            analysisStatistics.QuickScans.Increment();
         }
 
         if (lhsRanges.Count == 0)
@@ -421,6 +444,7 @@ public class FingerprinterTask : IScheduledTask
                 lhsId,
                 rhsId);
 
+            analysisStatistics.FirstPassCPUTime.AddDuration(start);
             return (new Intro(lhsId), new Intro(rhsId));
         }
 
@@ -442,6 +466,7 @@ public class FingerprinterTask : IScheduledTask
             rhsIntro.Start = 0;
         }
 
+        analysisStatistics.FirstPassCPUTime.AddDuration(start);
         return (new Intro(lhsId, lhsIntro), new Intro(rhsId, rhsIntro));
     }
 

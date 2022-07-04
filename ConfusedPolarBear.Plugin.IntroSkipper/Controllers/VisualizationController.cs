@@ -150,6 +150,17 @@ public class VisualizationController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Returns the statistics for the most recent analysis.
+    /// </summary>
+    /// <response code="200">Analysis statistics.</response>
+    /// <returns>AnalysisStatistics.</returns>
+    [HttpGet("Statistics")]
+    public ActionResult<AnalysisStatistics> GetAnalysisStatistics()
+    {
+        return Plugin.Instance!.AnalysisStatistics;
+    }
+
     private string GetSeasonName(QueuedEpisode episode)
     {
         return "Season " + episode.SeasonNumber.ToString(CultureInfo.InvariantCulture);

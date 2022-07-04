@@ -105,6 +105,12 @@
                 </form>
             </div>
 
+            <details id="statistics">
+                <summary>Analysis Statistics</summary>
+
+                <pre id="statisticsText" style="font-size: larger"></p>
+            </details>
+
             <details id="visualizer">
                 <summary>Fingerprint Visualizer</summary>
 
@@ -187,6 +193,7 @@
 
             // settings elements
             var visualizer = document.querySelector("details#visualizer");
+            var statistics = document.querySelector("details#statistics");
             var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
 
             // visualizer elements
@@ -221,6 +228,42 @@
                 }
 
                 selectShow.value = "";
+
+                Dashboard.hideLoadingMsg();
+            }
+
+            async function statisticsToggled() {
+                if (!statistics.open) {
+                    return;
+                }
+
+                // Blank any old statistics
+                const text = document.querySelector("pre#statisticsText");
+                text.textContent = "";
+
+                Dashboard.showLoadingMsg();
+
+                // Load the statistics from the server
+                let stats = await getJson("Intros/Statistics");
+
+                // Select which fields to print and label them with more friendly descriptions
+                let fields = "TotalCPUTime,FingerprintCPUTime,FirstPassCPUTime,SecondPassCPUTime,QuickScans,FullScans," +
+                    "TotalQueuedEpisodes";
+
+                let friendlyNames = {
+                    TotalCPUTime: "Total CPU time (ms)",
+                    FingerprintCPUTime: "Fingerprint time (ms)",
+                    FirstPassCPUTime: "First pass (ms)",
+                    SecondPassCPUTime: "Second pass (ms)",
+                    QuickScans: "Quick scans",
+                    FullScans: "Full scans",
+                    TotalQueuedEpisodes: "Episodes queued",
+                };
+
+                // Print all friendly names and data points
+                for (var f of fields.split(",")) {
+                    text.textContent += friendlyNames[f].padEnd(25) + stats[f] + "\n";
+                }
 
                 Dashboard.hideLoadingMsg();
             }
@@ -533,6 +576,7 @@
                 });
 
             visualizer.addEventListener("toggle", visualizerToggled);
+            statistics.addEventListener("toggle", statisticsToggled);
             txtOffset.addEventListener("change", renderTroubleshooter);
             selectShow.addEventListener("change", showChanged);
             selectSeason.addEventListener("change", seasonChanged);
