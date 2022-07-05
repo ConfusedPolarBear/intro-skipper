@@ -2,6 +2,8 @@
  * which supports both chromaprint and the "-fp_format raw" flag.
  */
 
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Xunit;
 using Microsoft.Extensions.Logging;
 
@@ -62,6 +64,26 @@ public class TestAudioFingerprinting
     }
 
     [Fact]
+    public void TestIndexGeneration()
+    {
+        //                                    0  1  2  3  4  5   6   7
+        var fpr = new List<uint>(new uint[] { 1, 2, 3, 1, 5, 77, 42, 2 }).AsReadOnly();
+        var expected = new Dictionary<uint, Collection<uint>>()
+        {
+            {1, new Collection<uint>{ 0, 3 } },
+            {2, new Collection<uint>{ 1, 7 } },
+            {3, new Collection<uint>{ 2 } },
+            {5, new Collection<uint>{ 4 } },
+            {42, new Collection<uint>{ 6 } },
+            {77, new Collection<uint>{ 5 } },
+        };
+
+        var actual = Chromaprint.CreateInvertedIndex(fpr);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public void TestIntroDetection()
     {
         var task = new FingerprinterTask(new LoggerFactory());
@@ -76,8 +98,8 @@ public class TestAudioFingerprinting
         Assert.Equal(17.792, lhs.IntroEnd);
 
         Assert.True(rhs.Valid);
-        Assert.Equal(0, rhs.IntroStart);
-        Assert.Equal(22.656, rhs.IntroEnd);
+        Assert.Equal(5.12, rhs.IntroStart);
+        Assert.Equal(22.912, rhs.IntroEnd);
     }
 
     private QueuedEpisode queueEpisode(string path)

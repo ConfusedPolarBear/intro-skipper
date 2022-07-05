@@ -392,7 +392,8 @@ public class FingerprinterTask : IScheduledTask
             lhsEpisode.EpisodeId,
             lhsFingerprint,
             rhsEpisode.EpisodeId,
-            rhsFingerprint);
+            rhsFingerprint,
+            true);
     }
 
     /// <summary>
@@ -402,53 +403,86 @@ public class FingerprinterTask : IScheduledTask
     /// <param name="lhsPoints">First episode fingerprint points.</param>
     /// <param name="rhsId">Second episode id.</param>
     /// <param name="rhsPoints">Second episode fingerprint points.</param>
+    /// <param name="isFirstPass">If this was called as part of the first analysis pass, add the elapsed time to the statistics.</param>
     /// <returns>Intros for the first and second episodes.</returns>
     public (Intro Lhs, Intro Rhs) FingerprintEpisodes(
         Guid lhsId,
         ReadOnlyCollection<uint> lhsPoints,
         Guid rhsId,
-        ReadOnlyCollection<uint> rhsPoints)
+        ReadOnlyCollection<uint> rhsPoints,
+        bool isFirstPass)
     {
-        var start = DateTime.Now;
-        var lhsRanges = new List<TimeRange>();
-        var rhsRanges = new List<TimeRange>();
+        // If this isn't running as part of the first analysis pass, don't count this CPU time as first pass time.
+        var start = isFirstPass ? DateTime.Now : DateTime.MinValue;
 
-        // Compare all elements of the shortest fingerprint to the other fingerprint.
-        var limit = Math.Min(lhsPoints.Count, rhsPoints.Count);
+        // ===== Method 1: Inverted indexes =====
+        // Creates an inverted fingerprint point index for both episodes.
+        // For every point which is a 100% match, search for an introduction at that point.
+        var (lhsRanges, rhsRanges) = SearchInvertedIndex(lhsPoints, rhsPoints);
 
-        // First, test if an intro can be found within the first 5 seconds of the episodes (±5/0.128 = ±40 samples).
-        var (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, -40, 40);
-        lhsRanges.AddRange(lhsContiguous);
-        rhsRanges.AddRange(rhsContiguous);
-
-        // If no valid ranges were found, re-analyze the episodes considering all possible shifts.
-        if (lhsRanges.Count == 0)
+        if (lhsRanges.Count > 0)
         {
-            _logger.LogTrace("quick scan unsuccessful, falling back to full scan (±{Limit})", limit);
-            analysisStatistics.FullScans.Increment();
-
-            (lhsContiguous, rhsContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
-            lhsRanges.AddRange(lhsContiguous);
-            rhsRanges.AddRange(rhsContiguous);
-        }
-        else
-        {
-            _logger.LogTrace("quick scan successful");
-            analysisStatistics.QuickScans.Increment();
-        }
-
-        if (lhsRanges.Count == 0)
-        {
-            _logger.LogTrace(
-                "Unable to find a shared introduction sequence between {LHS} and {RHS}",
-                lhsId,
-                rhsId);
-
+            _logger.LogTrace("Index search successful");
+            analysisStatistics.IndexSearches.Increment();
             analysisStatistics.FirstPassCPUTime.AddDuration(start);
-            return (new Intro(lhsId), new Intro(rhsId));
+
+            return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
         }
 
-        // After comparing both episodes at all possible shift positions, store the longest time range as the intro.
+        // ===== Method 2: Quick scan =====
+        // Tests if an intro can be found within the first 5 seconds of the episodes. ±5/0.128 = ±40 samples.
+        (lhsRanges, rhsRanges) = ShiftEpisodes(lhsPoints, rhsPoints, -40, 40);
+
+        if (lhsRanges.Count > 0)
+        {
+            _logger.LogTrace("Quick scan successful");
+            analysisStatistics.QuickScans.Increment();
+            analysisStatistics.FirstPassCPUTime.AddDuration(start);
+
+            return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
+        }
+
+        // ===== Method 3: Full scan =====
+        // Compares all elements of the shortest fingerprint to the other fingerprint.
+        var limit = Math.Min(lhsPoints.Count, rhsPoints.Count);
+        (lhsRanges, rhsRanges) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
+
+        if (lhsRanges.Count > 0)
+        {
+            _logger.LogTrace("Full scan successful");
+            analysisStatistics.FullScans.Increment();
+            analysisStatistics.FirstPassCPUTime.AddDuration(start);
+
+            return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
+        }
+
+        // No method was able to find an introduction, return nothing.
+
+        _logger.LogTrace(
+            "Unable to find a shared introduction sequence between {LHS} and {RHS}",
+            lhsId,
+            rhsId);
+
+        analysisStatistics.FirstPassCPUTime.AddDuration(start);
+
+        return (new Intro(lhsId), new Intro(rhsId));
+    }
+
+    /// <summary>
+    /// Locates the longest range of similar audio and returns an Intro class for each range.
+    /// </summary>
+    /// <param name="lhsId">First episode id.</param>
+    /// <param name="lhsRanges">First episode shared timecodes.</param>
+    /// <param name="rhsId">Second episode id.</param>
+    /// <param name="rhsRanges">Second episode shared timecodes.</param>
+    /// <returns>Intros for the first and second episodes.</returns>
+    private (Intro Lhs, Intro Rhs) GetLongestTimeRange(
+        Guid lhsId,
+        List<TimeRange> lhsRanges,
+        Guid rhsId,
+        List<TimeRange> rhsRanges)
+    {
+        // Store the longest time range as the introduction.
         lhsRanges.Sort();
         rhsRanges.Sort();
 
@@ -466,8 +500,52 @@ public class FingerprinterTask : IScheduledTask
             rhsIntro.Start = 0;
         }
 
-        analysisStatistics.FirstPassCPUTime.AddDuration(start);
+        // Create Intro classes for each time range.
         return (new Intro(lhsId, lhsIntro), new Intro(rhsId, rhsIntro));
+    }
+
+    /// <summary>
+    /// Search for a shared introduction sequence using inverted indexes.
+    /// </summary>
+    /// <param name="lhsPoints">Left episode fingerprint points.</param>
+    /// <param name="rhsPoints">Right episode fingerprint points.</param>
+    /// <returns>List of shared TimeRanges between the left and right episodes.</returns>
+    private (List<TimeRange> Lhs, List<TimeRange> Rhs) SearchInvertedIndex(
+        ReadOnlyCollection<uint> lhsPoints,
+        ReadOnlyCollection<uint> rhsPoints)
+    {
+        var lhsRanges = new List<TimeRange>();
+        var rhsRanges = new List<TimeRange>();
+
+        // Generate inverted indexes for the left and right episodes.
+        var lhsIndex = Chromaprint.CreateInvertedIndex(lhsPoints);
+        var rhsIndex = Chromaprint.CreateInvertedIndex(rhsPoints);
+        var indexShifts = new HashSet<int>();
+
+        // For all audio points in the left episode, check if the right episode has a point which matches exactly.
+        // If an exact match is found, calculate the shift that must be used to align the points.
+        foreach (var kvp in lhsIndex)
+        {
+            var point = kvp.Key;
+
+            if (rhsIndex.ContainsKey(point))
+            {
+                // TODO: consider all timecodes before falling back
+                var lhsFirst = (int)lhsIndex[point][0];
+                var rhsFirst = (int)rhsIndex[point][0];
+                indexShifts.Add(rhsFirst - lhsFirst);
+            }
+        }
+
+        // Use all discovered shifts to compare the episodes.
+        foreach (var shift in indexShifts)
+        {
+            var (lhsIndexContiguous, rhsIndexContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, shift, shift);
+            lhsRanges.AddRange(lhsIndexContiguous);
+            rhsRanges.AddRange(rhsIndexContiguous);
+        }
+
+        return (lhsRanges, rhsRanges);
     }
 
     /// <summary>

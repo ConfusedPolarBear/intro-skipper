@@ -106,7 +106,7 @@
             </div>
 
             <details id="statistics">
-                <summary>Analysis Statistics</summary>
+                <summary>Analysis Statistics (experimental)</summary>
 
                 <pre id="statisticsText" style="font-size: larger"></p>
             </details>
@@ -239,7 +239,7 @@
 
                 // Blank any old statistics
                 const text = document.querySelector("pre#statisticsText");
-                text.textContent = "";
+                text.textContent = "All CPU times are displayed as seconds.\n\n";
 
                 Dashboard.showLoadingMsg();
 
@@ -247,14 +247,15 @@
                 let stats = await getJson("Intros/Statistics");
 
                 // Select which fields to print and label them with more friendly descriptions
-                let fields = "TotalCPUTime,FingerprintCPUTime,FirstPassCPUTime,SecondPassCPUTime,QuickScans,FullScans," +
-                    "TotalQueuedEpisodes";
+                let fields = "TotalCPUTime,FingerprintCPUTime,FirstPassCPUTime,SecondPassCPUTime,IndexSearches," +
+                    "QuickScans,FullScans,TotalQueuedEpisodes";
 
                 let friendlyNames = {
-                    TotalCPUTime: "Total CPU time (ms)",
-                    FingerprintCPUTime: "Fingerprint time (ms)",
-                    FirstPassCPUTime: "First pass (ms)",
-                    SecondPassCPUTime: "Second pass (ms)",
+                    TotalCPUTime: "Total CPU time",
+                    FingerprintCPUTime: "Fingerprint CPU time",
+                    FirstPassCPUTime: "First pass CPU time",
+                    SecondPassCPUTime: "Second pass CPU time",
+                    IndexSearches: "Index searches",
                     QuickScans: "Quick scans",
                     FullScans: "Full scans",
                     TotalQueuedEpisodes: "Episodes queued",
@@ -262,8 +263,24 @@
 
                 // Print all friendly names and data points
                 for (var f of fields.split(",")) {
-                    text.textContent += friendlyNames[f].padEnd(25) + stats[f] + "\n";
+                    let name = friendlyNames[f].padEnd(25);
+                    let value = stats[f];
+
+                    // If this statistic is a measure of CPU time, divide by 1,000 to turn milliseconds into seconds.
+                    if (name.includes("time"))
+                    {
+                        value = Math.round(value / 1000);
+                    }
+
+                    text.textContent += name + value + "\n";
                 }
+
+                // Calculate the percentage of time (to two decimal places) spent waiting for fingerprints
+                const percentWait = Math.round((stats.FingerprintCPUTime * 10_000) / stats.TotalCPUTime) / 100;
+
+                // Breakdown CPU time by analysis component
+                text.textContent += "\nCPU time breakdown:\n";
+                text.textContent += "Fingerprint generation   " + percentWait + "%\n";
 
                 Dashboard.hideLoadingMsg();
             }

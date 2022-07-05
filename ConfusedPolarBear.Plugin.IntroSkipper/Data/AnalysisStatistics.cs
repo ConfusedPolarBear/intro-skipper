@@ -21,6 +21,11 @@ public class AnalysisStatistics
     public int TotalQueuedEpisodes { get; set; }
 
     /// <summary>
+    /// Gets the number of times an index search successfully located a pair of introductions.
+    /// </summary>
+    public ThreadSafeInteger IndexSearches { get; } = new ThreadSafeInteger();
+
+    /// <summary>
     /// Gets the number of times a quick scan successfully located a pair of introductions.
     /// </summary>
     public ThreadSafeInteger QuickScans { get; } = new ThreadSafeInteger();
@@ -89,6 +94,11 @@ public class ThreadSafeInteger
     /// <param name="start">Start time.</param>
     public void AddDuration(DateTime start)
     {
+        if (start == DateTime.MinValue)
+        {
+            return;
+        }
+
         var elapsed = DateTime.Now.Subtract(start);
         Add((int)elapsed.TotalMilliseconds);
     }
