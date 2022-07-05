@@ -530,9 +530,8 @@ public class FingerprinterTask : IScheduledTask
 
             if (rhsIndex.ContainsKey(point))
             {
-                // TODO: consider all timecodes before falling back
-                var lhsFirst = (int)lhsIndex[point][0];
-                var rhsFirst = (int)rhsIndex[point][0];
+                var lhsFirst = (int)lhsIndex[point];
+                var rhsFirst = (int)rhsIndex[point];
                 indexShifts.Add(rhsFirst - lhsFirst);
             }
         }

@@ -110,24 +110,21 @@ public static class Chromaprint
     }
 
     /// <summary>
-    /// Transforms a Chromaprint into an inverted index of fingerprint points to the indexes they appeared at.
+    /// Transforms a Chromaprint into an inverted index of fingerprint points to the last index it appeared at.
     /// </summary>
     /// <param name="fingerprint">Chromaprint fingerprint.</param>
     /// <returns>Inverted index.</returns>
-    public static Dictionary<uint, Collection<uint>> CreateInvertedIndex(ReadOnlyCollection<uint> fingerprint)
+    public static Dictionary<uint, int> CreateInvertedIndex(ReadOnlyCollection<uint> fingerprint)
     {
-        var invIndex = new Dictionary<uint, Collection<uint>>();
+        var invIndex = new Dictionary<uint, int>();
 
         for (int i = 0; i < fingerprint.Count; i++)
         {
             // Get the current point.
             var point = fingerprint[i];
 
-            // Create a new collection for points of this value if it doesn't exist already.
-            invIndex.TryAdd(point, new Collection<uint>());
-
             // Append the current sample's timecode to the collection for this point.
-            invIndex[point].Add((uint)i);
+            invIndex[point] = i;
         }
 
         return invIndex;

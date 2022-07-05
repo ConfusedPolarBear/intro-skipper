@@ -68,14 +68,14 @@ public class TestAudioFingerprinting
     {
         //                                    0  1  2  3  4  5   6   7
         var fpr = new List<uint>(new uint[] { 1, 2, 3, 1, 5, 77, 42, 2 }).AsReadOnly();
-        var expected = new Dictionary<uint, Collection<uint>>()
+        var expected = new Dictionary<uint, int>()
         {
-            {1, new Collection<uint>{ 0, 3 } },
-            {2, new Collection<uint>{ 1, 7 } },
-            {3, new Collection<uint>{ 2 } },
-            {5, new Collection<uint>{ 4 } },
-            {42, new Collection<uint>{ 6 } },
-            {77, new Collection<uint>{ 5 } },
+            {1, 3},
+            {2, 7},
+            {3, 2},
+            {5, 4},
+            {42, 6},
+            {77, 5},
         };
 
         var actual = Chromaprint.CreateInvertedIndex(fpr);
