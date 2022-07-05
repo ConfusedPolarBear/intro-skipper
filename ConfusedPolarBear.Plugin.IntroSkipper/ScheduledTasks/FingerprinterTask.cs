@@ -800,18 +800,12 @@ public class FingerprinterTask : IScheduledTask
 
             var oldDuration = GetIntroDuration(episode.EpisodeId);
 
-            var shortPath = episode.Path;
-            if (shortPath.Length > 40)
-            {
-                shortPath = shortPath.Substring(episode.Path.Length - 40);
-            }
-
             // If the episode's intro duration is close enough to the targeted bucket, leave it alone.
             if (Math.Abs(lhsDuration - oldDuration) <= ReanalysisTolerance)
             {
                 _logger.LogTrace(
                     "Not reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
-                    shortPath,
+                    episode.Path,
                     Math.Round(oldDuration, 2),
                     maxDuration);
 
@@ -820,7 +814,7 @@ public class FingerprinterTask : IScheduledTask
 
             _logger.LogTrace(
                 "Reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
-                shortPath,
+                episode.Path,
                 Math.Round(oldDuration, 2),
                 maxDuration);
 
@@ -837,7 +831,8 @@ public class FingerprinterTask : IScheduledTask
                     maxEpisode.EpisodeId,
                     lhsFingerprint,
                     episode.EpisodeId,
-                    fp);
+                    fp,
+                    false);
 
                 // Ensure that the new intro duration is within the targeted bucket and longer than what was found previously.
                 var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);
@@ -845,7 +840,7 @@ public class FingerprinterTask : IScheduledTask
                 {
                     _logger.LogTrace(
                         "Ignoring reanalysis for {Path} (was {Initial}, now is {New})",
-                        shortPath,
+                        episode.Path,
                         oldDuration,
                         newDuration);
 
@@ -854,7 +849,7 @@ public class FingerprinterTask : IScheduledTask
 
                 _logger.LogTrace(
                     "Reanalysis succeeded for {Path} (was {Initial}, now is {New})",
-                    shortPath,
+                    episode.Path,
                     oldDuration,
                     newDuration);
 
