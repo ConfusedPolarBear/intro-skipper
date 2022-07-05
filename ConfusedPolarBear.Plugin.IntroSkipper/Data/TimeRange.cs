@@ -3,8 +3,7 @@ using System.Collections.Generic;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
-// Supress CA1036: Override methods on comparable types.
-#pragma warning disable CA1036
+#pragma warning disable CA1036 // Override methods on comparable types
 
 /// <summary>
 /// Range of contiguous time.

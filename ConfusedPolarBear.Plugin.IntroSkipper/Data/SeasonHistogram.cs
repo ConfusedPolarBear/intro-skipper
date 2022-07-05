@@ -1,4 +1,4 @@
-#pragma warning disable CA1815
+#pragma warning disable CA1815 // Override equals and operator equals on value types
 
 using System;
 using System.Collections.ObjectModel;
