@@ -2,8 +2,8 @@
     {
         "guid": "c83d86bb-a1e0-4c35-a113-e2101cf4ee6b",
         "name": "Intro Skipper",
-        "overview": "Automatically detect and skip intros in television episodes",
         "description": "Analyzes the audio of television episodes and detects introduction sequences.",
+        "overview": "Automatically detect and skip intros in television episodes",
         "owner": "ConfusedPolarBear",
         "category": "General",
         "imageUrl": "https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png",
