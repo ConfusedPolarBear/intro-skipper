@@ -93,6 +93,8 @@ public class FingerprinterTask : IScheduledTask
         _queueLogger = loggerFactory.CreateLogger<QueueManager>();
 
         _fingerprintCache = new Dictionary<Guid, ReadOnlyCollection<uint>>();
+
+        EdlManager.Initialize(_logger);
     }
 
     /// <summary>
@@ -140,6 +142,9 @@ public class FingerprinterTask : IScheduledTask
                 "No episodes to analyze. If you are limiting the list of libraries to analyze, check that all library names have been spelled correctly.");
         }
 
+        // Log EDL settings
+        EdlManager.LogConfiguration();
+
         // Include the previously processed episodes in the percentage reported to the UI.
         var totalProcessed = CountProcessedEpisodes();
         var options = new ParallelOptions()
@@ -153,10 +158,12 @@ public class FingerprinterTask : IScheduledTask
 
         minimumIntroDuration = Plugin.Instance!.Configuration.MinimumIntroDuration;
 
+        // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
             var workerStart = DateTime.Now;
             var first = season.Value[0];
+            var writeEdl = false;
 
             try
             {
@@ -164,6 +171,7 @@ public class FingerprinterTask : IScheduledTask
                 // (instead of just using the number of episodes in the current season).
                 var analyzed = AnalyzeSeason(season, cancellationToken);
                 Interlocked.Add(ref totalProcessed, analyzed);
+                writeEdl = analyzed > 0 || Plugin.Instance!.Configuration.RegenerateEdlFiles;
             }
             catch (FingerprintException ex)
             {
@@ -191,14 +199,28 @@ public class FingerprinterTask : IScheduledTask
                 }
             }
 
+            if (writeEdl && Plugin.Instance!.Configuration.EdlAction != EdlAction.None)
+            {
+                EdlManager.UpdateEDLFiles(season.Value.AsReadOnly());
+            }
+
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
 
             analysisStatistics.TotalCPUTime.AddDuration(workerStart);
             Plugin.Instance!.AnalysisStatistics = analysisStatistics;
         });
 
+        // Update analysis statistics
         analysisStatistics.TotalTaskTime.AddDuration(taskStart);
         Plugin.Instance!.AnalysisStatistics = analysisStatistics;
+
+        // Turn the regenerate EDL flag off after the scan completes.
+        if (Plugin.Instance!.Configuration.RegenerateEdlFiles)
+        {
+            _logger.LogInformation("Turning EDL file regeneration flag off");
+            Plugin.Instance!.Configuration.RegenerateEdlFiles = false;
+            Plugin.Instance!.SaveConfiguration();
+        }
 
         return Task.CompletedTask;
     }

@@ -31,6 +31,20 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public string SelectedLibraries { get; set; } = string.Empty;
 
+    // ===== EDL handling =====
+
+    /// <summary>
+    /// Gets or sets a value indicating the action to write to created EDL files.
+    /// </summary>
+    public EdlAction EdlAction { get; set; } = EdlAction.None;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to regenerate all EDL files during the next scan.
+    /// By default, EDL files are only written for a season if the season had at least one newly analyzed episode.
+    /// If this is set, all EDL files will be regenerated and overwrite any existing EDL file.
+    /// </summary>
+    public bool RegenerateEdlFiles { get; set; } = false;
+
     // ===== Custom analysis settings =====
 
     /// <summary>
