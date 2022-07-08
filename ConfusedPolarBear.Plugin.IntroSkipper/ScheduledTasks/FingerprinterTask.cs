@@ -16,11 +16,6 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class FingerprinterTask : IScheduledTask
 {
     /// <summary>
-    /// Minimum time (in seconds) for a contiguous time range to be considered an introduction.
-    /// </summary>
-    private const int MinimumIntroDuration = 15;
-
-    /// <summary>
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
     /// 6 bits means the audio must be at least 81% similar (1 - 6 / 32).
     /// </summary>
@@ -72,6 +67,11 @@ public class FingerprinterTask : IScheduledTask
     /// Statistics for the currently running analysis task.
     /// </summary>
     private AnalysisStatistics analysisStatistics = new AnalysisStatistics();
+
+    /// <summary>
+    /// Minimum duration of similar audio that will be considered an introduction.
+    /// </summary>
+    private static int minimumIntroDuration = 15;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
@@ -150,6 +150,8 @@ public class FingerprinterTask : IScheduledTask
         var taskStart = DateTime.Now;
         analysisStatistics = new AnalysisStatistics();
         analysisStatistics.TotalQueuedEpisodes = Plugin.Instance!.TotalQueued;
+
+        minimumIntroDuration = Plugin.Instance!.Configuration.MinimumIntroDuration;
 
         Parallel.ForEach(queue, options, (season) =>
         {
@@ -635,7 +637,7 @@ public class FingerprinterTask : IScheduledTask
 
         // Now that both fingerprints have been compared at this shift, see if there's a contiguous time range.
         var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MaximumDistance);
-        if (lContiguous is null || lContiguous.Duration < MinimumIntroDuration)
+        if (lContiguous is null || lContiguous.Duration < minimumIntroDuration)
         {
             return (new TimeRange(), new TimeRange());
         }
@@ -701,7 +703,7 @@ public class FingerprinterTask : IScheduledTask
             var id = episode.EpisodeId;
             var duration = GetIntroDuration(id);
 
-            if (duration < MinimumIntroDuration)
+            if (duration < minimumIntroDuration)
             {
                 continue;
             }

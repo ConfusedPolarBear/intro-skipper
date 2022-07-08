@@ -18,6 +18,9 @@ public class QueueManager
     private ILibraryManager _libraryManager;
     private ILogger<QueueManager> _logger;
 
+    private double analysisPercent;
+    private IList<string> selectedLibraries;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueManager"/> class.
     /// </summary>
@@ -27,6 +30,8 @@ public class QueueManager
     {
         _logger = logger;
         _libraryManager = libraryManager;
+
+        selectedLibraries = new List<string>();
     }
 
     /// <summary>
@@ -44,19 +49,7 @@ public class QueueManager
         Plugin.Instance!.AnalysisQueue.Clear();
         Plugin.Instance!.TotalQueued = 0;
 
-        // Get the list of library names which have been selected for analysis, ignoring whitespace and empty entries.
-        var selected = Plugin.Instance!.Configuration.SelectedLibraries
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToList();
-
-        if (selected.Count > 0)
-        {
-            _logger.LogInformation("Limiting analysis to the following libraries: {Selected}", selected);
-        }
-        else
-        {
-            _logger.LogDebug("Not limiting analysis by library name");
-        }
+        LoadAnalysisSettings();
 
         // For all selected TV show libraries, enqueue all contained items.
         foreach (var folder in _libraryManager.GetVirtualFolders())
@@ -67,7 +60,7 @@ public class QueueManager
             }
 
             // If libraries have been selected for analysis, ensure this library was selected.
-            if (selected.Count > 0 && !selected.Contains(folder.Name))
+            if (selectedLibraries.Count > 0 && !selectedLibraries.Contains(folder.Name))
             {
                 _logger.LogDebug("Not analyzing library \"{Name}\"", folder.Name);
                 continue;
@@ -86,6 +79,43 @@ public class QueueManager
             {
                 _logger.LogError("Failed to enqueue items from library {Name}: {Exception}", folder.Name, ex);
             }
+        }
+    }
+
+    /// <summary>
+    /// Loads the list of libraries which have been selected for analysis and the minimum intro duration.
+    /// Settings which have been modified from the defaults are logged.
+    /// </summary>
+    private void LoadAnalysisSettings()
+    {
+        var config = Plugin.Instance!.Configuration;
+
+        // Store the analysis percent
+        analysisPercent = Convert.ToDouble(config.AnalysisPercent) / 100;
+
+        // Get the list of library names which have been selected for analysis, ignoring whitespace and empty entries.
+        selectedLibraries = config.SelectedLibraries
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        // If any libraries have been selected for analysis, log their names.
+        if (selectedLibraries.Count > 0)
+        {
+            _logger.LogInformation("Limiting analysis to the following libraries: {Selected}", selectedLibraries);
+        }
+        else
+        {
+            _logger.LogDebug("Not limiting analysis by library name");
+        }
+
+        // If analysis settings have been changed from the default, log the modified settings.
+        if (config.AnalysisLengthLimit != 10 || config.AnalysisPercent != 25 || config.MinimumIntroDuration != 15)
+        {
+            _logger.LogInformation(
+                "Analysis settings have been changed to: {Percent}%/{Minutes}m and a minimum of {Minimum}s",
+                config.AnalysisPercent,
+                config.AnalysisLengthLimit,
+                config.MinimumIntroDuration);
         }
     }
 
@@ -147,14 +177,25 @@ public class QueueManager
             return;
         }
 
-        // Only fingerprint up to 25% of the episode and at most 10 minutes.
+        var queue = Plugin.Instance.AnalysisQueue;
+
+        // Allocate a new list for each new season
+        if (!queue.ContainsKey(episode.SeasonId))
+        {
+            Plugin.Instance.AnalysisQueue[episode.SeasonId] = new List<QueuedEpisode>();
+        }
+
+        var config = Plugin.Instance!.Configuration;
+
+        // Limit analysis to the first X% of the episode and at most Y minutes.
+        // X and Y default to 25% and 10 minutes.
         var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
         if (duration >= 5 * 60)
         {
-            duration /= 4;
+            duration *= analysisPercent;
         }
 
-        duration = Math.Min(duration, 10 * 60);
+        duration = Math.Min(duration, 60 * config.AnalysisLengthLimit);
 
         // Allocate a new list for each new season
         Plugin.Instance!.AnalysisQueue.TryAdd(episode.SeasonId, new List<QueuedEpisode>());

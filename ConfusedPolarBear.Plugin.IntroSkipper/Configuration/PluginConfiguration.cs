@@ -14,6 +14,8 @@ public class PluginConfiguration : BasePluginConfiguration
     {
     }
 
+    // ===== Analysis settings =====
+
     /// <summary>
     /// Gets or sets a value indicating whether the episode's fingerprint should be cached to the filesystem.
     /// </summary>
@@ -28,6 +30,25 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the comma separated list of library names to analyze. If empty, all libraries will be analyzed.
     /// </summary>
     public string SelectedLibraries { get; set; } = string.Empty;
+
+    // ===== Custom analysis settings =====
+
+    /// <summary>
+    /// Gets or sets the percentage of each episode's audio track to analyze.
+    /// </summary>
+    public int AnalysisPercent { get; set; } = 25;
+
+    /// <summary>
+    /// Gets or sets the upper limit (in minutes) on the length of each episode's audio track that will be analyzed.
+    /// </summary>
+    public int AnalysisLengthLimit { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets the minimum length of similar audio that will be considered an introduction.
+    /// </summary>
+    public int MinimumIntroDuration { get; set; } = 15;
+
+    // ===== Playback settings =====
 
     /// <summary>
     /// Gets or sets a value indicating whether introductions should be automatically skipped.

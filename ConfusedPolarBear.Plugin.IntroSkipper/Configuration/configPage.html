@@ -48,6 +48,59 @@
                                 blank, all libraries on the server containing television episodes will be analyzed.
                             </div>
                         </div>
+
+                        <details>
+                            <summary>Modify introduction requirements</summary>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">
+                                    Percent of audio to analyze
+                                </label>
+                                <input id="AnalysisPercent" type="number" is="emby-input" min="1" max="90" />
+                                <div class="fieldDescription">
+                                    Analysis will be limited to this percentage of each episode's audio. For example, a
+                                    value of 25 (the default) will limit analysis to the first quarter of each episode.
+                                </div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">
+                                    Maximum runtime of audio to analyze (in minutes)
+                                </label>
+                                <input id="AnalysisLengthLimit" type="number" is="emby-input" min="1" />
+                                <div class="fieldDescription">
+                                    Analysis will be limited to this amount of each episode's audio. For example, a
+                                    value of 10 (the default) will limit analysis to the first 10 minutes of each
+                                    episode.
+                                </div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MinimumDuration">
+                                    Minimum introduction duration (in seconds)
+                                </label>
+                                <input id="MinimumDuration" type="number" is="emby-input" min="1" />
+                                <div class="fieldDescription">
+                                    Similar sounding audio which is shorter than this duration will not be considered an
+                                    introduction.
+                                </div>
+                            </div>
+
+                            <p>
+                                The amount of each episode's audio that will be analyzed is determined using both
+                                the percentage of audio and maximum runtime of audio to analyze. The minimum of
+                                (episode duration * percent, maximum runtime) is the amount of audio that will
+                                be analyzed.
+                            </p>
+
+                            <p>
+                                If the audio percentage or maximum runtime settings are modified, the cached
+                                fingerprints and introduction timestamps for each season you want to analyze with the
+                                modified settings <strong>will have to be deleted.</strong>
+
+                                Increasing either of these settings will cause episode analysis to take much longer.
+                            </p>
+                        </details>
                     </fieldset>
 
                     <fieldset class="verticalSection-extrabottompadding">
@@ -267,8 +320,7 @@
                     let value = stats[f];
 
                     // If this statistic is a measure of CPU time, divide by 1,000 to turn milliseconds into seconds.
-                    if (name.includes("time"))
-                    {
+                    if (name.includes("time")) {
                         value = Math.round(value / 1000);
                     }
 
@@ -563,6 +615,10 @@
                         document.querySelector('#MaxParallelism').value = config.MaxParallelism;
                         document.querySelector('#SelectedLibraries').value = config.SelectedLibraries;
 
+                        document.querySelector('#AnalysisPercent').value = config.AnalysisPercent;
+                        document.querySelector('#AnalysisLengthLimit').value = config.AnalysisLengthLimit;
+                        document.querySelector('#MinimumDuration').value = config.MinimumIntroDuration;
+
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
                         document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
                         document.querySelector('#HidePromptAdjustment').value = config.HidePromptAdjustment;
@@ -578,6 +634,10 @@
                         config.AutoSkip = document.querySelector('#AutoSkip').checked;
                         config.MaxParallelism = document.querySelector('#MaxParallelism').value;
                         config.SelectedLibraries = document.querySelector('#SelectedLibraries').value;
+
+                        config.AnalysisPercent = document.querySelector('#AnalysisPercent').value;
+                        config.AnalysisLengthLimit = document.querySelector('#AnalysisLengthLimit').value;
+                        config.MinimumIntroDuration = document.querySelector('#MinimumDuration').value;
 
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
                         config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;
