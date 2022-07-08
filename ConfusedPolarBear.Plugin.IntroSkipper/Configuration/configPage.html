@@ -533,7 +533,7 @@
                 if (shifts.length === 0) {
                     txtSuggested.textContent += "none available";
                 } else {
-                    shifts.sort();
+                    shifts.sort((a, b) => { return a - b });
                     txtSuggested.textContent += shifts.join(", ");
                 }
             }
