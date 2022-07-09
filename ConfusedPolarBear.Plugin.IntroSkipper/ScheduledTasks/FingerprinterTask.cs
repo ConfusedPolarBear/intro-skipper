@@ -788,29 +788,13 @@ public class FingerprinterTask : IScheduledTask
         var goodFingerprints = new List<ReadOnlyCollection<uint>>();
         foreach (var id in maxBucket.Episodes)
         {
-            // Sometimes an episode isn't in the fingerprint cache. When this occurs, it has to be fingerprinted again.
-            _logger.LogTrace("Second pass: searching cache for {Id}", id);
-
-            if (_fingerprintCache.ContainsKey(id))
+            if (!_fingerprintCache.TryGetValue(id, out var fp))
             {
-                _logger.LogTrace("Second pass: cache hit for {Id}", id);
-                goodFingerprints.Add(_fingerprintCache[id]);
+                _logger.LogTrace("Second pass: max bucket episode {Id} not in cache, skipping", id);
+                continue;
             }
-            else
-            {
-                _logger.LogTrace("Second pass: cache miss for {Id}", id);
 
-                var fullEp = episodes.Find((e) => { return e.EpisodeId == id; });
-
-                if (fullEp is not null)
-                {
-                    goodFingerprints.Add(Chromaprint.Fingerprint(fullEp));
-                }
-                else
-                {
-                    _logger.LogTrace("Second pass: unable to find episode {Id}", id);
-                }
-            }
+            goodFingerprints.Add(fp);
         }
 
         foreach (var episode in episodes)
