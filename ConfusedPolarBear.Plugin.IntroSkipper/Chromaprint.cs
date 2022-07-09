@@ -66,10 +66,10 @@ public static class Chromaprint
     /// </summary>
     /// <param name="episode">Queued episode to fingerprint.</param>
     /// <returns>Numerical fingerprint points.</returns>
-    public static ReadOnlyCollection<uint> Fingerprint(QueuedEpisode episode)
+    public static uint[] Fingerprint(QueuedEpisode episode)
     {
         // Try to load this episode from cache before running ffmpeg.
-        if (LoadCachedFingerprint(episode, out ReadOnlyCollection<uint> cachedFingerprint))
+        if (LoadCachedFingerprint(episode, out uint[] cachedFingerprint))
         {
             Logger?.LogDebug("Fingerprint cache hit on {File}", episode.Path);
             return cachedFingerprint;
@@ -106,7 +106,7 @@ public static class Chromaprint
         // Try to cache this fingerprint.
         CacheFingerprint(episode, results);
 
-        return results.AsReadOnly();
+        return results.ToArray();
     }
 
     /// <summary>
@@ -114,11 +114,11 @@ public static class Chromaprint
     /// </summary>
     /// <param name="fingerprint">Chromaprint fingerprint.</param>
     /// <returns>Inverted index.</returns>
-    public static Dictionary<uint, int> CreateInvertedIndex(ReadOnlyCollection<uint> fingerprint)
+    public static Dictionary<uint, int> CreateInvertedIndex(uint[] fingerprint)
     {
         var invIndex = new Dictionary<uint, int>();
 
-        for (int i = 0; i < fingerprint.Count; i++)
+        for (int i = 0; i < fingerprint.Length; i++)
         {
             // Get the current point.
             var point = fingerprint[i];
@@ -183,11 +183,11 @@ public static class Chromaprint
     /// Tries to load an episode's fingerprint from cache. If caching is not enabled, calling this function is a no-op.
     /// </summary>
     /// <param name="episode">Episode to try to load from cache.</param>
-    /// <param name="fingerprint">ReadOnlyCollection to store the fingerprint in.</param>
+    /// <param name="fingerprint">Array to store the fingerprint in.</param>
     /// <returns>true if the episode was successfully loaded from cache, false on any other error.</returns>
-    private static bool LoadCachedFingerprint(QueuedEpisode episode, out ReadOnlyCollection<uint> fingerprint)
+    private static bool LoadCachedFingerprint(QueuedEpisode episode, out uint[] fingerprint)
     {
-        fingerprint = new List<uint>().AsReadOnly();
+        fingerprint = Array.Empty<uint>();
 
         // If fingerprint caching isn't enabled, don't try to load anything.
         if (!(Plugin.Instance?.Configuration.CacheFingerprints ?? false))
@@ -228,7 +228,7 @@ public static class Chromaprint
             return false;
         }
 
-        fingerprint = result.AsReadOnly();
+        fingerprint = result.ToArray();
         return true;
     }
 

@@ -66,8 +66,8 @@ public class TestAudioFingerprinting
     [Fact]
     public void TestIndexGeneration()
     {
-        //                                    0  1  2  3  4  5   6   7
-        var fpr = new List<uint>(new uint[] { 1, 2, 3, 1, 5, 77, 42, 2 }).AsReadOnly();
+        //                     0  1  2  3  4  5   6   7
+        var fpr = new uint[] { 1, 2, 3, 1, 5, 77, 42, 2 };
         var expected = new Dictionary<uint, int>()
         {
             {1, 3},

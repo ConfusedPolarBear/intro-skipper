@@ -61,7 +61,7 @@ public class FingerprinterTask : IScheduledTask
     /// Temporary fingerprint cache to speed up reanalysis.
     /// Fingerprints are removed from this after a season is analyzed.
     /// </summary>
-    private Dictionary<Guid, ReadOnlyCollection<uint>> _fingerprintCache;
+    private Dictionary<Guid, uint[]> _fingerprintCache;
 
     /// <summary>
     /// Statistics for the currently running analysis task.
@@ -92,7 +92,7 @@ public class FingerprinterTask : IScheduledTask
         _logger = loggerFactory.CreateLogger<FingerprinterTask>();
         _queueLogger = loggerFactory.CreateLogger<QueueManager>();
 
-        _fingerprintCache = new Dictionary<Guid, ReadOnlyCollection<uint>>();
+        _fingerprintCache = new Dictionary<Guid, uint[]>();
 
         EdlManager.Initialize(_logger);
     }
@@ -431,9 +431,9 @@ public class FingerprinterTask : IScheduledTask
     /// <returns>Intros for the first and second episodes.</returns>
     public (Intro Lhs, Intro Rhs) FingerprintEpisodes(
         Guid lhsId,
-        ReadOnlyCollection<uint> lhsPoints,
+        uint[] lhsPoints,
         Guid rhsId,
-        ReadOnlyCollection<uint> rhsPoints,
+        uint[] rhsPoints,
         bool isFirstPass)
     {
         // If this isn't running as part of the first analysis pass, don't count this CPU time as first pass time.
@@ -468,7 +468,7 @@ public class FingerprinterTask : IScheduledTask
 
         // ===== Method 3: Full scan =====
         // Compares all elements of the shortest fingerprint to the other fingerprint.
-        var limit = Math.Min(lhsPoints.Count, rhsPoints.Count);
+        var limit = Math.Min(lhsPoints.Length, rhsPoints.Length);
         (lhsRanges, rhsRanges) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
 
         if (lhsRanges.Count > 0)
@@ -535,8 +535,8 @@ public class FingerprinterTask : IScheduledTask
     /// <param name="rhsPoints">Right episode fingerprint points.</param>
     /// <returns>List of shared TimeRanges between the left and right episodes.</returns>
     private (List<TimeRange> Lhs, List<TimeRange> Rhs) SearchInvertedIndex(
-        ReadOnlyCollection<uint> lhsPoints,
-        ReadOnlyCollection<uint> rhsPoints)
+        uint[] lhsPoints,
+        uint[] rhsPoints)
     {
         var lhsRanges = new List<TimeRange>();
         var rhsRanges = new List<TimeRange>();
@@ -579,8 +579,8 @@ public class FingerprinterTask : IScheduledTask
     /// <param name="lower">Lower end of the shift range.</param>
     /// <param name="upper">Upper end of the shift range.</param>
     private static (List<TimeRange> Lhs, List<TimeRange> Rhs) ShiftEpisodes(
-        ReadOnlyCollection<uint> lhs,
-        ReadOnlyCollection<uint> rhs,
+        uint[] lhs,
+        uint[] rhs,
         int lower,
         int upper)
     {
@@ -610,8 +610,8 @@ public class FingerprinterTask : IScheduledTask
     /// <param name="rhs">Second fingerprint to compare.</param>
     /// <param name="shiftAmount">Amount to shift one fingerprint by.</param>
     private static (TimeRange Lhs, TimeRange Rhs) FindContiguous(
-        ReadOnlyCollection<uint> lhs,
-        ReadOnlyCollection<uint> rhs,
+        uint[] lhs,
+        uint[] rhs,
         int shiftAmount)
     {
         var leftOffset = 0;
@@ -630,7 +630,7 @@ public class FingerprinterTask : IScheduledTask
         // Store similar times for both LHS and RHS.
         var lhsTimes = new List<double>();
         var rhsTimes = new List<double>();
-        var upperLimit = Math.Min(lhs.Count, rhs.Count) - Math.Abs(shiftAmount);
+        var upperLimit = Math.Min(lhs.Length, rhs.Length) - Math.Abs(shiftAmount);
 
         // XOR all elements in LHS and RHS, using the shift amount from above.
         for (var i = 0; i < upperLimit; i++)
@@ -785,7 +785,7 @@ public class FingerprinterTask : IScheduledTask
 
         // TODO: add limit and make it customizable
         var count = maxBucket.Episodes.Count - 1;
-        var goodFingerprints = new List<ReadOnlyCollection<uint>>();
+        var goodFingerprints = new List<uint[]>();
         foreach (var id in maxBucket.Episodes)
         {
             if (!_fingerprintCache.TryGetValue(id, out var fp))

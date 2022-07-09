@@ -103,7 +103,7 @@ public class VisualizationController : ControllerBase
     /// <param name="id">Episode id.</param>
     /// <returns>Read only collection of fingerprint points.</returns>
     [HttpGet("Fingerprint/{Id}")]
-    public ActionResult<ReadOnlyCollection<uint>> GetEpisodeFingerprint([FromRoute] Guid id)
+    public ActionResult<uint[]> GetEpisodeFingerprint([FromRoute] Guid id)
     {
         var queue = Plugin.Instance!.AnalysisQueue;
 
