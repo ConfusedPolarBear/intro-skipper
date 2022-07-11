@@ -177,16 +177,6 @@ public class QueueManager
             return;
         }
 
-        var queue = Plugin.Instance.AnalysisQueue;
-
-        // Allocate a new list for each new season
-        if (!queue.ContainsKey(episode.SeasonId))
-        {
-            Plugin.Instance.AnalysisQueue[episode.SeasonId] = new List<QueuedEpisode>();
-        }
-
-        var config = Plugin.Instance!.Configuration;
-
         // Limit analysis to the first X% of the episode and at most Y minutes.
         // X and Y default to 25% and 10 minutes.
         var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
@@ -195,7 +185,7 @@ public class QueueManager
             duration *= analysisPercent;
         }
 
-        duration = Math.Min(duration, 60 * config.AnalysisLengthLimit);
+        duration = Math.Min(duration, 60 * Plugin.Instance!.Configuration.AnalysisLengthLimit);
 
         // Allocate a new list for each new season
         Plugin.Instance!.AnalysisQueue.TryAdd(episode.SeasonId, new List<QueuedEpisode>());
