@@ -1,8 +1,23 @@
 # Changelog
 
 ## v0.1.6.0 (unreleased)
-* Write EDL files with intro timestamps
-* Restore per season status updates
+* New features
+  * Generate EDL files with intro timestamps ([documentation](docs/edl.md))
+  * Support selecting which libraries are analyzed
+  * Support customizing [introduction requirements](README.md#introduction-requirements)
+    * Changing these settings will increase episode analysis times
+  * Report how CPU time is being spent while analyzing episodes
+    * CPU time reports can be viewed under "Analysis Statistics (experimental)" in the plugin configuration page
+  * Sped up fingerprint analysis (not including fingerprint generation time) by 40%
+  * Support erasing discovered introductions by season
+  * Suggest potential shifts in the fingerprint visualizer
+
+* Fixes
+  * Ensure episode analysis queue matches the current filesystem and library state
+    * Fixes a bug where renamed or deleted episodes were being analyzed
+  * Restore per season status updates in the log
+  * Prevent null key in `/Intros/Shows` endpoint
+  * Fix positioning of skip intro button on mobile devices
 
 ## v0.1.5.0 (2022-06-17)
 * Use `ffmpeg` to generate audio fingerprints instead of `fpcalc`

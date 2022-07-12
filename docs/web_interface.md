@@ -18,8 +18,8 @@ services:
         ports:
             - '8096:8096'
         volumes:
-            - '/full/path/to/extracted/archive/dist:/jellyfin/jellyfin-web:ro' # <== add this line if using the official docker image
-            - '/full/path/to/extracted/archive/dist:/usr/share/jellyfin/web' # <== add this line if using the linuxserver docker image
+            - '/full/path/to/extracted/dist:/jellyfin/jellyfin-web:ro'  # <== add this line if using the official container
+            - '/full/path/to/extracted/dist:/usr/share/jellyfin/web:ro' # <== add this line if using the linuxserver container
             - '/config:/config'
             - '/media:/media:ro'
         image: 'jellyfin/jellyfin:10.8.0'
@@ -31,4 +31,3 @@ services:
     1. If you reuse the configuration data from another container, **make sure to create a backup first**.
 
 The Dockerfile which builds this container can be viewed [here](../docker/Dockerfile).
-
