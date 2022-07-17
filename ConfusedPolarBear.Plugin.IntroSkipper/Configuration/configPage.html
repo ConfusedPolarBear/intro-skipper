@@ -128,10 +128,10 @@
                             </div>
 
                             <div class="inputContainer">
-                                <label class="inputLabel inputLabelUnfocused" for="MinimumDuration">
+                                <label class="inputLabel inputLabelUnfocused" for="MinimumIntroDuration">
                                     Minimum introduction duration (in seconds)
                                 </label>
-                                <input id="MinimumDuration" type="number" is="emby-input" min="1" />
+                                <input id="MinimumIntroDuration" type="number" is="emby-input" min="1" />
                                 <div class="fieldDescription">
                                     Similar sounding audio which is shorter than this duration will not be considered an
                                     introduction.
@@ -300,6 +300,18 @@
             var visualizer = document.querySelector("details#visualizer");
             var statistics = document.querySelector("details#statistics");
             var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
+
+            // all plugin configuration fields that can be get or set with .value (i.e. strings or numbers).
+            var configurationFields = [
+                "MaxParallelism",
+                "SelectedLibraries",
+                "AnalysisPercent",
+                "AnalysisLengthLimit",
+                "MinimumIntroDuration",
+                "EdlAction",
+                "ShowPromptAdjustment",
+                "HidePromptAdjustment"
+            ]
 
             // visualizer elements
             var canvas = document.querySelector("canvas#troubleshooter");
@@ -664,19 +676,12 @@
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         document.querySelector('#AutoSkip').checked = config.AutoSkip;
-                        document.querySelector('#MaxParallelism').value = config.MaxParallelism;
-                        document.querySelector('#SelectedLibraries').value = config.SelectedLibraries;
-
-                        document.querySelector('#AnalysisPercent').value = config.AnalysisPercent;
-                        document.querySelector('#AnalysisLengthLimit').value = config.AnalysisLengthLimit;
-                        document.querySelector('#MinimumDuration').value = config.MinimumIntroDuration;
-
-                        document.querySelector('#EdlAction').value = config.EdlAction;
                         document.querySelector('#RegenerateEdl').checked = config.RegenerateEdlFiles;
-
                         document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
-                        document.querySelector('#ShowPromptAdjustment').value = config.ShowPromptAdjustment;
-                        document.querySelector('#HidePromptAdjustment').value = config.HidePromptAdjustment;
+
+                        for (const field of configurationFields) {
+                            document.querySelector("#" + field).value = config[field];
+                        }
 
                         Dashboard.hideLoadingMsg();
                     });
@@ -687,19 +692,12 @@
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
                         config.AutoSkip = document.querySelector('#AutoSkip').checked;
-                        config.MaxParallelism = document.querySelector('#MaxParallelism').value;
-                        config.SelectedLibraries = document.querySelector('#SelectedLibraries').value;
-
-                        config.AnalysisPercent = document.querySelector('#AnalysisPercent').value;
-                        config.AnalysisLengthLimit = document.querySelector('#AnalysisLengthLimit').value;
-                        config.MinimumIntroDuration = document.querySelector('#MinimumDuration').value;
-
-                        config.EdlAction = document.querySelector('#EdlAction').value;
                         config.RegenerateEdlFiles = document.querySelector('#RegenerateEdl').checked;
-
                         config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
-                        config.ShowPromptAdjustment = document.querySelector("#ShowPromptAdjustment").value;
-                        config.HidePromptAdjustment = document.querySelector("#HidePromptAdjustment").value;
+
+                        for (const field of configurationFields) {
+                            config[field] = document.querySelector("#" + field).value;
+                        }
 
                         ApiClient.updatePluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b", config)
                             .then(function (result) {
