@@ -53,7 +53,7 @@
                             <summary>EDL file generation</summary>
 
                             <div class="selectContainer">
-                                <label class="selectLabel" for="Options">EDL Action</label>
+                                <label class="selectLabel" for="EdlAction">EDL Action</label>
                                 <select is="emby-select" id="EdlAction" class="emby-select-withcolor emby-select">
                                     <option value="None">
                                         None (do not create or modify EDL files)
@@ -105,7 +105,7 @@
                             <summary>Modify introduction requirements</summary>
 
                             <div class="inputContainer">
-                                <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">
+                                <label class="inputLabel inputLabelUnfocused" for="AnalysisPercent">
                                     Percent of audio to analyze
                                 </label>
                                 <input id="AnalysisPercent" type="number" is="emby-input" min="1" max="90" />
@@ -116,7 +116,7 @@
                             </div>
 
                             <div class="inputContainer">
-                                <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">
+                                <label class="inputLabel inputLabelUnfocused" for="AnalysisLengthLimit">
                                     Maximum runtime of audio to analyze (in minutes)
                                 </label>
                                 <input id="AnalysisLengthLimit" type="number" is="emby-input" min="1" />
