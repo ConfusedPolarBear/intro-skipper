@@ -287,6 +287,7 @@
                     <p id="editRightEpisodeTitle" style="margin-top:0;margin-bottom:0"></p>
                     <input style="width:4em" type="number" min="0" id="editRightEpisodeStart"> to
                     <input style="width:4em;margin-bottom:10px" type="number" min="0" id="editRightEpisodeEnd">
+                    <br />
 
                     <button id="btnUpdateTimestamps" type="button">
                         Update timestamps
@@ -471,6 +472,7 @@
 
                 Dashboard.hideLoadingMsg();
 
+                txtOffset.value = "0";
                 refreshBounds();
                 renderTroubleshooter();
                 findExactMatches();
