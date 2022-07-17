@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
 using MediaBrowser.Common.Configuration;
@@ -17,6 +16,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
+    private readonly object _serializationLock = new object();
     private IXmlSerializer _xmlSerializer;
     private ILibraryManager _libraryManager;
     private string _introPath;
@@ -110,14 +110,17 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// </summary>
     public void SaveTimestamps()
     {
-        var introList = new List<Intro>();
-
-        foreach (var intro in Plugin.Instance!.Intros)
+        lock (_serializationLock)
         {
-            introList.Add(intro.Value);
-        }
+            var introList = new List<Intro>();
 
-        _xmlSerializer.SerializeToFile(introList, _introPath);
+            foreach (var intro in Plugin.Instance!.Intros)
+            {
+                introList.Add(intro.Value);
+            }
+
+            _xmlSerializer.SerializeToFile(introList, _introPath);
+        }
     }
 
     /// <summary>

@@ -84,7 +84,8 @@
                                     <a href="https://kodi.wiki/view/Edit_decision_list">MPlayer compatible EDL files</a>
                                     alongside your episode files. <br />
 
-                                    If this value is changed after EDL files are generated, you must check the "Regenerate EDL files" checkbox below.
+                                    If this value is changed after EDL files are generated, you must check the
+                                    "Regenerate EDL files" checkbox below.
                                 </div>
                             </div>
 
@@ -95,7 +96,8 @@
                                 </label>
 
                                 <div class="fieldDescription">
-                                    If checked, the plugin will <strong>overwrite all EDL files</strong> associated with your episodes with the currently discovered introduction timestamps and EDL action.
+                                    If checked, the plugin will <strong>overwrite all EDL files</strong> associated with
+                                    your episodes with the currently discovered introduction timestamps and EDL action.
                                 </div>
                             </div>
                         </details>
@@ -276,6 +278,23 @@
                 <br />
                 <br />
 
+                <div id="timestampEditor" style="display:none">
+                    <p>Introduction timestamp editor. All times are in seconds.</p>
+                    <p id="editLeftEpisodeTitle" style="margin-bottom:0"></p>
+                    <input style="width:4em" type="number" min="0" id="editLeftEpisodeStart"> to
+                    <input style="width:4em;margin-bottom:10px" type="number" min="0" id="editLeftEpisodeEnd">
+
+                    <p id="editRightEpisodeTitle" style="margin-top:0;margin-bottom:0"></p>
+                    <input style="width:4em" type="number" min="0" id="editRightEpisodeStart"> to
+                    <input style="width:4em;margin-bottom:10px" type="number" min="0" id="editRightEpisodeEnd">
+
+                    <button id="btnUpdateTimestamps" type="button">
+                        Update timestamps
+                    </button>
+                </div>
+                <br />
+                <br />
+
                 <canvas id="troubleshooter"></canvas>
                 <span id="timestampContainer">
                     <span id="timestamps"></span> <br />
@@ -324,6 +343,7 @@
             var txtOffset = document.querySelector("input#offset");
             var txtSuggested = document.querySelector("span#suggestedShifts");
             var btnSeasonEraseTimestamps = document.querySelector("button#btnEraseSeasonTimestamps");
+            var btnUpdateTimestamps = document.querySelector("button#btnUpdateTimestamps");
             var timeContainer = document.querySelector("span#timestampContainer");
 
             var windowHashInterval = 0;
@@ -446,14 +466,50 @@
 
                 Dashboard.showLoadingMsg();
 
-                lhs = await getJson("Intros/Fingerprint/" + selectEpisode1.value);
-                rhs = await getJson("Intros/Fingerprint/" + selectEpisode2.value);
+                lhs = await getJson("Intros/Episode/" + selectEpisode1.value + "/Chromaprint");
+                rhs = await getJson("Intros/Episode/" + selectEpisode2.value + "/Chromaprint");
 
                 Dashboard.hideLoadingMsg();
 
                 refreshBounds();
                 renderTroubleshooter();
                 findExactMatches();
+                updateTimestampEditor();
+            }
+
+            // updates the timestamp editor
+            async function updateTimestampEditor() {
+                // Get the title and ID of the left and right episodes
+                const leftEpisode = selectEpisode1.options[selectEpisode1.selectedIndex];
+                const rightEpisode = selectEpisode2.options[selectEpisode2.selectedIndex];
+
+                // Try to get the timestamps of each intro, falling back a default value of zero if no intro was found
+                let leftEpisodeIntro = {
+                    IntroStart: 0,
+                    IntroEnd: 0,
+                };
+
+                let rightEpisodeIntro = {
+                    IntroStart: 0,
+                    IntroEnd: 0,
+                };
+
+                try {
+                    leftEpisodeIntro = await getJson("Episode/" + leftEpisode.value + "/IntroTimestamps/v1");
+                    rightEpisodeIntro = await getJson("Episode/" + rightEpisode.value + "/IntroTimestamps/v1");
+                } catch {
+                    // Ignore the server provided intro and use the defaults from above
+                }
+
+                // Update the editor for the first and second episodes
+                document.querySelector("#timestampEditor").style.display = "unset";
+                document.querySelector("#editLeftEpisodeTitle").textContent = leftEpisode.text;
+                document.querySelector("#editLeftEpisodeStart").value = Math.round(leftEpisodeIntro.IntroStart);
+                document.querySelector("#editLeftEpisodeEnd").value = Math.round(leftEpisodeIntro.IntroEnd);
+
+                document.querySelector("#editRightEpisodeTitle").textContent = rightEpisode.text;
+                document.querySelector("#editRightEpisodeStart").value = Math.round(rightEpisodeIntro.IntroStart);
+                document.querySelector("#editRightEpisodeEnd").value = Math.round(rightEpisodeIntro.IntroEnd);
             }
 
             // adds an item to a dropdown
@@ -472,20 +528,26 @@
 
             // make an authenticated GET to the server and parse the response as JSON
             async function getJson(url, method = "GET") {
+                return await fetchWithAuth(url, method).then(r => { return r.json(); });
+            }
+
+            // make an authenticated fetch to the server
+            async function fetchWithAuth(url, method, body) {
                 url = ApiClient.serverAddress() + "/" + url;
 
                 const reqInit = {
                     method: method,
                     headers: {
                         "Authorization": "MediaBrowser Token=" + ApiClient.accessToken()
-                    }
+                    },
+                    body: body,
                 };
 
-                return await
-                    fetch(url, reqInit)
-                        .then(r => {
-                            return r.json();
-                        });
+                if (method === "POST") {
+                    reqInit.headers["Content-Type"] = "application/json";
+                }
+
+                return await fetch(url, reqInit);
             }
 
             // key pressed
@@ -625,6 +687,24 @@
                 getJson(url, "DELETE");
 
                 Dashboard.alert("Erased timestamps for " + season + " of " + show);
+            });
+            btnUpdateTimestamps.addEventListener("click", () => {
+                const lhsId = selectEpisode1.options[selectEpisode1.selectedIndex].value;
+                const newLhsIntro = {
+                    IntroStart: document.querySelector("#editLeftEpisodeStart").value,
+                    IntroEnd: document.querySelector("#editLeftEpisodeEnd").value,
+                };
+
+                const rhsId = selectEpisode2.options[selectEpisode2.selectedIndex].value;
+                const newRhsIntro = {
+                    IntroStart: document.querySelector("#editRightEpisodeStart").value,
+                    IntroEnd: document.querySelector("#editRightEpisodeEnd").value,
+                };
+
+                fetchWithAuth("Intros/Episode/" + lhsId + "/UpdateIntroTimestamps", "POST", JSON.stringify(newLhsIntro));
+                fetchWithAuth("Intros/Episode/" + rhsId + "/UpdateIntroTimestamps", "POST", JSON.stringify(newRhsIntro));
+
+                Dashboard.alert("New introduction timestamps saved");
             });
             document.addEventListener("keydown", keyDown);
             windowHashInterval = setInterval(checkWindowHash, 2500);

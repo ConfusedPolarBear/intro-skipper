@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
@@ -102,7 +101,7 @@ public class VisualizationController : ControllerBase
     /// </summary>
     /// <param name="id">Episode id.</param>
     /// <returns>Read only collection of fingerprint points.</returns>
-    [HttpGet("Fingerprint/{Id}")]
+    [HttpGet("Episode/{Id}/Chromaprint")]
     public ActionResult<uint[]> GetEpisodeFingerprint([FromRoute] Guid id)
     {
         var queue = Plugin.Instance!.AnalysisQueue;
@@ -145,6 +144,23 @@ public class VisualizationController : ControllerBase
             Plugin.Instance!.Intros.Remove(e.EpisodeId);
         }
 
+        Plugin.Instance!.SaveTimestamps();
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Updates the timestamps for the provided episode.
+    /// </summary>
+    /// <param name="id">Episode ID to update timestamps for.</param>
+    /// <param name="timestamps">New introduction start and end times.</param>
+    /// <response code="204">New introduction timestamps saved.</response>
+    /// <returns>No content.</returns>
+    [HttpPost("Episode/{Id}/UpdateIntroTimestamps")]
+    public ActionResult UpdateTimestamps([FromRoute] Guid id, [FromBody] Intro timestamps)
+    {
+        var tr = new TimeRange(timestamps.IntroStart, timestamps.IntroEnd);
+        Plugin.Instance!.Intros[id] = new Intro(id, tr);
         Plugin.Instance!.SaveTimestamps();
 
         return NoContent();

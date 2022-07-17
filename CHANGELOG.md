@@ -6,6 +6,7 @@
   * Support selecting which libraries are analyzed
   * Support customizing [introduction requirements](README.md#introduction-requirements)
     * Changing these settings will increase episode analysis times
+  * Support adding and editing intro timestamps
   * Report how CPU time is being spent while analyzing episodes
     * CPU time reports can be viewed under "Analysis Statistics (experimental)" in the plugin configuration page
   * Sped up fingerprint analysis (not including fingerprint generation time) by 40%
