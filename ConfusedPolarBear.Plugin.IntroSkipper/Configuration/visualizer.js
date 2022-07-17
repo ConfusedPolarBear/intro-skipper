@@ -105,6 +105,9 @@ function findExactMatches() {
         shifts.push(shift);
     }
 
+    // Only suggest up to 20 shifts
+    shifts = shifts.slice(0, 20);
+
     txtSuggested.textContent = "Suggested shifts: ";
     if (shifts.length === 0) {
         txtSuggested.textContent += "none available";
