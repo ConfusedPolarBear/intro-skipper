@@ -534,8 +534,8 @@
             }
 
             // make an authenticated GET to the server and parse the response as JSON
-            async function getJson(url, method = "GET") {
-                return await fetchWithAuth(url, method).then(r => { return r.json(); });
+            async function getJson(url) {
+                return await fetchWithAuth(url, "GET").then(r => { return r.json(); });
             }
 
             // make an authenticated fetch to the server
@@ -681,7 +681,7 @@
                         }
 
                         // reset all intro timestamps on the server so a new fingerprint comparison algorithm can be tested
-                        getJson("Intros/EraseTimestamps", "POST");
+                        fetchWithAuth("Intros/EraseTimestamps", "POST", null);
                     });
 
                 e.preventDefault();
@@ -699,7 +699,7 @@
                         const season = selectSeason.value;
 
                         const url = "Intros/Show/" + encodeURIComponent(show) + "/" + encodeURIComponent(season);
-                        getJson(url, "DELETE");
+                        fetchWithAuth(url, "DELETE", null);
 
                         Dashboard.alert("Erased timestamps for " + season + " of " + show);
                     }
