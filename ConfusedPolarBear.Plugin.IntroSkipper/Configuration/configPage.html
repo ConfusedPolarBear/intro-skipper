@@ -392,10 +392,11 @@
                 let stats = await getJson("Intros/Statistics");
 
                 // Select which fields to print and label them with more friendly descriptions
-                let fields = "TotalCPUTime,FingerprintCPUTime,FirstPassCPUTime,SecondPassCPUTime,IndexSearches," +
-                    "QuickScans,FullScans,TotalQueuedEpisodes";
+                let fields = "TotalTaskTime,TotalCPUTime,FingerprintCPUTime,FirstPassCPUTime,SecondPassCPUTime," +
+                    "IndexSearches,QuickScans,FullScans,TotalQueuedEpisodes";
 
                 let friendlyNames = {
+                    TotalTaskTime: "Total task time",
                     TotalCPUTime: "Total CPU time",
                     FingerprintCPUTime: "Fingerprint CPU time",
                     FirstPassCPUTime: "First pass CPU time",
