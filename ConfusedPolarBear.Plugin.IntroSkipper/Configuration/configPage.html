@@ -492,21 +492,14 @@
                 const rightEpisode = selectEpisode2.options[selectEpisode2.selectedIndex];
 
                 // Try to get the timestamps of each intro, falling back a default value of zero if no intro was found
-                let leftEpisodeIntro = {
-                    IntroStart: 0,
-                    IntroEnd: 0,
-                };
+                let leftEpisodeIntro = await getJson("Episode/" + leftEpisode.value + "/IntroTimestamps/v1");
+                if (!leftEpisodeIntro.hasOwnProperty("IntroStart")) {
+                    leftEpisodeIntro = { IntroStart: 0, IntroEnd: 0 };
+                }
 
-                let rightEpisodeIntro = {
-                    IntroStart: 0,
-                    IntroEnd: 0,
-                };
-
-                try {
-                    leftEpisodeIntro = await getJson("Episode/" + leftEpisode.value + "/IntroTimestamps/v1");
-                    rightEpisodeIntro = await getJson("Episode/" + rightEpisode.value + "/IntroTimestamps/v1");
-                } catch {
-                    // Ignore the server provided intro and use the defaults from above
+                let rightEpisodeIntro = await getJson("Episode/" + rightEpisode.value + "/IntroTimestamps/v1");
+                if (!rightEpisodeIntro.hasOwnProperty("IntroStart")) {
+                    rightEpisodeIntro = { IntroStart: 0, IntroEnd: 0 };
                 }
 
                 // Update the editor for the first and second episodes
