@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -14,6 +13,8 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public static class Chromaprint
 {
+    private static bool _loggedVersionInformation;
+
     /// <summary>
     /// Gets or sets the logger.
     /// </summary>
@@ -27,6 +28,14 @@ public static class Chromaprint
     {
         try
         {
+            // Log the output of "ffmpeg -version" at the first call to this function
+            if (!_loggedVersionInformation)
+            {
+                _loggedVersionInformation = true;
+                var version = Encoding.UTF8.GetString(GetOutput("-version", 2000));
+                Logger?.LogDebug("ffmpeg version information: {Version}", version);
+            }
+
             // First, validate that the installed version of ffmpeg supports chromaprint at all.
             var muxers = Encoding.UTF8.GetString(GetOutput("-muxers", 2000));
             Logger?.LogTrace("ffmpeg muxers: {Muxers}", muxers);
@@ -71,7 +80,7 @@ public static class Chromaprint
         // Try to load this episode from cache before running ffmpeg.
         if (LoadCachedFingerprint(episode, out uint[] cachedFingerprint))
         {
-            Logger?.LogDebug("Fingerprint cache hit on {File}", episode.Path);
+            Logger?.LogTrace("Fingerprint cache hit on {File}", episode.Path);
             return cachedFingerprint;
         }
 

@@ -56,13 +56,14 @@ public class QueueManager
         {
             if (folder.CollectionType != CollectionTypeOptions.TvShows)
             {
+                _logger.LogDebug("Not analyzing library \"{Name}\": not a TV show library", folder.Name);
                 continue;
             }
 
             // If libraries have been selected for analysis, ensure this library was selected.
             if (selectedLibraries.Count > 0 && !selectedLibraries.Contains(folder.Name))
             {
-                _logger.LogDebug("Not analyzing library \"{Name}\"", folder.Name);
+                _logger.LogDebug("Not analyzing library \"{Name}\": not selected by user", folder.Name);
                 continue;
             }
 

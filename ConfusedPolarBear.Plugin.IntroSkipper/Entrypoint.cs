@@ -67,7 +67,10 @@ public class Entrypoint : IServerEntryPoint
             _logger.LogError("Unable to run startup enqueue: {Exception}", ex);
         }
 
-        _logger.LogDebug("Total enqueued seasons: {Count}", Plugin.Instance!.AnalysisQueue.Count);
+        _logger.LogDebug(
+            "Total enqueued seasons: {Count} ({Episodes} episodes)",
+            Plugin.Instance!.AnalysisQueue.Count,
+            Plugin.Instance!.TotalQueued);
 
         return Task.CompletedTask;
     }
