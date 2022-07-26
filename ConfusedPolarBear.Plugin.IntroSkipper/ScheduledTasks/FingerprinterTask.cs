@@ -158,6 +158,9 @@ public class FingerprinterTask : IScheduledTask
 
         minimumIntroDuration = Plugin.Instance!.Configuration.MinimumIntroDuration;
 
+        // TODO: if the queue is modified while the task is running, the task will fail.
+        // clone the queue before running the task to prevent this.
+
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
