@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.6.0 (unreleased)
+## v0.1.6.0 (2022-08-04)
 * New features
   * Generate EDL files with intro timestamps ([documentation](docs/edl.md)) (#21)
   * Support selecting which libraries are analyzed (#37)
