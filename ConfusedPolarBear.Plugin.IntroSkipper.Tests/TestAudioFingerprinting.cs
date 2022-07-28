@@ -3,7 +3,6 @@
  */
 
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using Xunit;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +10,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper.Tests;
 
 public class TestAudioFingerprinting
 {
-    [Fact]
+    [FactSkipFFmpegTests]
     public void TestInstallationCheck()
     {
         Assert.True(Chromaprint.CheckFFmpegVersion());
@@ -29,7 +28,7 @@ public class TestAudioFingerprinting
         Assert.Equal(expectedBits, FingerprinterTask.CountBits(number));
     }
 
-    [Fact]
+    [FactSkipFFmpegTests]
     public void TestFingerprinting()
     {
         // Generated with `fpcalc -raw audio/big_buck_bunny_intro.mp3`
@@ -83,7 +82,7 @@ public class TestAudioFingerprinting
         Assert.Equal(expected, actual);
     }
 
-    [Fact]
+    [FactSkipFFmpegTests]
     public void TestIntroDetection()
     {
         var task = new FingerprinterTask(new LoggerFactory());
@@ -110,4 +109,12 @@ public class TestAudioFingerprinting
             FingerprintDuration = 60
         };
     }
+}
+
+public class FactSkipFFmpegTests : FactAttribute {
+    #if SKIP_FFMPEG_TESTS
+    public FactSkipFFmpegTests() {
+        Skip = "SKIP_FFMPEG_TESTS defined, skipping unit tests that require FFmpeg to be installed";
+    }
+    #endif
 }

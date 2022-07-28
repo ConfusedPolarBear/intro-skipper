@@ -1,6 +1,7 @@
 bin/
 obj/
 BenchmarkDotNet.Artifacts/
+/package/
 
 # Ignore pre compiled web interface
 docker/dist
