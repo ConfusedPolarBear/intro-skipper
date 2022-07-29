@@ -1,0 +1,23 @@
+{
+    "common": {
+        "library": "/full/path/to/test/library/on/host",
+        "episode": "Episode title to search for"
+    },
+    "servers": [
+        {
+            "comment": "Optional comment to identify this server",
+            "image": "ghcr.io/confusedpolarbear/jellyfin-intro-skipper:latest",
+            "username": "admin",
+            "password": "hunter2",
+            "base": "config/official",
+            "browsers": [
+                "chrome",
+                "firefox"
+            ], // supported values are "chrome" and "firefox".
+            "tests": [
+                "skip_button", // test skip intro button
+                "settings" // test plugin administration page
+            ]
+        }
+    ]
+}

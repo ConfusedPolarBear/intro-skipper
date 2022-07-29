@@ -5,6 +5,3 @@ BenchmarkDotNet.Artifacts/
 
 # Ignore pre compiled web interface
 docker/dist
-
-# Ignore user provided end to end test results
-ConfusedPolarBear.Plugin.IntroSkipper.Tests/e2e_tests/expected/*.json

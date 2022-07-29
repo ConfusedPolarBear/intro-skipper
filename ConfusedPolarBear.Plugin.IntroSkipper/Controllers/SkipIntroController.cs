@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Mime;
+using MediaBrowser.Controller.Entities.TV;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -73,11 +74,32 @@ public class SkipIntroController : ControllerBase
     /// Get all introductions. Only used by the end to end testing script.
     /// </summary>
     /// <response code="200">All introductions have been returned.</response>
-    /// <returns>Dictionary of Intro objects.</returns>
+    /// <returns>List of IntroWithMetadata objects.</returns>
     [Authorize(Policy = "RequiresElevation")]
     [HttpGet("Intros/All")]
-    public ActionResult<Dictionary<Guid, Intro>> GetAllIntros()
+    public ActionResult<List<IntroWithMetadata>> GetAllIntros()
     {
-        return Plugin.Instance!.Intros;
+        List<IntroWithMetadata> intros = new();
+
+        // Get metadata for all intros
+        foreach (var intro in Plugin.Instance!.Intros)
+        {
+            // Get the details of the item from Jellyfin
+            var rawItem = Plugin.Instance!.GetItem(intro.Key);
+            if (rawItem is not Episode episode)
+            {
+                throw new InvalidCastException("Unable to cast item id " + intro.Key + " to an Episode");
+            }
+
+            // Associate the metadata with the intro
+            intros.Add(
+                new IntroWithMetadata(
+                episode.SeriesName,
+                episode.AiredSeasonNumber ?? 0,
+                episode.Name,
+                intro.Value));
+        }
+
+        return intros;
     }
 }
