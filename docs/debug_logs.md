@@ -38,3 +38,7 @@
 ```
 
 4. Save the file and restart Jellyfin
+
+## How to enable verbose logs
+
+To enable verbose log messages, set the log level to `Verbose` instead of `Debug` in step 3.
