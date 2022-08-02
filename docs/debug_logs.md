@@ -2,7 +2,7 @@
 
 1. Browse to your Jellyfin config folder
 2. Make a backup copy of `config/logging.default.json` before editing it
-2. Open `config/logging.default.json` with a text editor. The top lines should look something like this:
+3. Open `config/logging.default.json` with a text editor. The top lines should look something like this:
 
 ```jsonc
 {
@@ -19,7 +19,7 @@
 }
 ```
 
-3. Inside the `Override` section, add a new entry for `ConfusedPolarBear` and set it to `Debug`. The modified file should now look like this:
+4. Inside the `Override` section, add a new entry for `ConfusedPolarBear` and set it to `Debug`. The modified file should now look like this:
 
 ```jsonc
 {
@@ -37,8 +37,8 @@
 }
 ```
 
-4. Save the file and restart Jellyfin
+5. Save the file and restart Jellyfin
 
 ## How to enable verbose logs
 
-To enable verbose log messages, set the log level to `Verbose` instead of `Debug` in step 3.
+To enable verbose log messages, set the log level to `Verbose` instead of `Debug` in step 4.
