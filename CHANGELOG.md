@@ -20,6 +20,7 @@
   * Restore per season status updates in the log
   * Prevent null key in `/Intros/Shows` endpoint (#27)
   * Fix positioning of skip intro button on mobile devices (#43)
+  * Ensure video playback always resumes after clicking the skip intro button (#44)
 
 ## v0.1.5.0 (2022-06-17)
 * Use `ffmpeg` to generate audio fingerprints instead of `fpcalc`
