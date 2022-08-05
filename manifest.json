@@ -9,12 +9,20 @@
         "imageUrl": "https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png",
         "versions": [
             {
-            "version": "0.1.5.0",
-            "changelog": "- use ffmpeg instead of fpcalc\n- version API endpoints\n- see CHANGELOG.md for full list of changes",
-            "targetAbi": "10.8.0.0",
-            "sourceUrl": "https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.1.5.0/intro-skipper-v0.1.5.zip",
-            "checksum": "cdb5baa20a37af1559d85a4aeb4760fa",
-            "timestamp": "2022-06-18T03:01:21Z"
+                "version": "0.1.6.0",
+                "changelog": "- See the full changelog at [GitHub](https://github.com/ConfusedPolarBear/intro-skipper/blob/master/CHANGELOG.md)\n",
+                "targetAbi": "10.8.1.0",
+                "sourceUrl": "https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.1.6/intro-skipper-v0.1.6.zip",
+                "checksum": "625990fa5f92244c5269143da42697ea",
+                "timestamp": "2022-08-05T06:04:59Z"
+            },
+            {
+                "version": "0.1.5.0",
+                "changelog": "- use ffmpeg instead of fpcalc\n- version API endpoints\n- see CHANGELOG.md for full list of changes",
+                "targetAbi": "10.8.0.0",
+                "sourceUrl": "https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.1.5.0/intro-skipper-v0.1.5.zip",
+                "checksum": "cdb5baa20a37af1559d85a4aeb4760fa",
+                "timestamp": "2022-06-18T03:01:21Z"
             },
             {
                 "version": "0.1.0.0",
