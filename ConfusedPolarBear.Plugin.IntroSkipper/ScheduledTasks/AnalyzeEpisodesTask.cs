@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,9 +10,9 @@ using Microsoft.Extensions.Logging;
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
-/// Fingerprint and analyze all queued episodes for common audio sequences.
+/// Analyze all television episodes for introduction sequences.
 /// </summary>
-public class FingerprinterTask : IScheduledTask
+public class AnalyzeEpisodesTask : IScheduledTask
 {
     /// <summary>
     /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
@@ -41,7 +40,7 @@ public class FingerprinterTask : IScheduledTask
     /// </summary>
     private const double ReanalysisTolerance = ReanalysisBucketWidth * 1.5;
 
-    private readonly ILogger<FingerprinterTask> _logger;
+    private readonly ILogger<AnalyzeEpisodesTask> _logger;
 
     private readonly ILogger<QueueManager> _queueLogger;
 
@@ -74,22 +73,22 @@ public class FingerprinterTask : IScheduledTask
     private static int minimumIntroDuration = 15;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
+    /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
     /// <param name="libraryManager">Library manager.</param>
-    public FingerprinterTask(ILoggerFactory loggerFactory, ILibraryManager libraryManager) : this(loggerFactory)
+    public AnalyzeEpisodesTask(ILoggerFactory loggerFactory, ILibraryManager libraryManager) : this(loggerFactory)
     {
         _libraryManager = libraryManager;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FingerprinterTask"/> class.
+    /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
-    public FingerprinterTask(ILoggerFactory loggerFactory)
+    public AnalyzeEpisodesTask(ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<FingerprinterTask>();
+        _logger = loggerFactory.CreateLogger<AnalyzeEpisodesTask>();
         _queueLogger = loggerFactory.CreateLogger<QueueManager>();
 
         _fingerprintCache = new Dictionary<Guid, uint[]>();
@@ -894,7 +893,7 @@ public class FingerprinterTask : IScheduledTask
             new TaskTriggerInfo
             {
                 Type = TaskTriggerInfo.TriggerDaily,
-                TimeOfDayTicks = TimeSpan.FromDays(24).Ticks
+                TimeOfDayTicks = TimeSpan.FromHours(0).Ticks
             }
         };
     }

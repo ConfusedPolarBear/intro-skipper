@@ -25,7 +25,7 @@ public class TestAudioFingerprinting
     [InlineData(19, 2_465_585_877)]
     public void TestBitCounting(int expectedBits, uint number)
     {
-        Assert.Equal(expectedBits, FingerprinterTask.CountBits(number));
+        Assert.Equal(expectedBits, AnalyzeEpisodesTask.CountBits(number));
     }
 
     [FactSkipFFmpegTests]
@@ -85,7 +85,7 @@ public class TestAudioFingerprinting
     [FactSkipFFmpegTests]
     public void TestIntroDetection()
     {
-        var task = new FingerprinterTask(new LoggerFactory());
+        var task = new AnalyzeEpisodesTask(new LoggerFactory());
 
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
