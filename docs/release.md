@@ -7,18 +7,19 @@
 
 ## Release plugin
 
-1. Build release DLL with `dotnet build -c Release`
-2. Zip release DLL
-3. Update and commit latest changelog and manifest
-4. Test plugin manifest
+1. Run package plugin action and download bundle
+2. Combine generated `manifest.json` with main plugin manifest
+3. Test plugin manifest
    1. Replace manifest URL with local IP address
    2. Serve release ZIP and manifest with `python3 -m http.server`
    3. Test updating plugin
-5. Tag and push latest commit
-6. Create release on GitHub with the following files:
+4. Create release on GitHub with the following files:
    1. Archived plugin DLL
-   2. Latest web interface
+   2. Link to the latest web interface
 
 ## Release container
 
 1. Run publish container action
+2. Update `latest` tag
+    1. `docker tag ghcr.io/confusedpolarbear/jellyfin-intro-skipper:{COMMIT,latest}`
+    2. `docker push ghcr.io/confusedpolarbear/jellyfin-intro-skipper:latest`

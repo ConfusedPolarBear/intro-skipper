@@ -5,6 +5,7 @@ using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
@@ -142,6 +143,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         }
     }
 
+    internal BaseItem GetItem(Guid id)
+    {
+        return _libraryManager.GetItemById(id);
+    }
+
     /// <summary>
     /// Gets the full path for an item.
     /// </summary>
@@ -149,7 +155,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <returns>Full path to item.</returns>
     internal string GetItemPath(Guid id)
     {
-        return _libraryManager.GetItemById(id).Path;
+        return GetItem(id).Path;
     }
 
     /// <inheritdoc />
