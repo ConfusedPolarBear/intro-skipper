@@ -109,7 +109,7 @@ func runAnalysisAndWait(hostAddress, apiKey string, pollInterval time.Duration) 
 	fmt.Println()
 
 	fmt.Println("[+] Starting analysis task")
-	SendRequest("POST", hostAddress+"/ScheduledTasks/Running/8863329048cc357f7dfebf080f2fe204", apiKey)
+	SendRequest("POST", hostAddress+"/ScheduledTasks/Running/6adda26c5261c40e8fa4a7e7df568be2", apiKey)
 	fmt.Println()
 
 	fmt.Println("[+] Waiting for analysis task to complete")
@@ -141,7 +141,7 @@ func runAnalysisAndWait(hostAddress, apiKey string, pollInterval time.Duration) 
 
 		lastQuery = time.Now()
 
-		raw := SendRequest("GET", hostAddress+"/ScheduledTasks/8863329048cc357f7dfebf080f2fe204?hideUrl=1", apiKey)
+		raw := SendRequest("GET", hostAddress+"/ScheduledTasks/6adda26c5261c40e8fa4a7e7df568be2?hideUrl=1", apiKey)
 
 		if err := json.Unmarshal(raw, &info); err != nil {
 			fmt.Printf("[!] Unable to unmarshal response into taskInfo struct: %s\n", err)
