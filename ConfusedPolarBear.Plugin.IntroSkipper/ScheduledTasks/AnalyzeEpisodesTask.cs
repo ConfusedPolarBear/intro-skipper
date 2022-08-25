@@ -264,35 +264,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
             return episodes.Count;
         }
 
-        var unanalyzed = false;
-
-        // Only log an analysis message if there are unanalyzed episodes in this season.
-        foreach (var episode in episodes)
-        {
-            if (!Plugin.Instance!.Intros.ContainsKey(episode.EpisodeId))
-            {
-                unanalyzed = true;
-                break;
-            }
-        }
-
-        if (unanalyzed)
-        {
-            _logger.LogInformation(
-                "Analyzing {Count} episodes from {Name} season {Season}",
-                season.Value.Count,
-                first.SeriesName,
-                first.SeasonNumber);
-        }
-        else
-        {
-            _logger.LogDebug(
-                "All episodes from {Name} season {Season} have already been analyzed",
-                first.SeriesName,
-                first.SeasonNumber);
-
-            return 0;
-        }
+        _logger.LogInformation(
+            "Analyzing {Count} episodes from {Name} season {Season}",
+            season.Value.Count,
+            first.SeriesName,
+            first.SeasonNumber);
 
         // Ensure there are an even number of episodes
         if (episodes.Count % 2 != 0)
@@ -301,8 +277,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
         }
 
         // Analyze each pair of episodes in the current season
-        var everFoundIntro = false;
-        var failures = 0;
         for (var i = 0; i < episodes.Count; i += 2)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -313,26 +287,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
             var lhs = episodes[i];
             var rhs = episodes[i + 1];
 
-            if (!everFoundIntro && failures >= 20)
-            {
-                _logger.LogWarning(
-                    "Failed to find an introduction in {Series} season {Season}",
-                    lhs.SeriesName,
-                    lhs.SeasonNumber);
-
-                break;
-            }
-
-            if (Plugin.Instance!.Intros.ContainsKey(lhs.EpisodeId) && Plugin.Instance!.Intros.ContainsKey(rhs.EpisodeId))
-            {
-                _logger.LogTrace(
-                    "Episodes {LHS} and {RHS} have both already been fingerprinted",
-                    lhs.EpisodeId,
-                    rhs.EpisodeId);
-
-                continue;
-            }
-
             try
             {
                 _logger.LogTrace("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
@@ -341,14 +295,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
                 seasonIntros[lhsIntro.EpisodeId] = lhsIntro;
                 seasonIntros[rhsIntro.EpisodeId] = rhsIntro;
                 analysisStatistics.TotalAnalyzedEpisodes.Add(2);
-
-                if (!lhsIntro.Valid)
-                {
-                    failures += 2;
-                    continue;
-                }
-
-                everFoundIntro = true;
             }
             catch (FingerprintException ex)
             {
