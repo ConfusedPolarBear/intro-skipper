@@ -99,7 +99,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Gets the task name.
     /// </summary>
-    public string Name => "Analyze episodes";
+    public string Name => "Detect Introductions";
 
     /// <summary>
     /// Gets the task category.
@@ -114,7 +114,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Gets the task key.
     /// </summary>
-    public string Key => "CPBIntroSkipperRunFingerprinter";
+    public string Key => "CPBIntroSkipperDetectIntroductions";
 
     /// <summary>
     /// Analyze all episodes in the queue. Only one instance of this task should be run at a time.
