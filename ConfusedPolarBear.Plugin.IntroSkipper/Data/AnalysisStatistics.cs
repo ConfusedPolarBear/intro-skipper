@@ -26,29 +26,14 @@ public class AnalysisStatistics
     public ThreadSafeInteger IndexSearches { get; } = new ThreadSafeInteger();
 
     /// <summary>
-    /// Gets the number of times a quick scan successfully located a pair of introductions.
-    /// </summary>
-    public ThreadSafeInteger QuickScans { get; } = new ThreadSafeInteger();
-
-    /// <summary>
-    /// Gets the number of times a full scan successfully located a pair of introductions.
-    /// </summary>
-    public ThreadSafeInteger FullScans { get; } = new ThreadSafeInteger();
-
-    /// <summary>
     /// Gets the total CPU time spent waiting for audio fingerprints to be generated.
     /// </summary>
     public ThreadSafeInteger FingerprintCPUTime { get; } = new ThreadSafeInteger();
 
     /// <summary>
-    /// Gets the total CPU time spent analyzing fingerprints in the initial pass.
+    /// Gets the total CPU time spent analyzing fingerprints.
     /// </summary>
-    public ThreadSafeInteger FirstPassCPUTime { get; } = new ThreadSafeInteger();
-
-    /// <summary>
-    /// Gets the total CPU time spent analyzing fingerprints in the second pass.
-    /// </summary>
-    public ThreadSafeInteger SecondPassCPUTime { get; } = new ThreadSafeInteger();
+    public ThreadSafeInteger AnalysisCPUTime { get; } = new ThreadSafeInteger();
 
     /// <summary>
     /// Gets the total task runtime across all threads.

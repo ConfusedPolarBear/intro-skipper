@@ -30,16 +30,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// </summary>
     private const double SamplesToSeconds = 0.128;
 
-    /// <summary>
-    /// Bucket size used in the reanalysis histogram.
-    /// </summary>
-    private const int ReanalysisBucketWidth = 5;
-
-    /// <summary>
-    /// Maximum time (in seconds) that an intro's duration can be different from a typical intro's duration before marking it for reanalysis.
-    /// </summary>
-    private const double ReanalysisTolerance = ReanalysisBucketWidth * 1.5;
-
     private readonly ILogger<AnalyzeEpisodesTask> _logger;
 
     private readonly ILogger<QueueManager> _queueLogger;
@@ -375,17 +365,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
             }
         }
 
-        // Only run the second pass if the user hasn't requested cancellation and we found an intro
-        if (!cancellationToken.IsCancellationRequested && everFoundIntro)
-        {
-            var start = DateTime.Now;
-
-            // Run a second pass over this season to remove outliers and fix episodes that failed in the first pass.
-            RunSecondPass(season.Value);
-
-            analysisStatistics.SecondPassCPUTime.AddDuration(start);
-        }
-
         lock (_introsLock)
         {
             Plugin.Instance!.SaveTimestamps();
@@ -441,7 +420,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // If this isn't running as part of the first analysis pass, don't count this CPU time as first pass time.
         var start = isFirstPass ? DateTime.Now : DateTime.MinValue;
 
-        // ===== Method 1: Inverted indexes =====
         // Creates an inverted fingerprint point index for both episodes.
         // For every point which is a 100% match, search for an introduction at that point.
         var (lhsRanges, rhsRanges) = SearchInvertedIndex(lhsPoints, rhsPoints);
@@ -450,46 +428,17 @@ public class AnalyzeEpisodesTask : IScheduledTask
         {
             _logger.LogTrace("Index search successful");
             analysisStatistics.IndexSearches.Increment();
-            analysisStatistics.FirstPassCPUTime.AddDuration(start);
+            analysisStatistics.AnalysisCPUTime.AddDuration(start);
 
             return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
         }
-
-        // ===== Method 2: Quick scan =====
-        // Tests if an intro can be found within the first 5 seconds of the episodes. ±5/0.128 = ±40 samples.
-        (lhsRanges, rhsRanges) = ShiftEpisodes(lhsPoints, rhsPoints, -40, 40);
-
-        if (lhsRanges.Count > 0)
-        {
-            _logger.LogTrace("Quick scan successful");
-            analysisStatistics.QuickScans.Increment();
-            analysisStatistics.FirstPassCPUTime.AddDuration(start);
-
-            return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
-        }
-
-        // ===== Method 3: Full scan =====
-        // Compares all elements of the shortest fingerprint to the other fingerprint.
-        var limit = Math.Min(lhsPoints.Length, rhsPoints.Length);
-        (lhsRanges, rhsRanges) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
-
-        if (lhsRanges.Count > 0)
-        {
-            _logger.LogTrace("Full scan successful");
-            analysisStatistics.FullScans.Increment();
-            analysisStatistics.FirstPassCPUTime.AddDuration(start);
-
-            return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
-        }
-
-        // No method was able to find an introduction, return nothing.
 
         _logger.LogTrace(
             "Unable to find a shared introduction sequence between {LHS} and {RHS}",
             lhsId,
             rhsId);
 
-        analysisStatistics.FirstPassCPUTime.AddDuration(start);
+        analysisStatistics.AnalysisCPUTime.AddDuration(start);
 
         return (new Intro(lhsId), new Intro(rhsId));
     }
@@ -692,184 +641,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
     public static int CountBits(uint number)
     {
         return BitOperations.PopCount(number);
-    }
-
-    /// <summary>
-    /// Reanalyze the most recently analyzed season.
-    /// Looks for and fixes intro durations that were either not found or are statistical outliers.
-    /// </summary>
-    /// <param name="episodes">List of episodes that was just analyzed.</param>
-    private void RunSecondPass(List<QueuedEpisode> episodes)
-    {
-        // First, assert that at least half of the episodes in this season have an intro.
-        var validCount = 0;
-        var totalCount = episodes.Count;
-
-        foreach (var episode in episodes)
-        {
-            if (Plugin.Instance!.Intros.TryGetValue(episode.EpisodeId, out var intro) && intro.Valid)
-            {
-                validCount++;
-            }
-        }
-
-        var percentValid = (validCount * 100) / totalCount;
-        _logger.LogTrace("Found intros in {Valid}/{Total} ({Percent}%) of episodes", validCount, totalCount, percentValid);
-        if (percentValid < 50)
-        {
-            return;
-        }
-
-        // Create a histogram of all episode durations
-        var histogram = new Dictionary<int, SeasonHistogram>();
-        foreach (var episode in episodes)
-        {
-            var id = episode.EpisodeId;
-            var duration = GetIntroDuration(id);
-
-            if (duration < minimumIntroDuration)
-            {
-                continue;
-            }
-
-            // Bucket the duration into equally sized groups
-            var bucket = Convert.ToInt32(Math.Floor(duration / ReanalysisBucketWidth)) * ReanalysisBucketWidth;
-
-            // TryAdd returns true when the key was successfully added (i.e. for newly created buckets).
-            // Newly created buckets are initialized with the provided episode ID, so nothing else needs to be done for them.
-            if (histogram.TryAdd(bucket, new SeasonHistogram(id)))
-            {
-                continue;
-            }
-
-            histogram[bucket].Episodes.Add(id);
-        }
-
-        // Find the bucket that was seen most often, as this is likely to be the true intro length.
-        var maxDuration = 0;
-        var maxBucket = new SeasonHistogram(Guid.Empty);
-        foreach (var entry in histogram)
-        {
-            if (entry.Value.Count > maxBucket.Count)
-            {
-                maxDuration = entry.Key;
-                maxBucket = entry.Value;
-            }
-        }
-
-        // Ensure that the most frequently seen bucket has a majority
-        percentValid = (maxBucket.Count * 100) / validCount;
-        _logger.LogTrace(
-            "Intro duration {Duration} appeared {Frequency} times ({Percent}%)",
-            maxDuration,
-            maxBucket.Count,
-            percentValid);
-
-        if (percentValid < 50 || maxBucket.Episodes[0].Equals(Guid.Empty))
-        {
-            return;
-        }
-
-        _logger.LogTrace("Second pass is processing {Count} episodes", totalCount - maxBucket.Count);
-
-        // Calculate a range of intro durations that are most likely to be correct.
-        var maxEpisode = episodes.Find(x => x.EpisodeId == maxBucket.Episodes[0]);
-        if (maxEpisode is null)
-        {
-            _logger.LogError("Second pass failed to get episode from bucket");
-            return;
-        }
-
-        var lhsDuration = GetIntroDuration(maxEpisode.EpisodeId);
-        var (lowTargetDuration, highTargetDuration) = (
-            lhsDuration - ReanalysisTolerance,
-            lhsDuration + ReanalysisTolerance);
-
-        // TODO: add limit and make it customizable
-        var count = maxBucket.Episodes.Count - 1;
-        var goodFingerprints = new List<uint[]>();
-        foreach (var id in maxBucket.Episodes)
-        {
-            if (!_fingerprintCache.TryGetValue(id, out var fp))
-            {
-                _logger.LogTrace("Second pass: max bucket episode {Id} not in cache, skipping", id);
-                continue;
-            }
-
-            goodFingerprints.Add(fp);
-        }
-
-        foreach (var episode in episodes)
-        {
-            // Don't reanalyze episodes from the max bucket
-            if (maxBucket.Episodes.Contains(episode.EpisodeId))
-            {
-                continue;
-            }
-
-            var oldDuration = GetIntroDuration(episode.EpisodeId);
-
-            // If the episode's intro duration is close enough to the targeted bucket, leave it alone.
-            if (Math.Abs(lhsDuration - oldDuration) <= ReanalysisTolerance)
-            {
-                _logger.LogTrace(
-                    "Not reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
-                    episode.Path,
-                    Math.Round(oldDuration, 2),
-                    maxDuration);
-
-                continue;
-            }
-
-            _logger.LogTrace(
-                "Reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
-                episode.Path,
-                Math.Round(oldDuration, 2),
-                maxDuration);
-
-            // Analyze the episode again, ignoring whatever is returned for the known good episode.
-            foreach (var lhsFingerprint in goodFingerprints)
-            {
-                if (!_fingerprintCache.TryGetValue(episode.EpisodeId, out var fp))
-                {
-                    _logger.LogTrace("Unable to get cached fingerprint for {Id}, skipping", episode.EpisodeId);
-                    continue;
-                }
-
-                var (_, newRhs) = FingerprintEpisodes(
-                    maxEpisode.EpisodeId,
-                    lhsFingerprint,
-                    episode.EpisodeId,
-                    fp,
-                    false);
-
-                // Ensure that the new intro duration is within the targeted bucket and longer than what was found previously.
-                var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);
-                if (newDuration < oldDuration || newDuration < lowTargetDuration || newDuration > highTargetDuration)
-                {
-                    _logger.LogTrace(
-                        "Ignoring reanalysis for {Path} (was {Initial}, now is {New})",
-                        episode.Path,
-                        oldDuration,
-                        newDuration);
-
-                    continue;
-                }
-
-                _logger.LogTrace(
-                    "Reanalysis succeeded for {Path} (was {Initial}, now is {New})",
-                    episode.Path,
-                    oldDuration,
-                    newDuration);
-
-                lock (_introsLock)
-                {
-                    Plugin.Instance!.Intros[episode.EpisodeId] = newRhs;
-                }
-
-                break;
-            }
-        }
     }
 
     private double GetIntroDuration(Guid id)
