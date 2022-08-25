@@ -211,6 +211,12 @@
                 </form>
             </div>
 
+            <details id="support">
+                <summary>Support Bundle</summary>
+
+                <textarea id="supportBundle" rows="20" cols="75" readonly></textarea>
+            </details>
+
             <details id="statistics">
                 <summary>Analysis Statistics (experimental)</summary>
 
@@ -326,6 +332,7 @@
             // settings elements
             var visualizer = document.querySelector("details#visualizer");
             var statistics = document.querySelector("details#statistics");
+            var support = document.querySelector("details#support");
             var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
 
             // all plugin configuration fields that can be get or set with .value (i.e. strings or numbers).
@@ -375,6 +382,39 @@
                 selectShow.value = "";
 
                 Dashboard.hideLoadingMsg();
+            }
+
+            // fetch the support bundle whenever the detail section is opened.
+            async function supportToggled() {
+                if (!support.open) {
+                    return;
+                }
+
+                // Fetch the support bundle
+                const bundle = await fetchWithAuth("IntroSkipper/SupportBundle", "GET", null);
+                const bundleText = await bundle.text();
+
+                // Display it to the user
+                document.querySelector("textarea#supportBundle").value = bundleText;
+
+                // Attempt to copy it to the clipboard automatically, falling back to selecting
+                // all text and prompting the user to press ctrl c.
+                try {
+                    navigator.clipboard.writeText(bundleText)
+                    Dashboard.alert("Support bundle copied to clipboard");
+                } catch {
+                    supportBundleCopyFailed();
+                }
+            }
+
+            // if the automatic bundle copy fails (likely due to an insecure context), have the
+            // user copy it manually.
+            function supportBundleCopyFailed() {
+                const ta = document.querySelector("textarea#supportBundle");
+                ta.focus();
+                ta.setSelectionRange(0, ta.value.length);
+
+                Dashboard.alert("Press Ctrl+C to copy support bundle");
             }
 
             async function statisticsToggled() {
@@ -660,6 +700,7 @@
 
             visualizer.addEventListener("toggle", visualizerToggled);
             statistics.addEventListener("toggle", statisticsToggled);
+            support.addEventListener("toggle", supportToggled);
             txtOffset.addEventListener("change", renderTroubleshooter);
             selectShow.addEventListener("change", showChanged);
             selectSeason.addEventListener("change", seasonChanged);

@@ -13,12 +13,12 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public static class Chromaprint
 {
-    private static bool _loggedVersionInformation;
-
     /// <summary>
     /// Gets or sets the logger.
     /// </summary>
     public static ILogger? Logger { get; set; }
+
+    private static Dictionary<string, string> ChromaprintLogs { get; set; } = new();
 
     /// <summary>
     /// Check that the installed version of ffmpeg supports chromaprint.
@@ -28,44 +28,47 @@ public static class Chromaprint
     {
         try
         {
-            // Log the output of "ffmpeg -version" at the first call to this function
-            if (!_loggedVersionInformation)
-            {
-                _loggedVersionInformation = true;
-                var version = Encoding.UTF8.GetString(GetOutput("-version", 2000));
-                Logger?.LogDebug("ffmpeg version information: {Version}", version);
-            }
+            // Log the output of "ffmpeg -version".
+            ChromaprintLogs["version"] = Encoding.UTF8.GetString(GetOutput("-version", 2000));
+            Logger?.LogDebug("ffmpeg version information: {Version}", ChromaprintLogs["version"]);
 
             // First, validate that the installed version of ffmpeg supports chromaprint at all.
             var muxers = Encoding.UTF8.GetString(GetOutput("-muxers", 2000));
+            ChromaprintLogs["muxer list"] = muxers;
             Logger?.LogTrace("ffmpeg muxers: {Muxers}", muxers);
 
             if (!muxers.Contains("chromaprint", StringComparison.OrdinalIgnoreCase))
             {
+                ChromaprintLogs["error"] = "muxer_not_supported";
                 Logger?.LogError("The installed version of ffmpeg does not support chromaprint");
                 return false;
             }
 
             // Second, validate that ffmpeg understands the "-fp_format raw" option.
             var muxerHelp = Encoding.UTF8.GetString(GetOutput("-h muxer=chromaprint", 2000));
+            ChromaprintLogs["muxer options"] = muxerHelp;
             Logger?.LogTrace("ffmpeg chromaprint help: {MuxerHelp}", muxerHelp);
 
             if (!muxerHelp.Contains("-fp_format", StringComparison.OrdinalIgnoreCase))
             {
+                ChromaprintLogs["error"] = "fp_format_not_supported";
                 Logger?.LogError("The installed version of ffmpeg does not support the -fp_format flag");
                 return false;
             }
             else if (!muxerHelp.Contains("binary raw fingerprint", StringComparison.OrdinalIgnoreCase))
             {
+                ChromaprintLogs["error"] = "fp_format_raw_not_supported";
                 Logger?.LogError("The installed version of ffmpeg does not support raw binary fingerprints");
                 return false;
             }
 
             Logger?.LogDebug("Installed version of ffmpeg meets fingerprinting requirements");
+            ChromaprintLogs["error"] = "okay";
             return true;
         }
         catch
         {
+            ChromaprintLogs["error"] = "unknown_error";
             return false;
         }
     }
@@ -272,5 +275,53 @@ public static class Chromaprint
     private static string GetFingerprintCachePath(QueuedEpisode episode)
     {
         return Path.Join(Plugin.Instance!.FingerprintCachePath, episode.EpisodeId.ToString("N"));
+    }
+
+    /// <summary>
+    /// Gets Chromaprint debugging logs.
+    /// </summary>
+    /// <returns>Markdown formatted logs.</returns>
+    public static string GetChromaprintLogs()
+    {
+        var logs = new StringBuilder(1024);
+
+        // Print the Chromaprint detection status at the top.
+        // Format: "* Chromaprint: `error`"
+        logs.Append("* Chromaprint: `");
+        logs.Append(ChromaprintLogs["error"]);
+        logs.Append("`\n\n"); // Use two newlines to separate the bulleted list from the logs
+
+        // Print all remaining logs
+        foreach (var kvp in ChromaprintLogs)
+        {
+            var name = kvp.Key;
+            var contents = kvp.Value;
+
+            if (string.Equals(name, "error", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            /* Format:
+             * FFmpeg NAME:
+             * ```
+             * LOGS
+             * ```
+             */
+            logs.Append("FFmpeg ");
+            logs.Append(name);
+            logs.Append(":\n```\n");
+            logs.Append(contents);
+
+            // ensure the closing triple backtick is on a separate line
+            if (!contents.EndsWith('\n'))
+            {
+                logs.Append('\n');
+            }
+
+            logs.Append("```\n\n");
+        }
+
+        return logs.ToString();
     }
 }
