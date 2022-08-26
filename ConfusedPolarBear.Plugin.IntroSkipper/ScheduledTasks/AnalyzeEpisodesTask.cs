@@ -37,20 +37,9 @@ public class AnalyzeEpisodesTask : IScheduledTask
     private readonly ILibraryManager? _libraryManager;
 
     /// <summary>
-    /// Lock which guards the fingerprint cache dictionary.
-    /// </summary>
-    private readonly object _fingerprintCacheLock = new object();
-
-    /// <summary>
     /// Lock which guards the shared dictionary of intros.
     /// </summary>
     private readonly object _introsLock = new object();
-
-    /// <summary>
-    /// Temporary fingerprint cache to speed up reanalysis.
-    /// Fingerprints are removed from this after a season is analyzed.
-    /// </summary>
-    private Dictionary<Guid, uint[]> _fingerprintCache;
 
     /// <summary>
     /// Statistics for the currently running analysis task.
@@ -80,8 +69,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
     {
         _logger = loggerFactory.CreateLogger<AnalyzeEpisodesTask>();
         _queueLogger = loggerFactory.CreateLogger<QueueManager>();
-
-        _fingerprintCache = new Dictionary<Guid, uint[]>();
 
         EdlManager.Initialize(_logger);
     }
@@ -182,15 +169,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
                     ex);
             }
 
-            // Clear this season's episodes from the temporary fingerprint cache.
-            lock (_fingerprintCacheLock)
-            {
-                foreach (var ep in season.Value)
-                {
-                    _fingerprintCache.Remove(ep.EpisodeId);
-                }
-            }
-
             if (writeEdl && Plugin.Instance!.Configuration.EdlAction != EdlAction.None)
             {
                 EdlManager.UpdateEDLFiles(season.Value.AsReadOnly());
@@ -255,6 +233,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
         CancellationToken cancellationToken)
     {
         var seasonIntros = new Dictionary<Guid, Intro>();
+        var fingerprintCache = new Dictionary<Guid, uint[]>();
 
         /* Don't analyze specials or seasons with an insufficient number of episodes.
          * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
@@ -273,7 +252,23 @@ public class AnalyzeEpisodesTask : IScheduledTask
             first.SeriesName,
             first.SeasonNumber);
 
-        // TODO: cache fingerprints and inverted indexes
+        // Cache all fingerprints
+        foreach (var episode in episodes)
+        {
+            try
+            {
+                fingerprintCache[episode.EpisodeId] = Chromaprint.Fingerprint(episode);
+            }
+            catch (FingerprintException ex)
+            {
+                _logger.LogWarning("Caught fingerprint error: {Ex}", ex);
+
+                // fallback to an empty fingerprint
+                fingerprintCache[episode.EpisodeId] = Array.Empty<uint>();
+            }
+        }
+
+        // TODO: cache inverted indexes
 
         // TODO: implementing bucketing
 
@@ -293,16 +288,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
                 Intro outerIntro;
                 Intro innerIntro;
 
-                try
-                {
-                    (outerIntro, innerIntro) = CompareEpisodes(outer, inner);
-                }
-                catch (FingerprintException ex)
-                {
-                    // TODO: remove the episode that threw the error from additional processing
-                    _logger.LogWarning("Caught fingerprint error: {Ex}", ex);
-                    continue;
-                }
+                (outerIntro, innerIntro) = CompareEpisodes(
+                        outer.EpisodeId,
+                        fingerprintCache[outer.EpisodeId],
+                        inner.EpisodeId,
+                        fingerprintCache[inner.EpisodeId]);
 
                 if (!outerIntro.Valid)
                 {
@@ -352,49 +342,18 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Analyze two episodes to find an introduction sequence shared between them.
     /// </summary>
-    /// <param name="lhsEpisode">First episode to analyze.</param>
-    /// <param name="rhsEpisode">Second episode to analyze.</param>
-    /// <returns>Intros for the first and second episodes.</returns>
-    public (Intro Lhs, Intro Rhs) CompareEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
-    {
-        var start = DateTime.Now;
-        var lhsFingerprint = Chromaprint.Fingerprint(lhsEpisode);
-        var rhsFingerprint = Chromaprint.Fingerprint(rhsEpisode);
-        analysisStatistics.FingerprintCPUTime.AddDuration(start);
-
-        // Cache the fingerprints for quicker recall in the second pass (if one is needed).
-        lock (_fingerprintCacheLock)
-        {
-            _fingerprintCache[lhsEpisode.EpisodeId] = lhsFingerprint;
-            _fingerprintCache[rhsEpisode.EpisodeId] = rhsFingerprint;
-        }
-
-        return CompareEpisodes(
-            lhsEpisode.EpisodeId,
-            lhsFingerprint,
-            rhsEpisode.EpisodeId,
-            rhsFingerprint,
-            true);
-    }
-
-    /// <summary>
-    /// Analyze two episodes to find an introduction sequence shared between them.
-    /// </summary>
     /// <param name="lhsId">First episode id.</param>
     /// <param name="lhsPoints">First episode fingerprint points.</param>
     /// <param name="rhsId">Second episode id.</param>
     /// <param name="rhsPoints">Second episode fingerprint points.</param>
-    /// <param name="isFirstPass">If this was called as part of the first analysis pass, add the elapsed time to the statistics.</param>
     /// <returns>Intros for the first and second episodes.</returns>
     public (Intro Lhs, Intro Rhs) CompareEpisodes(
         Guid lhsId,
         uint[] lhsPoints,
         Guid rhsId,
-        uint[] rhsPoints,
-        bool isFirstPass)
+        uint[] rhsPoints)
     {
-        // If this isn't running as part of the first analysis pass, don't count this CPU time as first pass time.
-        var start = isFirstPass ? DateTime.Now : DateTime.MinValue;
+        var start = DateTime.Now;
 
         // Creates an inverted fingerprint point index for both episodes.
         // For every point which is a 100% match, search for an introduction at that point.

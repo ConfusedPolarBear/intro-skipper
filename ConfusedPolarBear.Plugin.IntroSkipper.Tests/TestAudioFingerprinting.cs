@@ -89,8 +89,14 @@ public class TestAudioFingerprinting
 
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
+        var lhsFingerprint = Chromaprint.Fingerprint(lhsEpisode);
+        var rhsFingerprint = Chromaprint.Fingerprint(rhsEpisode);
 
-        var (lhs, rhs) = task.CompareEpisodes(lhsEpisode, rhsEpisode);
+        var (lhs, rhs) = task.CompareEpisodes(
+            lhsEpisode.EpisodeId,
+            lhsFingerprint,
+            rhsEpisode.EpisodeId,
+            rhsFingerprint);
 
         Assert.True(lhs.Valid);
         Assert.Equal(0, lhs.IntroStart);
@@ -111,10 +117,11 @@ public class TestAudioFingerprinting
     }
 }
 
-public class FactSkipFFmpegTests : FactAttribute {
-    #if SKIP_FFMPEG_TESTS
+public class FactSkipFFmpegTests : FactAttribute
+{
+#if SKIP_FFMPEG_TESTS
     public FactSkipFFmpegTests() {
         Skip = "SKIP_FFMPEG_TESTS defined, skipping unit tests that require FFmpeg to be installed";
     }
-    #endif
+#endif
 }
