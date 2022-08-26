@@ -2,6 +2,7 @@
  * which supports both chromaprint and the "-fp_format raw" flag.
  */
 
+using System;
 using System.Collections.Generic;
 using Xunit;
 using Microsoft.Extensions.Logging;
@@ -77,7 +78,7 @@ public class TestAudioFingerprinting
             {77, 5},
         };
 
-        var actual = Chromaprint.CreateInvertedIndex(fpr);
+        var actual = Chromaprint.CreateInvertedIndex(Guid.NewGuid(), fpr);
 
         Assert.Equal(expected, actual);
     }
@@ -111,6 +112,7 @@ public class TestAudioFingerprinting
     {
         return new QueuedEpisode()
         {
+            EpisodeId = Guid.NewGuid(),
             Path = "../../../" + path,
             FingerprintDuration = 60
         };

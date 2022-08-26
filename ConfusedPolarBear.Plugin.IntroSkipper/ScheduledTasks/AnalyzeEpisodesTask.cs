@@ -268,8 +268,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
             }
         }
 
-        // TODO: cache inverted indexes
-
         // TODO: implementing bucketing
 
         // For all episodes
@@ -357,7 +355,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
         // Creates an inverted fingerprint point index for both episodes.
         // For every point which is a 100% match, search for an introduction at that point.
-        var (lhsRanges, rhsRanges) = SearchInvertedIndex(lhsPoints, rhsPoints);
+        var (lhsRanges, rhsRanges) = SearchInvertedIndex(lhsId, lhsPoints, rhsId, rhsPoints);
 
         if (lhsRanges.Count > 0)
         {
@@ -417,19 +415,23 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Search for a shared introduction sequence using inverted indexes.
     /// </summary>
+    /// <param name="lhsId">LHS ID.</param>
     /// <param name="lhsPoints">Left episode fingerprint points.</param>
+    /// <param name="rhsId">RHS ID.</param>
     /// <param name="rhsPoints">Right episode fingerprint points.</param>
     /// <returns>List of shared TimeRanges between the left and right episodes.</returns>
     private (List<TimeRange> Lhs, List<TimeRange> Rhs) SearchInvertedIndex(
+        Guid lhsId,
         uint[] lhsPoints,
+        Guid rhsId,
         uint[] rhsPoints)
     {
         var lhsRanges = new List<TimeRange>();
         var rhsRanges = new List<TimeRange>();
 
         // Generate inverted indexes for the left and right episodes.
-        var lhsIndex = Chromaprint.CreateInvertedIndex(lhsPoints);
-        var rhsIndex = Chromaprint.CreateInvertedIndex(rhsPoints);
+        var lhsIndex = Chromaprint.CreateInvertedIndex(lhsId, lhsPoints);
+        var rhsIndex = Chromaprint.CreateInvertedIndex(rhsId, rhsPoints);
         var indexShifts = new HashSet<int>();
 
         // For all audio points in the left episode, check if the right episode has a point which matches exactly.
