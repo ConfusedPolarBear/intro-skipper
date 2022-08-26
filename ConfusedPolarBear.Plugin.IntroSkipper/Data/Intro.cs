@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
@@ -48,6 +49,12 @@ public class Intro
     /// Invalid results must not be returned through the API.
     /// </summary>
     public bool Valid => IntroEnd > 0;
+
+    /// <summary>
+    /// Gets the duration of this intro.
+    /// </summary>
+    [JsonIgnore]
+    public double Duration => IntroEnd - IntroStart;
 
     /// <summary>
     /// Gets or sets the introduction sequence start time.

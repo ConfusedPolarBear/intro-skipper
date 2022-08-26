@@ -90,7 +90,7 @@ public class TestAudioFingerprinting
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
 
-        var (lhs, rhs) = task.FingerprintEpisodes(lhsEpisode, rhsEpisode);
+        var (lhs, rhs) = task.CompareEpisodes(lhsEpisode, rhsEpisode);
 
         Assert.True(lhs.Valid);
         Assert.Equal(0, lhs.IntroStart);
