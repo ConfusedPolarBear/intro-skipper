@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -146,9 +147,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
             try
             {
+                var episodes = new Collection<QueuedEpisode>(season.Value);
+
                 // Increment totalProcessed by the number of episodes in this season that were actually analyzed
                 // (instead of just using the number of episodes in the current season).
-                var analyzed = AnalyzeSeason(season.Value, cancellationToken);
+                var analyzed = AnalyzeSeason(episodes, cancellationToken);
                 Interlocked.Add(ref totalProcessed, analyzed);
                 writeEdl = analyzed > 0 || Plugin.Instance!.Configuration.RegenerateEdlFiles;
             }
@@ -219,9 +222,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
         return previous;
     }
 
-    // TODO: restore warning
-#pragma warning disable CA1002
-
     /// <summary>
     /// Fingerprints all episodes in the provided season and stores the timestamps of all introductions.
     /// </summary>
@@ -229,11 +229,18 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <param name="cancellationToken">Cancellation token provided by the scheduled task.</param>
     /// <returns>Number of episodes from the provided season that were analyzed.</returns>
     private int AnalyzeSeason(
-        List<QueuedEpisode> episodes,
+        Collection<QueuedEpisode> episodes,
         CancellationToken cancellationToken)
     {
+        // All intros for this season.
         var seasonIntros = new Dictionary<Guid, Intro>();
+
+        // Cache of all fingerprints for this season.
         var fingerprintCache = new Dictionary<Guid, uint[]>();
+
+        // Total episodes in this season. Counted at the start of this function as episodes
+        // are popped from here during analysis.
+        var episodeCount = episodes.Count;
 
         /* Don't analyze specials or seasons with an insufficient number of episodes.
          * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
@@ -241,7 +248,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
          */
         if (episodes.Count < 2 || episodes[0].SeasonNumber == 0)
         {
-            return episodes.Count;
+            return episodeCount;
         }
 
         var first = episodes[0];
@@ -252,7 +259,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             first.SeriesName,
             first.SeasonNumber);
 
-        // Cache all fingerprints
+        // Compute fingerprints for all episodes in the season
         foreach (var episode in episodes)
         {
             try
@@ -263,60 +270,52 @@ public class AnalyzeEpisodesTask : IScheduledTask
             {
                 _logger.LogWarning("Caught fingerprint error: {Ex}", ex);
 
-                // fallback to an empty fingerprint
+                // Fallback to an empty fingerprint on any error
                 fingerprintCache[episode.EpisodeId] = Array.Empty<uint>();
             }
         }
 
-        // TODO: implementing bucketing
+        /* Theory of operation:
+         * Episodes are analyzed in the same order that Jellyfin displays them in and are
+         * sorted into buckets based off of the intro sequence that the episode contains.
+         *
+         * Jellyfin's episode ordering is used because it is assumed that the introduction
+         * in each season of a show will likely either:
+         *   - remain constant throughout the entire season
+         *   - remain constant in subranges of the season (e.g. episodes 1 - 5 and 6 - 10 share intros)
+         * If the intros do not follow this pattern, the plugin should still find most
+         * of them.
+         */
 
-        // For all episodes
-        foreach (var outer in episodes)
+        // While there are still episodes in the queue
+        while (episodes.Count > 0)
         {
-            // Compare the outer episode to all other episodes
-            foreach (var inner in episodes)
+            // Pop the first episode from the queue
+            var currentEpisode = episodes[0];
+            episodes.RemoveAt(0);
+
+            // Search through all remaining episodes.
+            foreach (var remainingEpisode in episodes)
             {
-                // Don't compare the episode to itself
-                if (outer.EpisodeId == inner.EpisodeId)
+                // Compare the current episode to all remaining episodes in the queue.
+                var (currentIntro, remainingIntro) = CompareEpisodes(
+                    currentEpisode.EpisodeId,
+                    fingerprintCache[currentEpisode.EpisodeId],
+                    remainingEpisode.EpisodeId,
+                    fingerprintCache[remainingEpisode.EpisodeId]);
+
+                // If we found an intro, save it.
+                if (currentIntro.Valid)
                 {
-                    continue;
-                }
+                    seasonIntros[currentIntro.EpisodeId] = currentIntro;
+                    seasonIntros[remainingIntro.EpisodeId] = remainingIntro;
 
-                // Fingerprint both episodes
-                Intro outerIntro;
-                Intro innerIntro;
-
-                (outerIntro, innerIntro) = CompareEpisodes(
-                        outer.EpisodeId,
-                        fingerprintCache[outer.EpisodeId],
-                        inner.EpisodeId,
-                        fingerprintCache[inner.EpisodeId]);
-
-                if (!outerIntro.Valid)
-                {
-                    continue;
-                }
-
-                // Save this intro if:
-                // - it is the first one we've seen for this episode
-                // - OR it is longer than the previous one
-                if (
-                    !seasonIntros.TryGetValue(outer.EpisodeId, out var currentOuterIntro) ||
-                    outerIntro.Duration > currentOuterIntro.Duration)
-                {
-                    seasonIntros[outer.EpisodeId] = outerIntro;
-                }
-
-                if (
-                    !seasonIntros.TryGetValue(inner.EpisodeId, out var currentInnerIntro) ||
-                    innerIntro.Duration > currentInnerIntro.Duration)
-                {
-                    seasonIntros[inner.EpisodeId] = innerIntro;
+                    break;
                 }
             }
-        }
 
-        // TODO: analysisStatistics.TotalAnalyzedEpisodes.Add(2);
+            // If no intro is found at this point, the popped episode is not reinserted into the queue.
+        }
 
         // Ensure only one thread at a time can update the shared intro dictionary.
         lock (_introsLock)
@@ -332,10 +331,8 @@ public class AnalyzeEpisodesTask : IScheduledTask
             Plugin.Instance!.SaveTimestamps();
         }
 
-        return episodes.Count;
+        return episodeCount;
     }
-
-#pragma warning restore CA1002
 
     /// <summary>
     /// Analyze two episodes to find an introduction sequence shared between them.
