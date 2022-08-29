@@ -9,9 +9,9 @@ using Microsoft.Extensions.Logging;
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
-/// Wrapper for libchromaprint.
+/// Wrapper for libchromaprint and the silencedetect filter.
 /// </summary>
-public static class Chromaprint
+public static class FFmpegWrapper
 {
     /// <summary>
     /// Gets or sets the logger.

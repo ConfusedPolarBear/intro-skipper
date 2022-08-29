@@ -113,7 +113,7 @@ public class VisualizationController : ControllerBase
             {
                 if (needle.EpisodeId == id)
                 {
-                    return Chromaprint.Fingerprint(needle);
+                    return FFmpegWrapper.Fingerprint(needle);
                 }
             }
         }

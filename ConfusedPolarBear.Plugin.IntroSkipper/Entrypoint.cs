@@ -46,7 +46,7 @@ public class Entrypoint : IServerEntryPoint
     /// <returns>Task.</returns>
     public Task RunAsync()
     {
-        Chromaprint.Logger = _logger;
+        FFmpegWrapper.Logger = _logger;
 
 #if DEBUG
         LogVersion();

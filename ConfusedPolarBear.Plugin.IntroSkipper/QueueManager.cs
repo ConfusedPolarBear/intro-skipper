@@ -40,7 +40,7 @@ public class QueueManager
     public void EnqueueAllEpisodes()
     {
         // Assert that ffmpeg with chromaprint is installed
-        if (!Chromaprint.CheckFFmpegVersion())
+        if (!FFmpegWrapper.CheckFFmpegVersion())
         {
             throw new FingerprintException(
                 "ffmpeg with chromaprint is not installed on this system - episodes will not be analyzed. If Jellyfin is running natively, install jellyfin-ffmpeg5. If Jellyfin is running in a container, upgrade it to the latest version of 10.8.0.");

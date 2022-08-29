@@ -269,7 +269,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
         {
             try
             {
-                fingerprintCache[episode.EpisodeId] = Chromaprint.Fingerprint(episode);
+                fingerprintCache[episode.EpisodeId] = FFmpegWrapper.Fingerprint(episode);
             }
             catch (FingerprintException ex)
             {
@@ -436,8 +436,8 @@ public class AnalyzeEpisodesTask : IScheduledTask
         var rhsRanges = new List<TimeRange>();
 
         // Generate inverted indexes for the left and right episodes.
-        var lhsIndex = Chromaprint.CreateInvertedIndex(lhsId, lhsPoints);
-        var rhsIndex = Chromaprint.CreateInvertedIndex(rhsId, rhsPoints);
+        var lhsIndex = FFmpegWrapper.CreateInvertedIndex(lhsId, lhsPoints);
+        var rhsIndex = FFmpegWrapper.CreateInvertedIndex(rhsId, rhsPoints);
         var indexShifts = new HashSet<int>();
 
         // For all audio points in the left episode, check if the right episode has a point which matches exactly.

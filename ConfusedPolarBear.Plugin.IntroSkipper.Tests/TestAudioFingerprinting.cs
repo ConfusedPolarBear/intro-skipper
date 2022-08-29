@@ -14,7 +14,7 @@ public class TestAudioFingerprinting
     [FactSkipFFmpegTests]
     public void TestInstallationCheck()
     {
-        Assert.True(Chromaprint.CheckFFmpegVersion());
+        Assert.True(FFmpegWrapper.CheckFFmpegVersion());
     }
 
     [Theory]
@@ -58,7 +58,7 @@ public class TestAudioFingerprinting
             3472417825, 3395841056, 3458735136, 3341420624, 1076496560, 1076501168, 1076501136, 1076497024
         };
 
-        var actual = Chromaprint.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
+        var actual = FFmpegWrapper.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
 
         Assert.Equal(expected, actual);
     }
@@ -78,7 +78,7 @@ public class TestAudioFingerprinting
             {77, 5},
         };
 
-        var actual = Chromaprint.CreateInvertedIndex(Guid.NewGuid(), fpr);
+        var actual = FFmpegWrapper.CreateInvertedIndex(Guid.NewGuid(), fpr);
 
         Assert.Equal(expected, actual);
     }
@@ -90,8 +90,8 @@ public class TestAudioFingerprinting
 
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
-        var lhsFingerprint = Chromaprint.Fingerprint(lhsEpisode);
-        var rhsFingerprint = Chromaprint.Fingerprint(rhsEpisode);
+        var lhsFingerprint = FFmpegWrapper.Fingerprint(lhsEpisode);
+        var rhsFingerprint = FFmpegWrapper.Fingerprint(rhsEpisode);
 
         var (lhs, rhs) = task.CompareEpisodes(
             lhsEpisode.EpisodeId,
