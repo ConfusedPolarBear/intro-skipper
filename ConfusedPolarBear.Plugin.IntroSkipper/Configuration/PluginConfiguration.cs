@@ -78,4 +78,10 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the seconds after the intro starts to hide the skip prompt at.
     /// </summary>
     public int HidePromptAdjustment { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets the amount of intro to play (in seconds).
+    /// TODO: rename.
+    /// </summary>
+    public int AmountOfIntroToPlay { get; set; } = 5;
 }

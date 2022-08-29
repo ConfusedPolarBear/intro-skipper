@@ -27,6 +27,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
     private const double MaximumDistance = 3.5;
 
     /// <summary>
+    /// Amount to shift inverted index offsets by.
+    /// </summary>
+    private const int InvertedIndexShift = 2;
+
+    /// <summary>
     /// Seconds of audio in one fingerprint point. This value is defined by the Chromaprint library and should not be changed.
     /// </summary>
     private const double SamplesToSeconds = 0.128;
@@ -275,18 +280,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
             }
         }
 
-        /* Theory of operation:
-         * Episodes are analyzed in the same order that Jellyfin displays them in and are
-         * sorted into buckets based off of the intro sequence that the episode contains.
-         *
-         * Jellyfin's episode ordering is used because it is assumed that the introduction
-         * in each season of a show will likely either:
-         *   - remain constant throughout the entire season
-         *   - remain constant in subranges of the season (e.g. episodes 1 - 5 and 6 - 10 share intros)
-         * If the intros do not follow this pattern, the plugin should still find most
-         * of them.
-         */
-
         // While there are still episodes in the queue
         while (episodes.Count > 0)
         {
@@ -304,14 +297,30 @@ public class AnalyzeEpisodesTask : IScheduledTask
                     remainingEpisode.EpisodeId,
                     fingerprintCache[remainingEpisode.EpisodeId]);
 
-                // If we found an intro, save it.
-                if (currentIntro.Valid)
+                // If one of the intros isn't valid, ignore this comparison result.
+                if (!currentIntro.Valid)
+                {
+                    continue;
+                }
+
+                // Only save the discovered intro if it is:
+                // - the first intro discovered for this episode
+                // - longer than the previously discovered intro
+                if (
+                    !seasonIntros.TryGetValue(currentIntro.EpisodeId, out var savedCurrentIntro) ||
+                    currentIntro.Duration > savedCurrentIntro.Duration)
                 {
                     seasonIntros[currentIntro.EpisodeId] = currentIntro;
-                    seasonIntros[remainingIntro.EpisodeId] = remainingIntro;
-
-                    break;
                 }
+
+                if (
+                    !seasonIntros.TryGetValue(remainingIntro.EpisodeId, out var savedRemainingIntro) ||
+                    remainingIntro.Duration > savedRemainingIntro.Duration)
+                {
+                    seasonIntros[remainingIntro.EpisodeId] = remainingIntro;
+                }
+
+                break;
             }
 
             // If no intro is found at this point, the popped episode is not reinserted into the queue.
@@ -435,13 +444,18 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // If an exact match is found, calculate the shift that must be used to align the points.
         foreach (var kvp in lhsIndex)
         {
-            var point = kvp.Key;
+            var originalPoint = kvp.Key;
 
-            if (rhsIndex.ContainsKey(point))
+            for (var i = -1 * InvertedIndexShift; i <= InvertedIndexShift; i++)
             {
-                var lhsFirst = (int)lhsIndex[point];
-                var rhsFirst = (int)rhsIndex[point];
-                indexShifts.Add(rhsFirst - lhsFirst);
+                var modifiedPoint = (uint)(originalPoint + i);
+
+                if (rhsIndex.ContainsKey(modifiedPoint))
+                {
+                    var lhsFirst = (int)lhsIndex[originalPoint];
+                    var rhsFirst = (int)rhsIndex[modifiedPoint];
+                    indexShifts.Add(rhsFirst - lhsFirst);
+                }
             }
         }
 
