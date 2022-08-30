@@ -367,6 +367,11 @@
                     return;
                 }
 
+                // ensure the series select is empty
+                while (selectShow.options.length > 0) {
+                    selectShow.remove(0);
+                }
+
                 Dashboard.showLoadingMsg();
 
                 shows = await getJson("Intros/Shows");
