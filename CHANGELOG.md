@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.7.0
+* New features
+  * Add support for the `silencedetect` filter in ffmpeg
+  * Add support bundle
+
+* Fixes
+  * Fix scheduled task interval (#79)
+
 ## v0.1.6.0 (2022-08-04)
 * New features
   * Generate EDL files with intro timestamps ([documentation](docs/edl.md)) (#21)
