@@ -152,7 +152,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
             try
             {
-                var episodes = new Collection<QueuedEpisode>(season.Value);
+                var episodes = new ReadOnlyCollection<QueuedEpisode>(season.Value);
 
                 // Increment totalProcessed by the number of episodes in this season that were actually analyzed
                 // (instead of just using the number of episodes in the current season).
@@ -234,7 +234,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <param name="cancellationToken">Cancellation token provided by the scheduled task.</param>
     /// <returns>Number of episodes from the provided season that were analyzed.</returns>
     private int AnalyzeSeason(
-        Collection<QueuedEpisode> episodes,
+        ReadOnlyCollection<QueuedEpisode> episodes,
         CancellationToken cancellationToken)
     {
         // All intros for this season.
@@ -243,8 +243,8 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Cache of all fingerprints for this season.
         var fingerprintCache = new Dictionary<Guid, uint[]>();
 
-        // Original episode queue.
-        var originalEpisodes = new List<QueuedEpisode>(episodes);
+        // Episode analysis queue.
+        var episodeAnalysisQueue = new List<QueuedEpisode>(episodes);
 
         /* Don't analyze specials or seasons with an insufficient number of episodes.
          * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
@@ -252,7 +252,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
          */
         if (episodes.Count < 2 || episodes[0].SeasonNumber == 0)
         {
-            return originalEpisodes.Count;
+            return episodes.Count;
         }
 
         var first = episodes[0];
@@ -264,7 +264,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             first.SeasonNumber);
 
         // Compute fingerprints for all episodes in the season
-        foreach (var episode in episodes)
+        foreach (var episode in episodeAnalysisQueue)
         {
             try
             {
@@ -280,14 +280,14 @@ public class AnalyzeEpisodesTask : IScheduledTask
         }
 
         // While there are still episodes in the queue
-        while (episodes.Count > 0)
+        while (episodeAnalysisQueue.Count > 0)
         {
             // Pop the first episode from the queue
-            var currentEpisode = episodes[0];
-            episodes.RemoveAt(0);
+            var currentEpisode = episodeAnalysisQueue[0];
+            episodeAnalysisQueue.RemoveAt(0);
 
             // Search through all remaining episodes.
-            foreach (var remainingEpisode in episodes)
+            foreach (var remainingEpisode in episodeAnalysisQueue)
             {
                 // Compare the current episode to all remaining episodes in the queue.
                 var (currentIntro, remainingIntro) = CompareEpisodes(
@@ -326,9 +326,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
         }
 
         // Adjust all introduction end times so that they end at silence.
-        seasonIntros = AdjustIntroEndTimes(
-            new ReadOnlyCollection<QueuedEpisode>(originalEpisodes),
-            seasonIntros);
+        seasonIntros = AdjustIntroEndTimes(episodes, seasonIntros);
 
         // Ensure only one thread at a time can update the shared intro dictionary.
         lock (_introsLock)
@@ -344,7 +342,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             Plugin.Instance!.SaveTimestamps();
         }
 
-        return originalEpisodes.Count;
+        return episodes.Count;
     }
 
     /// <summary>
