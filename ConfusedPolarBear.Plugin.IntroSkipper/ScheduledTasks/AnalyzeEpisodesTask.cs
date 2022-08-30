@@ -243,9 +243,8 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Cache of all fingerprints for this season.
         var fingerprintCache = new Dictionary<Guid, uint[]>();
 
-        // Total episodes in this season. Counted at the start of this function as episodes
-        // are popped from here during analysis.
-        var episodeCount = episodes.Count;
+        // Original episode queue.
+        var originalEpisodes = new List<QueuedEpisode>(episodes);
 
         /* Don't analyze specials or seasons with an insufficient number of episodes.
          * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
@@ -253,7 +252,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
          */
         if (episodes.Count < 2 || episodes[0].SeasonNumber == 0)
         {
-            return episodeCount;
+            return originalEpisodes.Count;
         }
 
         var first = episodes[0];
@@ -326,6 +325,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
             // If no intro is found at this point, the popped episode is not reinserted into the queue.
         }
 
+        // Adjust all introduction end times so that they end at silence.
+        seasonIntros = AdjustIntroEndTimes(
+            new ReadOnlyCollection<QueuedEpisode>(originalEpisodes),
+            seasonIntros);
+
         // Ensure only one thread at a time can update the shared intro dictionary.
         lock (_introsLock)
         {
@@ -340,7 +344,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             Plugin.Instance!.SaveTimestamps();
         }
 
-        return episodeCount;
+        return originalEpisodes.Count;
     }
 
     /// <summary>
@@ -579,6 +583,83 @@ public class AnalyzeEpisodesTask : IScheduledTask
         }
 
         return (lContiguous, rContiguous);
+    }
+
+    /// <summary>
+    /// Adjusts the end timestamps of all intros so that they end at silence.
+    /// </summary>
+    /// <param name="episodes">QueuedEpisodes to adjust.</param>
+    /// <param name="originalIntros">Original introductions.</param>
+    private Dictionary<Guid, Intro> AdjustIntroEndTimes(
+        ReadOnlyCollection<QueuedEpisode> episodes,
+        Dictionary<Guid, Intro> originalIntros)
+    {
+        // The minimum duration of audio that must be silent before adjusting the intro's end.
+        var minimumSilence = Plugin.Instance!.Configuration.SilenceDetectionMinimumDuration;
+
+        Dictionary<Guid, Intro> modifiedIntros = new();
+
+        // For all episodes
+        foreach (var episode in episodes)
+        {
+            _logger.LogTrace(
+                "Adjusting introduction end time for {Name} ({Id})",
+                episode.Name,
+                episode.EpisodeId);
+
+            // If no intro was found for this episode, skip it.
+            if (!originalIntros.TryGetValue(episode.EpisodeId, out var originalIntro))
+            {
+                _logger.LogTrace("{Name} does not have an intro", episode.Name);
+                continue;
+            }
+
+            // Since we only want to adjust the end timestamp of the intro, create a new TimeRange
+            // that covers the last few seconds.
+            var originalIntroEnd = new TimeRange(originalIntro.IntroEnd - 10, originalIntro.IntroEnd);
+
+            _logger.LogTrace(
+                "{Name} original intro: {Start} - {End}",
+                episode.Name,
+                originalIntro.IntroStart,
+                originalIntro.IntroEnd);
+
+            // Detect silence in the media file up to the end of the intro.
+            var silence = FFmpegWrapper.DetectSilence(episode, (int)originalIntro.IntroEnd + 2);
+
+            // For all periods of silence
+            foreach (var currentRange in silence)
+            {
+                _logger.LogTrace(
+                    "{Name} silence: {Start} - {End}",
+                    episode.Name,
+                    currentRange.Start,
+                    currentRange.End);
+
+                // Ignore any silence that:
+                // * doesn't intersect the ending of the intro, or
+                // * is less than half a second long
+                if (!originalIntroEnd.Intersects(currentRange) || currentRange.Duration < 0.5)
+                {
+                    continue;
+                }
+
+                // Adjust the end timestamp of the intro to match the start of the silence region.
+                originalIntro.IntroEnd = currentRange.Start;
+                break;
+            }
+
+            _logger.LogTrace(
+                "{Name} adjusted intro: {Start} - {End}",
+                episode.Name,
+                originalIntro.IntroStart,
+                originalIntro.IntroEnd);
+
+            // Add the (potentially) modified intro back.
+            modifiedIntros[episode.EpisodeId] = originalIntro;
+        }
+
+        return modifiedIntros;
     }
 
     /// <summary>

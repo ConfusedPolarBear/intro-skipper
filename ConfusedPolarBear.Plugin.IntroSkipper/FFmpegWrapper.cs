@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
@@ -13,6 +14,16 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public static class FFmpegWrapper
 {
+    // FFmpeg logs lines similar to the following:
+    // [silencedetect @ 0x000000000000] silence_start: 12.34
+    // [silencedetect @ 0x000000000000] silence_end: 56.123 | silence_duration: 43.783
+
+    /// <summary>
+    /// Used with FFmpeg's silencedetect filter to extract the start and end times of silence.
+    /// </summary>
+    private static readonly Regex SilenceDetectionExpression = new(
+        "silence_(?<type>start|end): (?<time>[0-9\\.]+)");
+
     /// <summary>
     /// Gets or sets the logger.
     /// </summary>
@@ -31,11 +42,11 @@ public static class FFmpegWrapper
         try
         {
             // Log the output of "ffmpeg -version".
-            ChromaprintLogs["version"] = Encoding.UTF8.GetString(GetOutput("-version", 2000));
+            ChromaprintLogs["version"] = Encoding.UTF8.GetString(GetOutput("-version", string.Empty, false, 2000));
             Logger?.LogDebug("ffmpeg version information: {Version}", ChromaprintLogs["version"]);
 
             // First, validate that the installed version of ffmpeg supports chromaprint at all.
-            var muxers = Encoding.UTF8.GetString(GetOutput("-muxers", 2000));
+            var muxers = Encoding.UTF8.GetString(GetOutput("-muxers", string.Empty, false, 2000));
             ChromaprintLogs["muxer list"] = muxers;
             Logger?.LogTrace("ffmpeg muxers: {Muxers}", muxers);
 
@@ -47,7 +58,7 @@ public static class FFmpegWrapper
             }
 
             // Second, validate that ffmpeg understands the "-fp_format raw" option.
-            var muxerHelp = Encoding.UTF8.GetString(GetOutput("-h muxer=chromaprint", 2000));
+            var muxerHelp = Encoding.UTF8.GetString(GetOutput("-h muxer=chromaprint", string.Empty, false, 2000));
             ChromaprintLogs["muxer options"] = muxerHelp;
             Logger?.LogTrace("ffmpeg chromaprint help: {MuxerHelp}", muxerHelp);
 
@@ -90,10 +101,9 @@ public static class FFmpegWrapper
         }
 
         Logger?.LogDebug(
-            "Fingerprinting {Duration} seconds from \"{File}\" (length {Length}, id {Id})",
+            "Fingerprinting {Duration} seconds from \"{File}\" (id {Id})",
             episode.FingerprintDuration,
             episode.Path,
-            episode.Path.Length,
             episode.EpisodeId);
 
         var args = string.Format(
@@ -103,7 +113,7 @@ public static class FFmpegWrapper
             episode.FingerprintDuration);
 
         // Returns all fingerprint points as raw 32 bit unsigned integers (little endian).
-        var rawPoints = GetOutput(args);
+        var rawPoints = GetOutput(args, string.Empty);
         if (rawPoints.Length == 0 || rawPoints.Length % 4 != 0)
         {
             Logger?.LogWarning("Chromaprint returned {Count} points for \"{Path}\"", rawPoints.Length, episode.Path);
@@ -153,26 +163,105 @@ public static class FFmpegWrapper
     }
 
     /// <summary>
-    /// Runs ffmpeg and returns standard output.
+    /// Detect ranges of silence in the provided episode.
+    /// </summary>
+    /// <param name="episode">Queued episode.</param>
+    /// <param name="limit">Maximum amount of audio (in seconds) to detect silence in.</param>
+    /// <returns>Array of TimeRange objects that are silent in the queued episode.</returns>
+    public static TimeRange[] DetectSilence(QueuedEpisode episode, int limit)
+    {
+        Logger?.LogTrace(
+            "Detecting silence in \"{File}\" (limit {Limit}, id {Id})",
+            episode.Path,
+            limit,
+            episode.EpisodeId);
+
+        // TODO: select the audio track that matches the user's preferred language, falling
+        //     back to the first track if nothing matches
+
+        // -vn, -sn, -dn: ignore video, subtitle, and data tracks
+        var args = string.Format(
+            CultureInfo.InvariantCulture,
+            "-vn -sn -dn " +
+                "-i \"{0}\" -to {1} -af \"silencedetect=noise={2}dB:duration=0.1\" -f null -",
+            episode.Path,
+            limit,
+            Plugin.Instance?.Configuration.SilenceDetectionMaximumNoise ?? -50);
+
+        // Cache the output of this command to "GUID-intro-silence-v1"
+        var cacheKey = episode.EpisodeId.ToString("N") + "-intro-silence-v1";
+
+        var currentRange = new TimeRange();
+        var silenceRanges = new List<TimeRange>();
+
+        // Each match will have a type (either "start" or "end") and a timecode (a double).
+        var raw = Encoding.UTF8.GetString(GetOutput(args, cacheKey, true));
+        foreach (Match match in SilenceDetectionExpression.Matches(raw))
+        {
+            var isStart = match.Groups["type"].Value == "start";
+            var time = Convert.ToDouble(match.Groups["time"].Value, CultureInfo.InvariantCulture);
+
+            if (isStart)
+            {
+                currentRange.Start = time;
+            }
+            else
+            {
+                currentRange.End = time;
+                silenceRanges.Add(new TimeRange(currentRange));
+            }
+        }
+
+        return silenceRanges.ToArray();
+    }
+
+    /// <summary>
+    /// Runs ffmpeg and returns standard output (or error).
+    /// If caching is enabled, will use cacheFilename to cache the output of this command.
     /// </summary>
     /// <param name="args">Arguments to pass to ffmpeg.</param>
-    /// <param name="timeout">Timeout (in seconds) to wait for ffmpeg to exit.</param>
-    private static ReadOnlySpan<byte> GetOutput(string args, int timeout = 60 * 1000)
+    /// <param name="cacheFilename">Filename to cache the output of this command to, or string.Empty if this command should not be cached.</param>
+    /// <param name="stderr">If standard error should be returned.</param>
+    /// <param name="timeout">Timeout (in miliseconds) to wait for ffmpeg to exit.</param>
+    private static ReadOnlySpan<byte> GetOutput(
+        string args,
+        string cacheFilename,
+        bool stderr = false,
+        int timeout = 60 * 1000)
     {
         var ffmpegPath = Plugin.Instance?.FFmpegPath ?? "ffmpeg";
 
+        var cacheOutput =
+            (Plugin.Instance?.Configuration.CacheFingerprints ?? false) &&
+            !string.IsNullOrEmpty(cacheFilename);
+
+        // If caching is enabled, try to load the output of this command from the cached file.
+        if (cacheOutput)
+        {
+            // Calculate the absolute path to the cached file.
+            cacheFilename = Path.Join(Plugin.Instance!.FingerprintCachePath, cacheFilename);
+
+            // If the cached file exists, return whatever it holds.
+            if (File.Exists(cacheFilename))
+            {
+                Logger?.LogTrace("Returning contents of cache {Cache}", cacheFilename);
+                return File.ReadAllBytes(cacheFilename);
+            }
+
+            Logger?.LogTrace("Not returning contents of cache {Cache} (not found)", cacheFilename);
+        }
+
         // Prepend some flags to prevent FFmpeg from logging it's banner and progress information
         // for each file that is fingerprinted.
-        var info = new ProcessStartInfo(ffmpegPath, args.Insert(0, "-hide_banner -loglevel warning "))
+        var info = new ProcessStartInfo(ffmpegPath, args.Insert(0, "-hide_banner -loglevel info "))
         {
             WindowStyle = ProcessWindowStyle.Hidden,
             CreateNoWindow = true,
             UseShellExecute = false,
             ErrorDialog = false,
 
-            // We only consume standardOutput.
-            RedirectStandardOutput = true,
-            RedirectStandardError = false
+            RedirectStandardOutput = !stderr,
+            RedirectStandardError = stderr
         };
 
         var ffmpeg = new Process
@@ -180,7 +269,10 @@ public static class FFmpegWrapper
             StartInfo = info
         };
 
-        Logger?.LogDebug("Starting ffmpeg with the following arguments: {Arguments}", ffmpeg.StartInfo.Arguments);
+        Logger?.LogDebug(
+            "Starting ffmpeg with the following arguments: {Arguments}",
+            ffmpeg.StartInfo.Arguments);
+
         ffmpeg.Start();
 
         using (MemoryStream ms = new MemoryStream())
@@ -190,19 +282,29 @@ public static class FFmpegWrapper
 
             do
             {
-                bytesRead = ffmpeg.StandardOutput.BaseStream.Read(buf, 0, buf.Length);
+                var streamReader = stderr ? ffmpeg.StandardError : ffmpeg.StandardOutput;
+                bytesRead = streamReader.BaseStream.Read(buf, 0, buf.Length);
                 ms.Write(buf, 0, bytesRead);
             }
             while (bytesRead > 0);
 
             ffmpeg.WaitForExit(timeout);
 
-            return ms.ToArray().AsSpan();
+            var output = ms.ToArray();
+
+            // If caching is enabled, cache the output of this command.
+            if (cacheOutput)
+            {
+                File.WriteAllBytes(cacheFilename, output);
+            }
+
+            return output;
         }
     }
 
     /// <summary>
     /// Tries to load an episode's fingerprint from cache. If caching is not enabled, calling this function is a no-op.
+    /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode to try to load from cache.</param>
     /// <param name="fingerprint">Array to store the fingerprint in.</param>
@@ -256,6 +358,7 @@ public static class FFmpegWrapper
 
     /// <summary>
     /// Cache an episode's fingerprint to disk. If caching is not enabled, calling this function is a no-op.
+    /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode to store in cache.</param>
     /// <param name="fingerprint">Fingerprint of the episode to store.</param>
@@ -280,6 +383,7 @@ public static class FFmpegWrapper
 
     /// <summary>
     /// Determines the path an episode should be cached at.
+    /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode.</param>
     private static string GetFingerprintCachePath(QueuedEpisode episode)

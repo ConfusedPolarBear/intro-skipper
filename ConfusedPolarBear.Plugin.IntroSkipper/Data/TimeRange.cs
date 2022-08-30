@@ -69,6 +69,18 @@ public class TimeRange : IComparable
 
         return tr.Duration.CompareTo(Duration);
     }
+
+    /// <summary>
+    /// Tests if this TimeRange object intersects the provided TimeRange.
+    /// </summary>
+    /// <param name="tr">Second TimeRange object to test.</param>
+    /// <returns>true if tr intersects the current TimeRange, false otherwise.</returns>
+    public bool Intersects(TimeRange tr)
+    {
+        return
+            (Start < tr.Start && tr.Start < End) ||
+            (Start < tr.End && tr.End < End);
+    }
 }
 
 #pragma warning restore CA1036

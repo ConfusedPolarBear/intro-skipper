@@ -108,6 +108,29 @@ public class TestAudioFingerprinting
         Assert.Equal(22.912, rhs.IntroEnd);
     }
 
+    /// <summary>
+    /// Test that the silencedetect wrapper is working.
+    /// </summary>
+    [FactSkipFFmpegTests]
+    public void TestSilenceDetection()
+    {
+        var clip = queueEpisode("audio/big_buck_bunny_clip.mp3");
+
+        var expected = new TimeRange[]
+        {
+            new TimeRange(44.6310, 44.8072),
+            new TimeRange(53.5905, 53.8070),
+            new TimeRange(53.8458, 54.2024),
+            new TimeRange(54.2611, 54.5935),
+            new TimeRange(54.7098, 54.9293),
+            new TimeRange(54.9294, 55.2590),
+        };
+
+        var actual = FFmpegWrapper.DetectSilence(clip, 60);
+
+        Assert.Equal(expected, actual);
+    }
+
     private QueuedEpisode queueEpisode(string path)
     {
         return new QueuedEpisode()

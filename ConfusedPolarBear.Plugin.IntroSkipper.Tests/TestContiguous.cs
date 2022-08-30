@@ -71,4 +71,22 @@ public class TestTimeRanges
 
         Assert.Equal(expected, actual);
     }
+
+    /// <summary>
+    /// Tests that TimeRange intersections are detected correctly.
+    /// Tests each time range against a range of 5 to 10 seconds.
+    /// </summary>
+    [Theory]
+    [InlineData(1, 4, false)]   // too early
+    [InlineData(4, 6, true)]    // intersects on the left
+    [InlineData(7, 8, true)]    // in the middle
+    [InlineData(9, 12, true)]   // intersects on the right
+    [InlineData(13, 15, false)] // too late
+    public void TestTimeRangeIntersection(int start, int end, bool expected)
+    {
+        var large = new TimeRange(5, 10);
+        var testRange = new TimeRange(start, end);
+
+        Assert.Equal(expected, large.Intersects(testRange));
+    }
 }

@@ -169,6 +169,8 @@ public class AutoSkip : IServerEntryPoint
             // Send the seek command
             _logger.LogDebug("Sending seek command to {Session}", deviceId);
 
+            var introEnd = (long)intro.IntroEnd - Plugin.Instance!.Configuration.AmountOfIntroToPlay;
+
             _sessionManager.SendPlaystateCommand(
                 session.Id,
                 session.Id,
@@ -176,7 +178,7 @@ public class AutoSkip : IServerEntryPoint
                 {
                     Command = PlaystateCommand.Seek,
                     ControllingUserId = session.UserId.ToString("N"),
-                    SeekPositionTicks = (long)intro.IntroEnd * TimeSpan.TicksPerSecond,
+                    SeekPositionTicks = introEnd * TimeSpan.TicksPerSecond,
                 },
                 CancellationToken.None);
 
