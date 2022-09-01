@@ -42,11 +42,13 @@ public static class FFmpegWrapper
         try
         {
             // Log the output of "ffmpeg -version".
-            ChromaprintLogs["version"] = Encoding.UTF8.GetString(GetOutput("-version", string.Empty, false, 2000));
+            ChromaprintLogs["version"] = Encoding.UTF8.GetString(
+                GetOutput("-version", string.Empty, false, 2000));
             Logger?.LogDebug("ffmpeg version information: {Version}", ChromaprintLogs["version"]);
 
             // First, validate that the installed version of ffmpeg supports chromaprint at all.
-            var muxers = Encoding.UTF8.GetString(GetOutput("-muxers", string.Empty, false, 2000));
+            var muxers = Encoding.UTF8.GetString(
+                GetOutput("-muxers", string.Empty, false, 2000));
             ChromaprintLogs["muxer list"] = muxers;
             Logger?.LogTrace("ffmpeg muxers: {Muxers}", muxers);
 
@@ -58,9 +60,10 @@ public static class FFmpegWrapper
             }
 
             // Second, validate that ffmpeg understands the "-fp_format raw" option.
-            var muxerHelp = Encoding.UTF8.GetString(GetOutput("-h muxer=chromaprint", string.Empty, false, 2000));
-            ChromaprintLogs["muxer options"] = muxerHelp;
-            Logger?.LogTrace("ffmpeg chromaprint help: {MuxerHelp}", muxerHelp);
+            var muxerHelp = Encoding.UTF8.GetString(
+                GetOutput("-h muxer=chromaprint", string.Empty, false, 2000));
+            ChromaprintLogs["chromaprint options"] = muxerHelp;
+            Logger?.LogTrace("ffmpeg chromaprint options: {MuxerHelp}", muxerHelp);
 
             if (!muxerHelp.Contains("-fp_format", StringComparison.OrdinalIgnoreCase))
             {
@@ -70,8 +73,22 @@ public static class FFmpegWrapper
             }
             else if (!muxerHelp.Contains("binary raw fingerprint", StringComparison.OrdinalIgnoreCase))
             {
-                ChromaprintLogs["error"] = "fp_format_raw_not_supported";
+                ChromaprintLogs["error"] = "fp_format_missing_options";
                 Logger?.LogError("The installed version of ffmpeg does not support raw binary fingerprints");
+                return false;
+            }
+
+            // Third, validate that ffmpeg supports of the all required silencedetect options.
+            var silenceDetectOptions = Encoding.UTF8.GetString(
+                GetOutput("-h filter=silencedetect", string.Empty, false, 2000));
+            ChromaprintLogs["silencedetect options"] = silenceDetectOptions;
+            Logger?.LogTrace("ffmpeg silencedetect options: {Options}", silenceDetectOptions);
+
+            if (!silenceDetectOptions.Contains("noise tolerance", StringComparison.OrdinalIgnoreCase) ||
+                !silenceDetectOptions.Contains("minimum duration", StringComparison.OrdinalIgnoreCase))
+            {
+                ChromaprintLogs["error"] = "silencedetect_missing_options";
+                Logger?.LogError("The installed version of ffmpeg does not support the silencedetect filter");
                 return false;
             }
 
@@ -400,8 +417,8 @@ public static class FFmpegWrapper
         var logs = new StringBuilder(1024);
 
         // Print the Chromaprint detection status at the top.
-        // Format: "* Chromaprint: `error`"
-        logs.Append("* Chromaprint: `");
+        // Format: "* FFmpeg: `error`"
+        logs.Append("* FFmpeg: `");
         logs.Append(ChromaprintLogs["error"]);
         logs.Append("`\n\n"); // Use two newlines to separate the bulleted list from the logs
 
