@@ -41,54 +41,47 @@ public static class FFmpegWrapper
     {
         try
         {
-            // Log the output of "ffmpeg -version".
-            ChromaprintLogs["version"] = Encoding.UTF8.GetString(
-                GetOutput("-version", string.Empty, false, 2000));
-            Logger?.LogDebug("ffmpeg version information: {Version}", ChromaprintLogs["version"]);
+            // Always log ffmpeg's version information.
+            if (!CheckFFmpegRequirement(
+                "-version",
+                "ffmpeg",
+                "version",
+                "Unknown error with FFmpeg version"))
+            {
+                ChromaprintLogs["error"] = "unknown_error";
+                return false;
+            }
 
             // First, validate that the installed version of ffmpeg supports chromaprint at all.
-            var muxers = Encoding.UTF8.GetString(
-                GetOutput("-muxers", string.Empty, false, 2000));
-            ChromaprintLogs["muxer list"] = muxers;
-            Logger?.LogTrace("ffmpeg muxers: {Muxers}", muxers);
-
-            if (!muxers.Contains("chromaprint", StringComparison.OrdinalIgnoreCase))
+            if (!CheckFFmpegRequirement(
+                "-muxers",
+                "chromaprint",
+                "muxer list",
+                "The installed version of ffmpeg does not support chromaprint"))
             {
-                ChromaprintLogs["error"] = "muxer_not_supported";
-                Logger?.LogError("The installed version of ffmpeg does not support chromaprint");
+                ChromaprintLogs["error"] = "chromaprint_not_supported";
                 return false;
             }
 
-            // Second, validate that ffmpeg understands the "-fp_format raw" option.
-            var muxerHelp = Encoding.UTF8.GetString(
-                GetOutput("-h muxer=chromaprint", string.Empty, false, 2000));
-            ChromaprintLogs["chromaprint options"] = muxerHelp;
-            Logger?.LogTrace("ffmpeg chromaprint options: {MuxerHelp}", muxerHelp);
-
-            if (!muxerHelp.Contains("-fp_format", StringComparison.OrdinalIgnoreCase))
+            // Second, validate that the Chromaprint muxer understands the "-fp_format raw" option.
+            if (!CheckFFmpegRequirement(
+                "-h muxer=chromaprint",
+                "binary raw fingerprint",
+                "chromaprint options",
+                "The installed version of ffmpeg does not support raw binary fingerprints"))
             {
                 ChromaprintLogs["error"] = "fp_format_not_supported";
-                Logger?.LogError("The installed version of ffmpeg does not support the -fp_format flag");
-                return false;
-            }
-            else if (!muxerHelp.Contains("binary raw fingerprint", StringComparison.OrdinalIgnoreCase))
-            {
-                ChromaprintLogs["error"] = "fp_format_missing_options";
-                Logger?.LogError("The installed version of ffmpeg does not support raw binary fingerprints");
                 return false;
             }
 
             // Third, validate that ffmpeg supports of the all required silencedetect options.
-            var silenceDetectOptions = Encoding.UTF8.GetString(
-                GetOutput("-h filter=silencedetect", string.Empty, false, 2000));
-            ChromaprintLogs["silencedetect options"] = silenceDetectOptions;
-            Logger?.LogTrace("ffmpeg silencedetect options: {Options}", silenceDetectOptions);
-
-            if (!silenceDetectOptions.Contains("noise tolerance", StringComparison.OrdinalIgnoreCase) ||
-                !silenceDetectOptions.Contains("minimum duration", StringComparison.OrdinalIgnoreCase))
+            if (!CheckFFmpegRequirement(
+                "-h filter=silencedetect",
+                "noise tolerance",
+                "silencedetect options",
+                "The installed version of ffmpeg does not support the silencedetect filter"))
             {
-                ChromaprintLogs["error"] = "silencedetect_missing_options";
-                Logger?.LogError("The installed version of ffmpeg does not support the silencedetect filter");
+                ChromaprintLogs["error"] = "silencedetect_not_supported";
                 return false;
             }
 
@@ -101,6 +94,38 @@ public static class FFmpegWrapper
             ChromaprintLogs["error"] = "unknown_error";
             return false;
         }
+    }
+
+    /// <summary>
+    /// Run an FFmpeg command with the provided arguments and validate that the output contains
+    /// the provided string.
+    /// </summary>
+    /// <param name="arguments">Arguments to pass to FFmpeg.</param>
+    /// <param name="mustContain">String that the output must contain. Case insensitive.</param>
+    /// <param name="bundleName">Support bundle key to store FFmpeg's output under.</param>
+    /// <param name="errorMessage">Error message to log if this requirement is not met.</param>
+    /// <returns>true on success, false on error.</returns>
+    private static bool CheckFFmpegRequirement(
+        string arguments,
+        string mustContain,
+        string bundleName,
+        string errorMessage)
+    {
+        Logger?.LogDebug("Checking FFmpeg requirement {Arguments}", arguments);
+
+        var output = Encoding.UTF8.GetString(GetOutput(arguments, string.Empty, false, 2000));
+        Logger?.LogTrace("Output of ffmpeg {Arguments}: {Output}", arguments, output);
+        ChromaprintLogs[bundleName] = output;
+
+        if (!output.Contains(mustContain, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger?.LogError("{ErrorMessage}", errorMessage);
+            return false;
+        }
+
+        Logger?.LogDebug("FFmpeg requirement {Arguments} met", arguments);
+
+        return true;
     }
 
     /// <summary>
@@ -416,11 +441,17 @@ public static class FFmpegWrapper
     {
         var logs = new StringBuilder(1024);
 
-        // Print the Chromaprint detection status at the top.
+        // Print the FFmpeg detection status at the top.
         // Format: "* FFmpeg: `error`"
         logs.Append("* FFmpeg: `");
         logs.Append(ChromaprintLogs["error"]);
         logs.Append("`\n\n"); // Use two newlines to separate the bulleted list from the logs
+
+        // Don't print FFmpeg's logs if no error was detected during initialization.
+        if (ChromaprintLogs["error"] == "okay")
+        {
+            return logs.ToString();
+        }
 
         // Print all remaining logs
         foreach (var kvp in ChromaprintLogs)
