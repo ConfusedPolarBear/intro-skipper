@@ -273,6 +273,11 @@ public static class FFmpegWrapper
     {
         var ffmpegPath = Plugin.Instance?.FFmpegPath ?? "ffmpeg";
 
+        // The silencedetect filter outputs silence timestamps at the info log level.
+        var logLevel = args.Contains("silencedetect", StringComparison.OrdinalIgnoreCase) ?
+            "info" :
+            "warning";
+
         var cacheOutput =
             (Plugin.Instance?.Configuration.CacheFingerprints ?? false) &&
             !string.IsNullOrEmpty(cacheFilename);
@@ -295,7 +300,12 @@ public static class FFmpegWrapper
 
         // Prepend some flags to prevent FFmpeg from logging it's banner and progress information
         // for each file that is fingerprinted.
-        var info = new ProcessStartInfo(ffmpegPath, args.Insert(0, "-hide_banner -loglevel info "))
+        var prependArgument = string.Format(
+            CultureInfo.InvariantCulture,
+            "-hide_banner -loglevel {0} ",
+            logLevel);
+
+        var info = new ProcessStartInfo(ffmpegPath, args.Insert(0, prependArgument))
         {
             WindowStyle = ProcessWindowStyle.Hidden,
             CreateNoWindow = true,
