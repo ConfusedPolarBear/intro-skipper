@@ -44,7 +44,7 @@ public class SkipIntroController : ControllerBase
         var config = Plugin.Instance!.Configuration;
         intro.ShowSkipPromptAt = Math.Max(0, intro.IntroStart - config.ShowPromptAdjustment);
         intro.HideSkipPromptAt = intro.IntroStart + config.HidePromptAdjustment;
-        intro.IntroEnd -= config.AmountOfIntroToPlay;
+        intro.IntroEnd -= config.SecondsOfIntroToPlay;
 
         return intro;
     }

@@ -92,7 +92,6 @@ public class PluginConfiguration : BasePluginConfiguration
 
     /// <summary>
     /// Gets or sets the amount of intro to play (in seconds).
-    /// TODO: rename.
     /// </summary>
-    public int AmountOfIntroToPlay { get; set; } = 2;
+    public int SecondsOfIntroToPlay { get; set; } = 2;
 }
