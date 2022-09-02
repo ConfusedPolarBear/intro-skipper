@@ -14,6 +14,8 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public static class FFmpegWrapper
 {
+    private static readonly object InvertedIndexCacheLock = new();
+
     // FFmpeg logs lines similar to the following:
     // [silencedetect @ 0x000000000000] silence_start: 12.34
     // [silencedetect @ 0x000000000000] silence_end: 56.123 | silence_duration: 43.783
@@ -183,9 +185,12 @@ public static class FFmpegWrapper
     /// <returns>Inverted index.</returns>
     public static Dictionary<uint, int> CreateInvertedIndex(Guid id, uint[] fingerprint)
     {
-        if (InvertedIndexCache.TryGetValue(id, out var cached))
+        lock (InvertedIndexCacheLock)
         {
-            return cached;
+            if (InvertedIndexCache.TryGetValue(id, out var cached))
+            {
+                return cached;
+            }
         }
 
         var invIndex = new Dictionary<uint, int>();
@@ -199,7 +204,10 @@ public static class FFmpegWrapper
             invIndex[point] = i;
         }
 
-        InvertedIndexCache[id] = invIndex;
+        lock (InvertedIndexCacheLock)
+        {
+            InvertedIndexCache[id] = invIndex;
+        }
 
         return invIndex;
     }
