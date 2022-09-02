@@ -16,22 +16,6 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class AnalyzeEpisodesTask : IScheduledTask
 {
     /// <summary>
-    /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
-    /// 6 bits means the audio must be at least 81% similar (1 - 6 / 32).
-    /// </summary>
-    private const double MaximumDifferences = 6;
-
-    /// <summary>
-    /// Maximum time (in seconds) permitted between timestamps before they are considered non-contiguous.
-    /// </summary>
-    private const double MaximumDistance = 3.5;
-
-    /// <summary>
-    /// Amount to shift inverted index offsets by.
-    /// </summary>
-    private const int InvertedIndexShift = 2;
-
-    /// <summary>
     /// Seconds of audio in one fingerprint point. This value is defined by the Chromaprint library and should not be changed.
     /// </summary>
     private const double SamplesToSeconds = 0.128;
@@ -56,6 +40,14 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// Minimum duration of similar audio that will be considered an introduction.
     /// </summary>
     private static int minimumIntroDuration = 15;
+
+    private static int maximumDifferences = 6;
+
+    private static int invertedIndexShift = 2;
+
+    private static double maximumTimeSkip = 3.5;
+
+    private static double silenceDetectionMinimumDuration = 0.33;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
@@ -123,6 +115,13 @@ public class AnalyzeEpisodesTask : IScheduledTask
             throw new FingerprintException(
                 "No episodes to analyze. If you are limiting the list of libraries to analyze, check that all library names have been spelled correctly.");
         }
+
+        // Load analysis settings from configuration
+        var config = Plugin.Instance?.Configuration ?? new Configuration.PluginConfiguration();
+        maximumDifferences = config.MaximumFingerprintPointDifferences;
+        invertedIndexShift = config.InvertedIndexShift;
+        maximumTimeSkip = config.MaximumTimeSkip;
+        silenceDetectionMinimumDuration = config.SilenceDetectionMinimumDuration;
 
         // Log EDL settings
         EdlManager.LogConfiguration();
@@ -448,7 +447,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
         {
             var originalPoint = kvp.Key;
 
-            for (var i = -1 * InvertedIndexShift; i <= InvertedIndexShift; i++)
+            for (var i = -1 * invertedIndexShift; i <= invertedIndexShift; i++)
             {
                 var modifiedPoint = (uint)(originalPoint + i);
 
@@ -542,7 +541,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             var diff = lhs[lhsPosition] ^ rhs[rhsPosition];
 
             // If the difference between the samples is small, flag both times as similar.
-            if (CountBits(diff) > MaximumDifferences)
+            if (CountBits(diff) > maximumDifferences)
             {
                 continue;
             }
@@ -559,25 +558,25 @@ public class AnalyzeEpisodesTask : IScheduledTask
         rhsTimes.Add(double.MaxValue);
 
         // Now that both fingerprints have been compared at this shift, see if there's a contiguous time range.
-        var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MaximumDistance);
+        var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), maximumTimeSkip);
         if (lContiguous is null || lContiguous.Duration < minimumIntroDuration)
         {
             return (new TimeRange(), new TimeRange());
         }
 
         // Since LHS had a contiguous time range, RHS must have one also.
-        var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), MaximumDistance)!;
+        var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), maximumTimeSkip)!;
 
         // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
         if (lContiguous.Duration >= 90)
         {
-            lContiguous.End -= 2 * MaximumDistance;
-            rContiguous.End -= 2 * MaximumDistance;
+            lContiguous.End -= 2 * maximumTimeSkip;
+            rContiguous.End -= 2 * maximumTimeSkip;
         }
         else if (lContiguous.Duration >= 30)
         {
-            lContiguous.End -= MaximumDistance;
-            rContiguous.End -= MaximumDistance;
+            lContiguous.End -= maximumTimeSkip;
+            rContiguous.End -= maximumTimeSkip;
         }
 
         return (lContiguous, rContiguous);
@@ -612,9 +611,8 @@ public class AnalyzeEpisodesTask : IScheduledTask
                 continue;
             }
 
-            // Since we only want to adjust the end timestamp of the intro, create a new TimeRange
-            // that covers the last few seconds.
-            var originalIntroEnd = new TimeRange(originalIntro.IntroEnd - 10, originalIntro.IntroEnd);
+            // Only adjust the end timestamp of the intro
+            var originalIntroEnd = new TimeRange(originalIntro.IntroEnd - 15, originalIntro.IntroEnd);
 
             _logger.LogTrace(
                 "{Name} original intro: {Start} - {End}",
@@ -636,8 +634,10 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
                 // Ignore any silence that:
                 // * doesn't intersect the ending of the intro, or
-                // * is less than half a second long
-                if (!originalIntroEnd.Intersects(currentRange) || currentRange.Duration < 0.5)
+                // * is shorter than the user defined minimum duration
+                if (
+                    !originalIntroEnd.Intersects(currentRange) ||
+                    currentRange.Duration < silenceDetectionMinimumDuration)
                 {
                     continue;
                 }

@@ -154,6 +154,32 @@
                                 Increasing either of these settings will cause episode analysis to take much longer.
                             </p>
                         </details>
+
+                        <details id="silence">
+                            <summary>Silence detection options</summary>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="SilenceDetectionMaximumNoise">
+                                    Noise tolerance
+                                </label>
+                                <input id="SilenceDetectionMaximumNoise" type="number" is="emby-input" min="-90"
+                                    max="0" />
+                                <div class="fieldDescription">
+                                    Noise tolerance in negative decibels.
+                                </div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="SilenceDetectionMinimumDuration">
+                                    Minimum silence duration
+                                </label>
+                                <input id="SilenceDetectionMinimumDuration" type="number" is="emby-input" min="0"
+                                    step="0.01" />
+                                <div class="fieldDescription">
+                                    Minimum silence duration in seconds before adjusting introduction end time.
+                                </div>
+                            </div>
+                        </details>
                     </fieldset>
 
                     <fieldset class="verticalSection-extrabottompadding">
@@ -190,6 +216,16 @@
                                 Seconds after the introduction starts to hide the skip prompt at.
                             </div>
                         </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="SecondsOfIntroToPlay">
+                                Seconds of intro to play
+                            </label>
+                            <input id="SecondsOfIntroToPlay" type="number" is="emby-input" min="0" />
+                            <div class="fieldDescription">
+                                Seconds of introduction that should be played. Defaults to 2.
+                            </div>
+                        </div>
                     </fieldset>
 
                     <div>
@@ -201,12 +237,6 @@
                         <button id="btnEraseTimestamps" is="emby-button" class="raised block emby-button">
                             <span>Erase introduction timestamps</span>
                         </button>
-
-                        <p>
-                            Erasing introduction timestamps is only necessary after upgrading the plugin if specifically
-                            requested to do so in the plugin's changelog. After the timestamps are erased, run the
-                            Analyze episodes scheduled task to re-analyze all media on the server.
-                        </p>
                     </div>
                 </form>
             </div>
@@ -337,14 +367,20 @@
 
             // all plugin configuration fields that can be get or set with .value (i.e. strings or numbers).
             var configurationFields = [
+                // analysis
                 "MaxParallelism",
                 "SelectedLibraries",
                 "AnalysisPercent",
                 "AnalysisLengthLimit",
                 "MinimumIntroDuration",
                 "EdlAction",
+                // playback
                 "ShowPromptAdjustment",
-                "HidePromptAdjustment"
+                "HidePromptAdjustment",
+                "SecondsOfIntroToPlay",
+                // internals
+                "SilenceDetectionMaximumNoise",
+                "SilenceDetectionMinimumDuration",
             ]
 
             // visualizer elements
