@@ -99,6 +99,8 @@ func generateReport(hostAddress, apiKey, reportDestination string, keepTimestamp
 }
 
 func runAnalysisAndWait(hostAddress, apiKey string, pollInterval time.Duration) {
+	var taskId string = ""
+
 	type taskInfo struct {
 		State                     string
 		CurrentProgressPercentage int
@@ -108,9 +110,24 @@ func runAnalysisAndWait(hostAddress, apiKey string, pollInterval time.Duration) 
 	SendRequest("POST", hostAddress+"/Intros/EraseTimestamps", apiKey)
 	fmt.Println()
 
+	// The task ID changed with v0.1.7.
+	// Old task ID: 8863329048cc357f7dfebf080f2fe204
+	// New task ID: 6adda26c5261c40e8fa4a7e7df568be2
 	fmt.Println("[+] Starting analysis task")
-	SendRequest("POST", hostAddress+"/ScheduledTasks/Running/6adda26c5261c40e8fa4a7e7df568be2", apiKey)
-	fmt.Println()
+	for _, id := range []string{"8863329048cc357f7dfebf080f2fe204", "6adda26c5261c40e8fa4a7e7df568be2"} {
+		body := SendRequest("POST", hostAddress+"/ScheduledTasks/Running/"+id, apiKey)
+		fmt.Println()
+
+		// If the scheduled task was found, store the task ID for later
+		if !strings.Contains(string(body), "Not Found") {
+			taskId = id
+			break
+		}
+	}
+
+	if taskId == "" {
+		panic("unable to find scheduled task")
+	}
 
 	fmt.Println("[+] Waiting for analysis task to complete")
 	fmt.Print("[+] Episodes analyzed: 0%")
@@ -141,7 +158,7 @@ func runAnalysisAndWait(hostAddress, apiKey string, pollInterval time.Duration) 
 
 		lastQuery = time.Now()
 
-		raw := SendRequest("GET", hostAddress+"/ScheduledTasks/6adda26c5261c40e8fa4a7e7df568be2?hideUrl=1", apiKey)
+		raw := SendRequest("GET", hostAddress+"/ScheduledTasks/"+taskId+"?hideUrl=1", apiKey)
 
 		if err := json.Unmarshal(raw, &info); err != nil {
 			fmt.Printf("[!] Unable to unmarshal response into taskInfo struct: %s\n", err)

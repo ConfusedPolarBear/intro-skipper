@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -19,10 +21,21 @@ var containerAddress string
 // Path to compiled plugin DLL to install in local containers.
 var pluginPath string
 
+// Randomly generated password used to setup container with.
+var containerPassword string
+
 func flags() {
 	flag.StringVar(&pluginPath, "dll", "", "Path to plugin DLL to install in container images.")
 	flag.StringVar(&containerAddress, "caddr", "", "IP address to use when connecting to local containers.")
 	flag.Parse()
+
+	// Randomize the container's password
+	rawPassword := make([]byte, 32)
+	if _, err := rand.Read(rawPassword); err != nil {
+		panic(err)
+	}
+
+	containerPassword = hex.EncodeToString(rawPassword)
 }
 
 func main() {
@@ -72,11 +85,6 @@ func main() {
 				panic(err)
 			}
 
-			// Copy the contents of the base configuration directory to a temp folder for the container
-			src, dst := server.Base+"/.", configurationDirectory
-			fmt.Printf("  [+] Copying %s to %s\n", src, dst)
-			RunProgram("cp", []string{"-ar", src, dst}, 10*time.Second)
-
 			// Create a folder to install the plugin into
 			pluginDirectory := path.Join(configurationDirectory, "plugins", "intro-skipper")
 			if lsioImage {
@@ -91,15 +99,19 @@ func main() {
 
 			// If this is an LSIO container, adjust the permissions on the plugin directory
 			if lsioImage {
-				if err := os.Chown(pluginDirectory, 911, 911); err != nil {
-					fmt.Printf("  [!] Failed to change plugin directory UID/GID: %s\n", err)
-					goto cleanup
-				}
+				RunProgram(
+					"chown",
+					[]string{
+						"911:911",
+						"-R",
+						path.Join(configurationDirectory, "data", "plugins")},
+					2*time.Second)
 			}
 
 			// Install the plugin
 			fmt.Printf("  [+] Copying plugin %s to %s\n", pluginPath, pluginDirectory)
 			RunProgram("cp", []string{pluginPath, pluginDirectory}, 2*time.Second)
+			fmt.Println()
 
 			/* Start the container with the following settings:
 			 *    Name:  jf-e2e
@@ -116,12 +128,39 @@ func main() {
 
 			// Wait for the container to fully start
 			waitForServerStartup(server.Address)
+			fmt.Println()
+
+			fmt.Println("  [+] Setting up container")
+
+			// Set up the container
+			SetupServer(server.Address, containerPassword)
+
+			// Restart the container and wait for it to come back up
+			RunProgram("docker", []string{"restart", "jf-e2e"}, 10*time.Second)
+			time.Sleep(time.Second)
+			waitForServerStartup(server.Address)
+			fmt.Println()
 		} else {
 			fmt.Println("[+] Remote instance, assuming plugin is already installed")
 		}
 
 		// Get an API key
 		apiKey = login(server)
+
+		// Rescan the library if this is a server that we just setup
+		if server.Docker {
+			fmt.Println("  [+] Rescanning library")
+
+			sendRequest(
+				server.Address+"/ScheduledTasks/Running/7738148ffcd07979c7ceb148e06b3aed?api_key="+apiKey,
+				"POST",
+				"")
+
+			// TODO: poll for task completion
+			time.Sleep(10 * time.Second)
+
+			fmt.Println()
+		}
 
 		// Analyze episodes and save report
 		fmt.Println("  [+] Analyzing episodes")
@@ -268,8 +307,9 @@ func loadConfiguration() Configuration {
 	}
 
 	// Print debugging info
-	fmt.Printf("Library: %s\n", config.Common.Library)
-	fmt.Printf("Episode: \"%s\"\n", config.Common.Episode)
+	fmt.Printf("Library:  %s\n", config.Common.Library)
+	fmt.Printf("Episode:  \"%s\"\n", config.Common.Episode)
+	fmt.Printf("Password: %s\n", containerPassword)
 	fmt.Println()
 
 	// Check the validity of all entries
@@ -282,14 +322,12 @@ func loadConfiguration() Configuration {
 				panic("The -caddr argument is required.")
 			}
 
-			if server.Base == "" {
-				panic("Original configuration directory is required")
-			}
-
 			if pluginPath == "" {
 				panic("The -dll argument is required.")
 			}
 
+			server.Username = "admin"
+			server.Password = containerPassword
 			server.Address = fmt.Sprintf("http://%s:8097", containerAddress)
 			server.Docker = true
 		}

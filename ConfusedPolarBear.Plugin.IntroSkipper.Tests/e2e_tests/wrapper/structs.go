@@ -17,7 +17,6 @@ type Server struct {
 	Image    string   `json:"image"`
 	Username string   `json:"username"`
 	Password string   `json:"password"`
-	Base     string   `json:"base"`
 	Browsers []string `json:"browsers"`
 	Tests    []string `json:"tests"`
 
