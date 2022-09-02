@@ -1,6 +1,6 @@
 {
     "common": {
-        "library": "/full/path/to/test/library/on/host",
+        "library": "/full/path/to/test/library/on/host/TV",
         "episode": "Episode title to search for"
     },
     "servers": [
@@ -9,7 +9,6 @@
             "image": "ghcr.io/confusedpolarbear/jellyfin-intro-skipper:latest",
             "username": "admin",
             "password": "hunter2",
-            "base": "config/official",
             "browsers": [
                 "chrome",
                 "firefox"
