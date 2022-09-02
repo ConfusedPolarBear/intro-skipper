@@ -74,6 +74,8 @@ public class AutoSkip : IServerEntryPoint
     private void UserDataManager_UserDataSaved(object? sender, UserDataSaveEventArgs e)
     {
         var itemId = e.Item.Id;
+        var newState = false;
+        var episodeNumber = e.Item.IndexNumber.GetValueOrDefault(-1);
 
         // Ignore all events except playback start & end
         if (e.SaveReason != UserDataSaveReason.PlaybackStart && e.SaveReason != UserDataSaveReason.PlaybackFinished)
@@ -106,13 +108,19 @@ public class AutoSkip : IServerEntryPoint
             return;
         }
 
+        // If this is the first episode in the season, and SkipFirstEpisode is false, pretend that we've already sent the seek command for this playback session.
+        if (!Plugin.Instance!.Configuration.SkipFirstEpisode && episodeNumber == 1)
+        {
+            newState = true;
+        }
+
         // Reset the seek command state for this device.
         lock (_sentSeekCommandLock)
         {
             var device = session.DeviceId;
 
             _logger.LogDebug("Resetting seek command state for session {Session}", device);
-            _sentSeekCommand[device] = false;
+            _sentSeekCommand[device] = newState;
         }
     }
 

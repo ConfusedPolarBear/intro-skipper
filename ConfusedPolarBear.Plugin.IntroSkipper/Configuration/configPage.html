@@ -171,6 +171,17 @@
                             </div>
                         </div>
 
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="SkipFirstEpisode" type="checkbox" is="emby-checkbox" />
+                                <span>Automatically skip intros in the first episode of a season</span>
+                            </label>
+
+                            <div class="fieldDescription">
+                                If checked, auto skip will skip introductions in the first episode of a season.<br />
+                            </div>
+                        </div>
+
                         <div class="inputContainer">
                             <label class="inputLabel inputLabelUnfocused" for="ShowPromptAdjustment">
                                 Show skip prompt at
@@ -345,6 +356,13 @@
                 "EdlAction",
                 "ShowPromptAdjustment",
                 "HidePromptAdjustment"
+            ]
+
+            var booleanConfigurationFields = [
+                "CacheFingerprints",
+                "RegenerateEdl",
+                "AutoSkip",
+                "SkipFirstEpisode"
             ]
 
             // visualizer elements
@@ -664,12 +682,12 @@
                 .addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
-                        document.querySelector('#AutoSkip').checked = config.AutoSkip;
-                        document.querySelector('#RegenerateEdl').checked = config.RegenerateEdlFiles;
-                        document.querySelector('#CacheFingerprints').checked = config.CacheFingerprints;
-
                         for (const field of configurationFields) {
                             document.querySelector("#" + field).value = config[field];
+                        }
+
+                        for (const field of booleanConfigurationFields) {
+                            document.querySelector("#" + field).checked = config[field];
                         }
 
                         Dashboard.hideLoadingMsg();
@@ -680,12 +698,12 @@
                 .addEventListener('submit', function (e) {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b").then(function (config) {
-                        config.AutoSkip = document.querySelector('#AutoSkip').checked;
-                        config.RegenerateEdlFiles = document.querySelector('#RegenerateEdl').checked;
-                        config.CacheFingerprints = document.querySelector('#CacheFingerprints').checked;
-
                         for (const field of configurationFields) {
                             config[field] = document.querySelector("#" + field).value;
+                        }
+
+                        for (const field of booleanConfigurationFields) {
+                            config[field] = document.querySelector("#" + field).checked;
                         }
 
                         ApiClient.updatePluginConfiguration("c83d86bb-a1e0-4c35-a113-e2101cf4ee6b", config)
