@@ -126,8 +126,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Log EDL settings
         EdlManager.LogConfiguration();
 
-        // Include the previously processed episodes in the percentage reported to the UI.
-        var totalProcessed = CountProcessedEpisodes();
+        var totalProcessed = 0;
         var options = new ParallelOptions()
         {
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
@@ -151,6 +150,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
             try
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var episodes = new ReadOnlyCollection<QueuedEpisode>(season.Value);
 
                 // Increment totalProcessed by the number of episodes in this season that were actually analyzed
@@ -268,6 +272,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
             try
             {
                 fingerprintCache[episode.EpisodeId] = FFmpegWrapper.Fingerprint(episode);
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return episodes.Count;
+                }
             }
             catch (FingerprintException ex)
             {
@@ -322,6 +331,11 @@ public class AnalyzeEpisodesTask : IScheduledTask
             }
 
             // If no intro is found at this point, the popped episode is not reinserted into the queue.
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return episodes.Count;
         }
 
         // Adjust all introduction end times so that they end at silence.
