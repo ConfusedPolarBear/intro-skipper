@@ -652,10 +652,12 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
                 // Ignore any silence that:
                 // * doesn't intersect the ending of the intro, or
-                // * is shorter than the user defined minimum duration
+                // * is shorter than the user defined minimum duration, or
+                // * starts before the introduction does
                 if (
                     !originalIntroEnd.Intersects(currentRange) ||
-                    currentRange.Duration < silenceDetectionMinimumDuration)
+                    currentRange.Duration < silenceDetectionMinimumDuration ||
+                    currentRange.Start < originalIntro.IntroStart)
                 {
                     continue;
                 }
