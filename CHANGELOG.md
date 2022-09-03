@@ -1,12 +1,18 @@
 # Changelog
 
-## v0.1.7.0
+## v0.1.7.0 (no eta)
 * New features
+  * Rewrote fingerprint comparison algorithm to be faster (~30x speedup) and detect more introductions
   * Add support for the `silencedetect` filter in ffmpeg
   * Add support bundle
+  * Add maximum introduction duration
+  * Support playing a few seconds from the end of the introduction to verify that no episode content was skipped over
+    * Amount played is customizable and defaults to 2 seconds
+  * Support modifying introduction detection algorithm settings
 
 * Fixes
   * Fix scheduled task interval (#79)
+  * Prevent show names from becoming duplicated in the show name dropdown under the advanced section
 
 ## v0.1.6.0 (2022-08-04)
 * New features
