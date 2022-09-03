@@ -304,8 +304,12 @@ public class AnalyzeEpisodesTask : IScheduledTask
                     remainingEpisode.EpisodeId,
                     fingerprintCache[remainingEpisode.EpisodeId]);
 
-                // If one of the intros isn't valid, ignore this comparison result.
-                if (!currentIntro.Valid)
+                // Ignore this comparison result if:
+                // - one of the intros isn't valid, or
+                // - the introduction exceeds the configured limit
+                if (
+                    !remainingIntro.Valid ||
+                    remainingIntro.Duration > Plugin.Instance!.Configuration.MaximumIntroDuration)
                 {
                     continue;
                 }

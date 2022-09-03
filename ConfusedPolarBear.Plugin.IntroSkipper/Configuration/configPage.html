@@ -139,6 +139,17 @@
                                 </div>
                             </div>
 
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MaximumIntroDuration">
+                                    Maximum introduction duration (in seconds)
+                                </label>
+                                <input id="MaximumIntroDuration" type="number" is="emby-input" min="1" />
+                                <div class="fieldDescription">
+                                    Similar sounding audio which is longer than this duration will not be considered an
+                                    introduction.
+                                </div>
+                            </div>
+
                             <p>
                                 The amount of each episode's audio that will be analyzed is determined using both
                                 the percentage of audio and maximum runtime of audio to analyze. The minimum of
@@ -373,6 +384,7 @@
                 "AnalysisPercent",
                 "AnalysisLengthLimit",
                 "MinimumIntroDuration",
+                "MaximumIntroDuration",
                 "EdlAction",
                 // playback
                 "ShowPromptAdjustment",

@@ -62,6 +62,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public int MinimumIntroDuration { get; set; } = 15;
 
+    /// <summary>
+    /// Gets or sets the maximum length of similar audio that will be considered an introduction.
+    /// </summary>
+    public int MaximumIntroDuration { get; set; } = 120;
+
     // ===== Playback settings =====
 
     /// <summary>
