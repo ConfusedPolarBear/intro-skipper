@@ -35,6 +35,17 @@ public class Intro
     /// <summary>
     /// Initializes a new instance of the <see cref="Intro"/> class.
     /// </summary>
+    /// <param name="intro">intro.</param>
+    public Intro(Intro intro)
+    {
+        EpisodeId = intro.EpisodeId;
+        IntroStart = intro.IntroStart;
+        IntroEnd = intro.IntroEnd;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Intro"/> class.
+    /// </summary>
     public Intro()
     {
     }
