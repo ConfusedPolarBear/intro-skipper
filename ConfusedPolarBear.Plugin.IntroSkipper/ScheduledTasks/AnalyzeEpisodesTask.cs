@@ -690,16 +690,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
         return BitOperations.PopCount(number);
     }
 
-    private double GetIntroDuration(Guid id)
-    {
-        if (!Plugin.Instance!.Intros.TryGetValue(id, out var episode))
-        {
-            return 0;
-        }
-
-        return episode.Valid ? Math.Round(episode.IntroEnd - episode.IntroStart, 2) : 0;
-    }
-
     /// <summary>
     /// Get task triggers.
     /// </summary>
