@@ -136,6 +136,7 @@ public class QueueManager
             },
             IncludeItemTypes = new BaseItemKind[] { BaseItemKind.Episode },
             Recursive = true,
+            IsVirtualItem = false
         };
 
         _logger.LogDebug("Getting items");
@@ -174,7 +175,11 @@ public class QueueManager
 
         if (string.IsNullOrEmpty(episode.Path))
         {
-            _logger.LogWarning("Not queuing episode {Id} as no path was provided by Jellyfin", episode.Id);
+            _logger.LogWarning(
+                "Not queuing episode \"{Name}\" from series \"{Series}\" ({Id}) as no path was provided by Jellyfin",
+                episode.Name,
+                episode.SeriesName,
+                episode.Id);
             return;
         }
 
