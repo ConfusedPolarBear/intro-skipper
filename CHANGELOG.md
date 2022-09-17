@@ -9,10 +9,12 @@
   * Support playing a few seconds from the end of the introduction to verify that no episode content was skipped over
     * Amount played is customizable and defaults to 2 seconds
   * Support modifying introduction detection algorithm settings
+  * Add option to not skip the introduction in the first episode of a season
 
 * Fixes
   * Fix scheduled task interval (#79)
   * Prevent show names from becoming duplicated in the show name dropdown under the advanced section
+  * Prevent virtual episodes from being inserted into the analysis queue
 
 ## v0.1.6.0 (2022-08-04)
 * New features
