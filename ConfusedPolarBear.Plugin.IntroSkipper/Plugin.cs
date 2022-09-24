@@ -81,11 +81,6 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public int TotalQueued { get; set; }
 
     /// <summary>
-    /// Gets or sets the statistics from the most recent analysis run.
-    /// </summary>
-    public AnalysisStatistics AnalysisStatistics { get; set; } = new AnalysisStatistics();
-
-    /// <summary>
     /// Gets the directory to cache fingerprints in.
     /// </summary>
     public string FingerprintCachePath { get; private set; }

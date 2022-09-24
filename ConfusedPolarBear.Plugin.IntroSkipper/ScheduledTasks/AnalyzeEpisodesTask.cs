@@ -32,11 +32,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
     private readonly object _introsLock = new object();
 
     /// <summary>
-    /// Statistics for the currently running analysis task.
-    /// </summary>
-    private AnalysisStatistics analysisStatistics = new AnalysisStatistics();
-
-    /// <summary>
     /// Minimum duration of similar audio that will be considered an introduction.
     /// </summary>
     private static int minimumIntroDuration = 15;
@@ -133,8 +128,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
         };
 
         var taskStart = DateTime.Now;
-        analysisStatistics = new AnalysisStatistics();
-        analysisStatistics.TotalQueuedEpisodes = Plugin.Instance!.TotalQueued;
 
         minimumIntroDuration = Plugin.Instance!.Configuration.MinimumIntroDuration;
 
@@ -186,14 +179,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             }
 
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
-
-            analysisStatistics.TotalCPUTime.AddDuration(workerStart);
-            Plugin.Instance!.AnalysisStatistics = analysisStatistics;
         });
-
-        // Update analysis statistics
-        analysisStatistics.TotalTaskTime.AddDuration(taskStart);
-        Plugin.Instance!.AnalysisStatistics = analysisStatistics;
 
         // Turn the regenerate EDL flag off after the scan completes.
         if (Plugin.Instance!.Configuration.RegenerateEdlFiles)
@@ -385,8 +371,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
         if (lhsRanges.Count > 0)
         {
             _logger.LogTrace("Index search successful");
-            analysisStatistics.IndexSearches.Increment();
-            analysisStatistics.AnalysisCPUTime.AddDuration(start);
 
             return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
         }
@@ -395,8 +379,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
             "Unable to find a shared introduction sequence between {LHS} and {RHS}",
             lhsId,
             rhsId);
-
-        analysisStatistics.AnalysisCPUTime.AddDuration(start);
 
         return (new Intro(lhsId), new Intro(rhsId));
     }

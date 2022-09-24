@@ -258,12 +258,6 @@
                 <textarea id="supportBundle" rows="20" cols="75" readonly></textarea>
             </details>
 
-            <details id="statistics">
-                <summary>Analysis Statistics (experimental)</summary>
-
-                <pre id="statisticsText" style="font-size: larger"></p>
-            </details>
-
             <details id="visualizer">
                 <summary>Advanced</summary>
 
@@ -372,7 +366,6 @@
 
             // settings elements
             var visualizer = document.querySelector("details#visualizer");
-            var statistics = document.querySelector("details#statistics");
             var support = document.querySelector("details#support");
             var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
 
@@ -468,59 +461,6 @@
                 ta.setSelectionRange(0, ta.value.length);
 
                 Dashboard.alert("Press Ctrl+C to copy support bundle");
-            }
-
-            async function statisticsToggled() {
-                if (!statistics.open) {
-                    return;
-                }
-
-                // Blank any old statistics
-                const text = document.querySelector("pre#statisticsText");
-                text.textContent = "All CPU times are displayed as seconds.\n\n";
-
-                Dashboard.showLoadingMsg();
-
-                // Load the statistics from the server
-                let stats = await getJson("Intros/Statistics");
-
-                // Select which fields to print and label them with more friendly descriptions
-                let fields = "TotalTaskTime,TotalCPUTime,FingerprintCPUTime,FirstPassCPUTime,SecondPassCPUTime," +
-                    "IndexSearches,QuickScans,FullScans,TotalQueuedEpisodes";
-
-                let friendlyNames = {
-                    TotalTaskTime: "Total task time",
-                    TotalCPUTime: "Total CPU time",
-                    FingerprintCPUTime: "Fingerprint CPU time",
-                    FirstPassCPUTime: "First pass CPU time",
-                    SecondPassCPUTime: "Second pass CPU time",
-                    IndexSearches: "Index searches",
-                    QuickScans: "Quick scans",
-                    FullScans: "Full scans",
-                    TotalQueuedEpisodes: "Episodes queued",
-                };
-
-                // Print all friendly names and data points
-                for (var f of fields.split(",")) {
-                    let name = friendlyNames[f].padEnd(25);
-                    let value = stats[f];
-
-                    // If this statistic is a measure of CPU time, divide by 1,000 to turn milliseconds into seconds.
-                    if (name.includes("time")) {
-                        value = Math.round(value / 1000);
-                    }
-
-                    text.textContent += name + value + "\n";
-                }
-
-                // Calculate the percentage of time (to two decimal places) spent waiting for fingerprints
-                const percentWait = Math.round((stats.FingerprintCPUTime * 10_000) / stats.TotalCPUTime) / 100;
-
-                // Breakdown CPU time by analysis component
-                text.textContent += "\nCPU time breakdown:\n";
-                text.textContent += "Fingerprint generation   " + percentWait + "%\n";
-
-                Dashboard.hideLoadingMsg();
             }
 
             // show changed, populate seasons
@@ -752,7 +692,6 @@
                 });
 
             visualizer.addEventListener("toggle", visualizerToggled);
-            statistics.addEventListener("toggle", statisticsToggled);
             support.addEventListener("toggle", supportToggled);
             txtOffset.addEventListener("change", renderTroubleshooter);
             selectShow.addEventListener("change", showChanged);
