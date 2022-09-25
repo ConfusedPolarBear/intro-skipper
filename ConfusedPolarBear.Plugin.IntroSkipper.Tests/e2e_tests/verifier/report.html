@@ -228,11 +228,11 @@
                             <p>{{ $episode.Title }}</p>
 
                             <p>
-                                Old: {{ $old.IntroStart }} - {{ $old.IntroEnd }}
+                                Old: {{ $old.FormattedStart }} - {{ $old.FormattedEnd }}
                                 (<span class="duration old">{{ $old.Duration }}</span>)
                                 (valid: {{ $old.Valid }}) <br />
 
-                                New: {{ $new.IntroStart }} - {{ $new.IntroEnd }}
+                                New: {{ $new.FormattedStart }} - {{ $new.FormattedEnd }}
                                 (<span class="duration new">{{ $new.Duration }}</span>)
                                 (valid: {{ $new.Valid }}) <br />
 

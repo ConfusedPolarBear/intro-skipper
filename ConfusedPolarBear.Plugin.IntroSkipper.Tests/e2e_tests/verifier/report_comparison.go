@@ -107,6 +107,10 @@ func unmarshalReport(path string) structs.Report {
 		// Round the duration to the nearest second to avoid showing 8 decimal places in the report
 		intro.Duration = float32(math.Round(float64(intro.Duration)))
 
+		// Pretty print the intro start and end times
+		intro.FormattedStart = (time.Duration(intro.IntroStart) * time.Second).String()
+		intro.FormattedEnd = (time.Duration(intro.IntroEnd) * time.Second).String()
+
 		show, season := intro.Series, intro.Season
 
 		// If this show hasn't been seen before, allocate space for it

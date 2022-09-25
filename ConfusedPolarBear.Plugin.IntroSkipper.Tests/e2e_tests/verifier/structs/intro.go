@@ -12,6 +12,9 @@ type Intro struct {
 	Duration   float32
 	Valid      bool
 
+	FormattedStart string
+	FormattedEnd   string
+
 	ShowSkipPromptAt float32
 	HideSkipPromptAt float32
 }
