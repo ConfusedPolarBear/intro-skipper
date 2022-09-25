@@ -16,7 +16,8 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class AnalyzeEpisodesTask : IScheduledTask
 {
     /// <summary>
-    /// Seconds of audio in one fingerprint point. This value is defined by the Chromaprint library and should not be changed.
+    /// Seconds of audio in one fingerprint point.
+    /// This value is defined by the Chromaprint library and should not be changed.
     /// </summary>
     private const double SamplesToSeconds = 0.128;
 
@@ -49,7 +50,9 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
     /// <param name="libraryManager">Library manager.</param>
-    public AnalyzeEpisodesTask(ILoggerFactory loggerFactory, ILibraryManager libraryManager) : this(loggerFactory)
+    public AnalyzeEpisodesTask(
+        ILoggerFactory loggerFactory,
+        ILibraryManager libraryManager) : this(loggerFactory)
     {
         _libraryManager = libraryManager;
     }
@@ -127,8 +130,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
         };
 
-        var taskStart = DateTime.Now;
-
         minimumIntroDuration = Plugin.Instance!.Configuration.MinimumIntroDuration;
 
         // TODO: if the queue is modified while the task is running, the task will fail.
@@ -137,8 +138,9 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
-            var workerStart = DateTime.Now;
-            var first = season.Value[0];
+
+            var episodes = season.Value.AsReadOnly();
+            var first = episodes[0];
             var writeEdl = false;
 
             try
@@ -147,8 +149,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
                 {
                     return;
                 }
-
-                var episodes = new ReadOnlyCollection<QueuedEpisode>(season.Value);
 
                 // Increment totalProcessed by the number of episodes in this season that were actually analyzed
                 // (instead of just using the number of episodes in the current season).
@@ -175,7 +175,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
             if (writeEdl && Plugin.Instance!.Configuration.EdlAction != EdlAction.None)
             {
-                EdlManager.UpdateEDLFiles(season.Value.AsReadOnly());
+                EdlManager.UpdateEDLFiles(episodes);
             }
 
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
@@ -338,10 +338,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             {
                 Plugin.Instance!.Intros[intro.Key] = intro.Value;
             }
-        }
 
-        lock (_introsLock)
-        {
             Plugin.Instance!.SaveTimestamps();
         }
 
@@ -362,8 +359,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
         Guid rhsId,
         uint[] rhsPoints)
     {
-        var start = DateTime.Now;
-
         // Creates an inverted fingerprint point index for both episodes.
         // For every point which is a 100% match, search for an introduction at that point.
         var (lhsRanges, rhsRanges) = SearchInvertedIndex(lhsId, lhsPoints, rhsId, rhsPoints);
@@ -463,41 +458,12 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Use all discovered shifts to compare the episodes.
         foreach (var shift in indexShifts)
         {
-            var (lhsIndexContiguous, rhsIndexContiguous) = ShiftEpisodes(lhsPoints, rhsPoints, shift, shift);
-            lhsRanges.AddRange(lhsIndexContiguous);
-            rhsRanges.AddRange(rhsIndexContiguous);
-        }
-
-        return (lhsRanges, rhsRanges);
-    }
-
-    /// <summary>
-    /// Shifts a pair of episodes through the range of provided shift amounts and returns discovered contiguous time ranges.
-    /// </summary>
-    /// <param name="lhs">First episode fingerprint.</param>
-    /// <param name="rhs">Second episode fingerprint.</param>
-    /// <param name="lower">Lower end of the shift range.</param>
-    /// <param name="upper">Upper end of the shift range.</param>
-    private static (List<TimeRange> Lhs, List<TimeRange> Rhs) ShiftEpisodes(
-        uint[] lhs,
-        uint[] rhs,
-        int lower,
-        int upper)
-    {
-        var lhsRanges = new List<TimeRange>();
-        var rhsRanges = new List<TimeRange>();
-
-        for (int amount = lower; amount <= upper; amount++)
-        {
-            var (lRange, rRange) = FindContiguous(lhs, rhs, amount);
-
-            if (lRange.End == 0 && rRange.End == 0)
+            var (lhsIndexContiguous, rhsIndexContiguous) = FindContiguous(lhsPoints, rhsPoints, shift);
+            if (lhsIndexContiguous.End > 0 && rhsIndexContiguous.End > 0)
             {
-                continue;
+                lhsRanges.Add(lhsIndexContiguous);
+                rhsRanges.Add(rhsIndexContiguous);
             }
-
-            lhsRanges.Add(lRange);
-            rhsRanges.Add(rRange);
         }
 
         return (lhsRanges, rhsRanges);
