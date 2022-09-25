@@ -113,7 +113,7 @@ public class VisualizationController : ControllerBase
             {
                 if (needle.EpisodeId == id)
                 {
-                    return Chromaprint.Fingerprint(needle);
+                    return FFmpegWrapper.Fingerprint(needle);
                 }
             }
         }
@@ -164,17 +164,6 @@ public class VisualizationController : ControllerBase
         Plugin.Instance!.SaveTimestamps();
 
         return NoContent();
-    }
-
-    /// <summary>
-    /// Returns the statistics for the most recent analysis.
-    /// </summary>
-    /// <response code="200">Analysis statistics.</response>
-    /// <returns>AnalysisStatistics.</returns>
-    [HttpGet("Statistics")]
-    public ActionResult<AnalysisStatistics> GetAnalysisStatistics()
-    {
-        return Plugin.Instance!.AnalysisStatistics;
     }
 
     private string GetSeasonName(QueuedEpisode episode)

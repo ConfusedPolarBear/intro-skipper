@@ -44,6 +44,7 @@ public class SkipIntroController : ControllerBase
         var config = Plugin.Instance!.Configuration;
         intro.ShowSkipPromptAt = Math.Max(0, intro.IntroStart - config.ShowPromptAdjustment);
         intro.HideSkipPromptAt = intro.IntroStart + config.HidePromptAdjustment;
+        intro.IntroEnd -= config.SecondsOfIntroToPlay;
 
         return intro;
     }
@@ -53,7 +54,8 @@ public class SkipIntroController : ControllerBase
     /// <returns>Intro object if the provided item has an intro, null otherwise.</returns>
     private Intro? GetIntro(Guid id)
     {
-        return Plugin.Instance!.Intros.TryGetValue(id, out var intro) ? intro : null;
+        // Returns a copy to avoid mutating the original Intro object stored in the dictionary.
+        return Plugin.Instance!.Intros.TryGetValue(id, out var intro) ? new Intro(intro) : null;
     }
 
     /// <summary>

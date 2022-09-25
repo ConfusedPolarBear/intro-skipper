@@ -2,6 +2,7 @@
  * which supports both chromaprint and the "-fp_format raw" flag.
  */
 
+using System;
 using System.Collections.Generic;
 using Xunit;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ public class TestAudioFingerprinting
     [FactSkipFFmpegTests]
     public void TestInstallationCheck()
     {
-        Assert.True(Chromaprint.CheckFFmpegVersion());
+        Assert.True(FFmpegWrapper.CheckFFmpegVersion());
     }
 
     [Theory]
@@ -57,7 +58,7 @@ public class TestAudioFingerprinting
             3472417825, 3395841056, 3458735136, 3341420624, 1076496560, 1076501168, 1076501136, 1076497024
         };
 
-        var actual = Chromaprint.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
+        var actual = FFmpegWrapper.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
 
         Assert.Equal(expected, actual);
     }
@@ -77,7 +78,7 @@ public class TestAudioFingerprinting
             {77, 5},
         };
 
-        var actual = Chromaprint.CreateInvertedIndex(fpr);
+        var actual = FFmpegWrapper.CreateInvertedIndex(Guid.NewGuid(), fpr);
 
         Assert.Equal(expected, actual);
     }
@@ -89,8 +90,14 @@ public class TestAudioFingerprinting
 
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
+        var lhsFingerprint = FFmpegWrapper.Fingerprint(lhsEpisode);
+        var rhsFingerprint = FFmpegWrapper.Fingerprint(rhsEpisode);
 
-        var (lhs, rhs) = task.FingerprintEpisodes(lhsEpisode, rhsEpisode);
+        var (lhs, rhs) = task.CompareEpisodes(
+            lhsEpisode.EpisodeId,
+            lhsFingerprint,
+            rhsEpisode.EpisodeId,
+            rhsFingerprint);
 
         Assert.True(lhs.Valid);
         Assert.Equal(0, lhs.IntroStart);
@@ -101,20 +108,45 @@ public class TestAudioFingerprinting
         Assert.Equal(22.912, rhs.IntroEnd);
     }
 
+    /// <summary>
+    /// Test that the silencedetect wrapper is working.
+    /// </summary>
+    [FactSkipFFmpegTests]
+    public void TestSilenceDetection()
+    {
+        var clip = queueEpisode("audio/big_buck_bunny_clip.mp3");
+
+        var expected = new TimeRange[]
+        {
+            new TimeRange(44.6310, 44.8072),
+            new TimeRange(53.5905, 53.8070),
+            new TimeRange(53.8458, 54.2024),
+            new TimeRange(54.2611, 54.5935),
+            new TimeRange(54.7098, 54.9293),
+            new TimeRange(54.9294, 55.2590),
+        };
+
+        var actual = FFmpegWrapper.DetectSilence(clip, 60);
+
+        Assert.Equal(expected, actual);
+    }
+
     private QueuedEpisode queueEpisode(string path)
     {
         return new QueuedEpisode()
         {
+            EpisodeId = Guid.NewGuid(),
             Path = "../../../" + path,
             FingerprintDuration = 60
         };
     }
 }
 
-public class FactSkipFFmpegTests : FactAttribute {
-    #if SKIP_FFMPEG_TESTS
+public class FactSkipFFmpegTests : FactAttribute
+{
+#if SKIP_FFMPEG_TESTS
     public FactSkipFFmpegTests() {
         Skip = "SKIP_FFMPEG_TESTS defined, skipping unit tests that require FFmpeg to be installed";
     }
-    #endif
+#endif
 }

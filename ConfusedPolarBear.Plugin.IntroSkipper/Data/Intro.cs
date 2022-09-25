@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
@@ -34,6 +35,17 @@ public class Intro
     /// <summary>
     /// Initializes a new instance of the <see cref="Intro"/> class.
     /// </summary>
+    /// <param name="intro">intro.</param>
+    public Intro(Intro intro)
+    {
+        EpisodeId = intro.EpisodeId;
+        IntroStart = intro.IntroStart;
+        IntroEnd = intro.IntroEnd;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Intro"/> class.
+    /// </summary>
     public Intro()
     {
     }
@@ -48,6 +60,12 @@ public class Intro
     /// Invalid results must not be returned through the API.
     /// </summary>
     public bool Valid => IntroEnd > 0;
+
+    /// <summary>
+    /// Gets the duration of this intro.
+    /// </summary>
+    [JsonIgnore]
+    public double Duration => IntroEnd - IntroStart;
 
     /// <summary>
     /// Gets or sets the introduction sequence start time.

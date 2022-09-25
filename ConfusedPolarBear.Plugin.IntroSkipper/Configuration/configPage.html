@@ -139,6 +139,17 @@
                                 </div>
                             </div>
 
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="MaximumIntroDuration">
+                                    Maximum introduction duration (in seconds)
+                                </label>
+                                <input id="MaximumIntroDuration" type="number" is="emby-input" min="1" />
+                                <div class="fieldDescription">
+                                    Similar sounding audio which is longer than this duration will not be considered an
+                                    introduction.
+                                </div>
+                            </div>
+
                             <p>
                                 The amount of each episode's audio that will be analyzed is determined using both
                                 the percentage of audio and maximum runtime of audio to analyze. The minimum of
@@ -153,6 +164,32 @@
 
                                 Increasing either of these settings will cause episode analysis to take much longer.
                             </p>
+                        </details>
+
+                        <details id="silence">
+                            <summary>Silence detection options</summary>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="SilenceDetectionMaximumNoise">
+                                    Noise tolerance
+                                </label>
+                                <input id="SilenceDetectionMaximumNoise" type="number" is="emby-input" min="-90"
+                                    max="0" />
+                                <div class="fieldDescription">
+                                    Noise tolerance in negative decibels.
+                                </div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="SilenceDetectionMinimumDuration">
+                                    Minimum silence duration
+                                </label>
+                                <input id="SilenceDetectionMinimumDuration" type="number" is="emby-input" min="0"
+                                    step="0.01" />
+                                <div class="fieldDescription">
+                                    Minimum silence duration in seconds before adjusting introduction end time.
+                                </div>
+                            </div>
                         </details>
                     </fieldset>
 
@@ -201,6 +238,16 @@
                                 Seconds after the introduction starts to hide the skip prompt at.
                             </div>
                         </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="SecondsOfIntroToPlay">
+                                Seconds of intro to play
+                            </label>
+                            <input id="SecondsOfIntroToPlay" type="number" is="emby-input" min="0" />
+                            <div class="fieldDescription">
+                                Seconds of introduction that should be played. Defaults to 2.
+                            </div>
+                        </div>
                     </fieldset>
 
                     <div>
@@ -212,12 +259,6 @@
                         <button id="btnEraseTimestamps" is="emby-button" class="raised block emby-button">
                             <span>Erase introduction timestamps</span>
                         </button>
-
-                        <p>
-                            Erasing introduction timestamps is only necessary after upgrading the plugin if specifically
-                            requested to do so in the plugin's changelog. After the timestamps are erased, run the
-                            Analyze episodes scheduled task to re-analyze all media on the server.
-                        </p>
                     </div>
                 </form>
             </div>
@@ -226,12 +267,6 @@
                 <summary>Support Bundle</summary>
 
                 <textarea id="supportBundle" rows="20" cols="75" readonly></textarea>
-            </details>
-
-            <details id="statistics">
-                <summary>Analysis Statistics (experimental)</summary>
-
-                <pre id="statisticsText" style="font-size: larger"></p>
             </details>
 
             <details id="visualizer">
@@ -342,20 +377,26 @@
 
             // settings elements
             var visualizer = document.querySelector("details#visualizer");
-            var statistics = document.querySelector("details#statistics");
             var support = document.querySelector("details#support");
             var btnEraseTimestamps = document.querySelector("button#btnEraseTimestamps");
 
             // all plugin configuration fields that can be get or set with .value (i.e. strings or numbers).
             var configurationFields = [
+                // analysis
                 "MaxParallelism",
                 "SelectedLibraries",
                 "AnalysisPercent",
                 "AnalysisLengthLimit",
                 "MinimumIntroDuration",
+                "MaximumIntroDuration",
                 "EdlAction",
+                // playback
                 "ShowPromptAdjustment",
-                "HidePromptAdjustment"
+                "HidePromptAdjustment",
+                "SecondsOfIntroToPlay",
+                // internals
+                "SilenceDetectionMaximumNoise",
+                "SilenceDetectionMinimumDuration",
             ]
 
             var booleanConfigurationFields = [
@@ -383,6 +424,11 @@
             async function visualizerToggled() {
                 if (!visualizer.open) {
                     return;
+                }
+
+                // ensure the series select is empty
+                while (selectShow.options.length > 0) {
+                    selectShow.remove(0);
                 }
 
                 Dashboard.showLoadingMsg();
@@ -433,59 +479,6 @@
                 ta.setSelectionRange(0, ta.value.length);
 
                 Dashboard.alert("Press Ctrl+C to copy support bundle");
-            }
-
-            async function statisticsToggled() {
-                if (!statistics.open) {
-                    return;
-                }
-
-                // Blank any old statistics
-                const text = document.querySelector("pre#statisticsText");
-                text.textContent = "All CPU times are displayed as seconds.\n\n";
-
-                Dashboard.showLoadingMsg();
-
-                // Load the statistics from the server
-                let stats = await getJson("Intros/Statistics");
-
-                // Select which fields to print and label them with more friendly descriptions
-                let fields = "TotalTaskTime,TotalCPUTime,FingerprintCPUTime,FirstPassCPUTime,SecondPassCPUTime," +
-                    "IndexSearches,QuickScans,FullScans,TotalQueuedEpisodes";
-
-                let friendlyNames = {
-                    TotalTaskTime: "Total task time",
-                    TotalCPUTime: "Total CPU time",
-                    FingerprintCPUTime: "Fingerprint CPU time",
-                    FirstPassCPUTime: "First pass CPU time",
-                    SecondPassCPUTime: "Second pass CPU time",
-                    IndexSearches: "Index searches",
-                    QuickScans: "Quick scans",
-                    FullScans: "Full scans",
-                    TotalQueuedEpisodes: "Episodes queued",
-                };
-
-                // Print all friendly names and data points
-                for (var f of fields.split(",")) {
-                    let name = friendlyNames[f].padEnd(25);
-                    let value = stats[f];
-
-                    // If this statistic is a measure of CPU time, divide by 1,000 to turn milliseconds into seconds.
-                    if (name.includes("time")) {
-                        value = Math.round(value / 1000);
-                    }
-
-                    text.textContent += name + value + "\n";
-                }
-
-                // Calculate the percentage of time (to two decimal places) spent waiting for fingerprints
-                const percentWait = Math.round((stats.FingerprintCPUTime * 10_000) / stats.TotalCPUTime) / 100;
-
-                // Breakdown CPU time by analysis component
-                text.textContent += "\nCPU time breakdown:\n";
-                text.textContent += "Fingerprint generation   " + percentWait + "%\n";
-
-                Dashboard.hideLoadingMsg();
             }
 
             // show changed, populate seasons
@@ -717,7 +710,6 @@
                 });
 
             visualizer.addEventListener("toggle", visualizerToggled);
-            statistics.addEventListener("toggle", statisticsToggled);
             support.addEventListener("toggle", supportToggled);
             txtOffset.addEventListener("change", renderTroubleshooter);
             selectShow.addEventListener("change", showChanged);

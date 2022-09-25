@@ -62,6 +62,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public int MinimumIntroDuration { get; set; } = 15;
 
+    /// <summary>
+    /// Gets or sets the maximum length of similar audio that will be considered an introduction.
+    /// </summary>
+    public int MaximumIntroDuration { get; set; } = 120;
+
     // ===== Playback settings =====
 
     /// <summary>
@@ -83,4 +88,38 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether the introduction in the first episode of a season should be skipped.
     /// </summary>
     public bool SkipFirstEpisode { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the amount of intro to play (in seconds).
+    /// </summary>
+    public int SecondsOfIntroToPlay { get; set; } = 3;
+
+    // ===== Internal algorithm settings =====
+
+    /// <summary>
+    /// Gets or sets the maximum number of bits (out of 32 total) that can be different between two Chromaprint points before they are considered dissimilar.
+    /// Defaults to 6 (81% similar).
+    /// </summary>
+    public int MaximumFingerprintPointDifferences { get; set; } = 6;
+
+    /// <summary>
+    /// Gets or sets the maximum number of seconds that can pass between two similar fingerprint points before a new time range is started.
+    /// </summary>
+    public double MaximumTimeSkip { get; set; } = 3.5;
+
+    /// <summary>
+    /// Gets or sets the amount to shift inverted indexes by.
+    /// </summary>
+    public int InvertedIndexShift { get; set; } = 2;
+
+    /// <summary>
+    /// Gets or sets the maximum amount of noise (in dB) that is considered silent.
+    /// Lowering this number will increase the filter's sensitivity to noise.
+    /// </summary>
+    public int SilenceDetectionMaximumNoise { get; set; } = -50;
+
+    /// <summary>
+    /// Gets or sets the minimum duration of audio (in seconds) that is considered silent.
+    /// </summary>
+    public double SilenceDetectionMinimumDuration { get; set; } = 0.33;
 }

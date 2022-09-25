@@ -58,7 +58,7 @@ public class TroubleshootingController : ControllerBase
         bundle.Append(" seasons");
         bundle.Append('\n');
 
-        bundle.Append(Chromaprint.GetChromaprintLogs());
+        bundle.Append(FFmpegWrapper.GetChromaprintLogs());
 
         return bundle.ToString();
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,30 +16,9 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 public class AnalyzeEpisodesTask : IScheduledTask
 {
     /// <summary>
-    /// Maximum number of bits (out of 32 total) that can be different between segments before they are considered dissimilar.
-    /// 6 bits means the audio must be at least 81% similar (1 - 6 / 32).
-    /// </summary>
-    private const double MaximumDifferences = 6;
-
-    /// <summary>
-    /// Maximum time (in seconds) permitted between timestamps before they are considered non-contiguous.
-    /// </summary>
-    private const double MaximumDistance = 3.5;
-
-    /// <summary>
     /// Seconds of audio in one fingerprint point. This value is defined by the Chromaprint library and should not be changed.
     /// </summary>
     private const double SamplesToSeconds = 0.128;
-
-    /// <summary>
-    /// Bucket size used in the reanalysis histogram.
-    /// </summary>
-    private const int ReanalysisBucketWidth = 5;
-
-    /// <summary>
-    /// Maximum time (in seconds) that an intro's duration can be different from a typical intro's duration before marking it for reanalysis.
-    /// </summary>
-    private const double ReanalysisTolerance = ReanalysisBucketWidth * 1.5;
 
     private readonly ILogger<AnalyzeEpisodesTask> _logger;
 
@@ -47,30 +27,22 @@ public class AnalyzeEpisodesTask : IScheduledTask
     private readonly ILibraryManager? _libraryManager;
 
     /// <summary>
-    /// Lock which guards the fingerprint cache dictionary.
-    /// </summary>
-    private readonly object _fingerprintCacheLock = new object();
-
-    /// <summary>
     /// Lock which guards the shared dictionary of intros.
     /// </summary>
     private readonly object _introsLock = new object();
 
     /// <summary>
-    /// Temporary fingerprint cache to speed up reanalysis.
-    /// Fingerprints are removed from this after a season is analyzed.
-    /// </summary>
-    private Dictionary<Guid, uint[]> _fingerprintCache;
-
-    /// <summary>
-    /// Statistics for the currently running analysis task.
-    /// </summary>
-    private AnalysisStatistics analysisStatistics = new AnalysisStatistics();
-
-    /// <summary>
     /// Minimum duration of similar audio that will be considered an introduction.
     /// </summary>
     private static int minimumIntroDuration = 15;
+
+    private static int maximumDifferences = 6;
+
+    private static int invertedIndexShift = 2;
+
+    private static double maximumTimeSkip = 3.5;
+
+    private static double silenceDetectionMinimumDuration = 0.33;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
@@ -90,8 +62,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
     {
         _logger = loggerFactory.CreateLogger<AnalyzeEpisodesTask>();
         _queueLogger = loggerFactory.CreateLogger<QueueManager>();
-
-        _fingerprintCache = new Dictionary<Guid, uint[]>();
 
         EdlManager.Initialize(_logger);
     }
@@ -141,19 +111,23 @@ public class AnalyzeEpisodesTask : IScheduledTask
                 "No episodes to analyze. If you are limiting the list of libraries to analyze, check that all library names have been spelled correctly.");
         }
 
+        // Load analysis settings from configuration
+        var config = Plugin.Instance?.Configuration ?? new Configuration.PluginConfiguration();
+        maximumDifferences = config.MaximumFingerprintPointDifferences;
+        invertedIndexShift = config.InvertedIndexShift;
+        maximumTimeSkip = config.MaximumTimeSkip;
+        silenceDetectionMinimumDuration = config.SilenceDetectionMinimumDuration;
+
         // Log EDL settings
         EdlManager.LogConfiguration();
 
-        // Include the previously processed episodes in the percentage reported to the UI.
-        var totalProcessed = CountProcessedEpisodes();
+        var totalProcessed = 0;
         var options = new ParallelOptions()
         {
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
         };
 
         var taskStart = DateTime.Now;
-        analysisStatistics = new AnalysisStatistics();
-        analysisStatistics.TotalQueuedEpisodes = Plugin.Instance!.TotalQueued;
 
         minimumIntroDuration = Plugin.Instance!.Configuration.MinimumIntroDuration;
 
@@ -169,9 +143,16 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
             try
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var episodes = new ReadOnlyCollection<QueuedEpisode>(season.Value);
+
                 // Increment totalProcessed by the number of episodes in this season that were actually analyzed
                 // (instead of just using the number of episodes in the current season).
-                var analyzed = AnalyzeSeason(season, cancellationToken);
+                var analyzed = AnalyzeSeason(episodes, cancellationToken);
                 Interlocked.Add(ref totalProcessed, analyzed);
                 writeEdl = analyzed > 0 || Plugin.Instance!.Configuration.RegenerateEdlFiles;
             }
@@ -192,29 +173,13 @@ public class AnalyzeEpisodesTask : IScheduledTask
                     ex);
             }
 
-            // Clear this season's episodes from the temporary fingerprint cache.
-            lock (_fingerprintCacheLock)
-            {
-                foreach (var ep in season.Value)
-                {
-                    _fingerprintCache.Remove(ep.EpisodeId);
-                }
-            }
-
             if (writeEdl && Plugin.Instance!.Configuration.EdlAction != EdlAction.None)
             {
                 EdlManager.UpdateEDLFiles(season.Value.AsReadOnly());
             }
 
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
-
-            analysisStatistics.TotalCPUTime.AddDuration(workerStart);
-            Plugin.Instance!.AnalysisStatistics = analysisStatistics;
         });
-
-        // Update analysis statistics
-        analysisStatistics.TotalTaskTime.AddDuration(taskStart);
-        Plugin.Instance!.AnalysisStatistics = analysisStatistics;
 
         // Turn the regenerate EDL flag off after the scan completes.
         if (Plugin.Instance!.Configuration.RegenerateEdlFiles)
@@ -254,117 +219,117 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Fingerprints all episodes in the provided season and stores the timestamps of all introductions.
     /// </summary>
-    /// <param name="season">Pairing of season GUID to a list of QueuedEpisode objects.</param>
+    /// <param name="episodes">Episodes in this season.</param>
     /// <param name="cancellationToken">Cancellation token provided by the scheduled task.</param>
     /// <returns>Number of episodes from the provided season that were analyzed.</returns>
     private int AnalyzeSeason(
-        KeyValuePair<Guid, List<QueuedEpisode>> season,
+        ReadOnlyCollection<QueuedEpisode> episodes,
         CancellationToken cancellationToken)
     {
+        // All intros for this season.
         var seasonIntros = new Dictionary<Guid, Intro>();
-        var episodes = season.Value;
-        var first = episodes[0];
+
+        // Cache of all fingerprints for this season.
+        var fingerprintCache = new Dictionary<Guid, uint[]>();
+
+        // Episode analysis queue.
+        var episodeAnalysisQueue = new List<QueuedEpisode>(episodes);
 
         /* Don't analyze specials or seasons with an insufficient number of episodes.
          * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
          * which would result in the entire episode being marked as an introduction, as the audio is identical.
          */
-        if (season.Value.Count < 2 || first.SeasonNumber == 0)
+        if (episodes.Count < 2 || episodes[0].SeasonNumber == 0)
         {
             return episodes.Count;
         }
 
-        var unanalyzed = false;
+        var first = episodes[0];
 
-        // Only log an analysis message if there are unanalyzed episodes in this season.
-        foreach (var episode in episodes)
+        _logger.LogInformation(
+            "Analyzing {Count} episodes from {Name} season {Season}",
+            episodes.Count,
+            first.SeriesName,
+            first.SeasonNumber);
+
+        // Compute fingerprints for all episodes in the season
+        foreach (var episode in episodeAnalysisQueue)
         {
-            if (!Plugin.Instance!.Intros.ContainsKey(episode.EpisodeId))
-            {
-                unanalyzed = true;
-                break;
-            }
-        }
-
-        if (unanalyzed)
-        {
-            _logger.LogInformation(
-                "Analyzing {Count} episodes from {Name} season {Season}",
-                season.Value.Count,
-                first.SeriesName,
-                first.SeasonNumber);
-        }
-        else
-        {
-            _logger.LogDebug(
-                "All episodes from {Name} season {Season} have already been analyzed",
-                first.SeriesName,
-                first.SeasonNumber);
-
-            return 0;
-        }
-
-        // Ensure there are an even number of episodes
-        if (episodes.Count % 2 != 0)
-        {
-            episodes.Add(episodes[episodes.Count - 2]);
-        }
-
-        // Analyze each pair of episodes in the current season
-        var everFoundIntro = false;
-        var failures = 0;
-        for (var i = 0; i < episodes.Count; i += 2)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-
-            var lhs = episodes[i];
-            var rhs = episodes[i + 1];
-
-            if (!everFoundIntro && failures >= 20)
-            {
-                _logger.LogWarning(
-                    "Failed to find an introduction in {Series} season {Season}",
-                    lhs.SeriesName,
-                    lhs.SeasonNumber);
-
-                break;
-            }
-
-            if (Plugin.Instance!.Intros.ContainsKey(lhs.EpisodeId) && Plugin.Instance!.Intros.ContainsKey(rhs.EpisodeId))
-            {
-                _logger.LogTrace(
-                    "Episodes {LHS} and {RHS} have both already been fingerprinted",
-                    lhs.EpisodeId,
-                    rhs.EpisodeId);
-
-                continue;
-            }
-
             try
             {
-                _logger.LogTrace("Analyzing {LHS} and {RHS}", lhs.Path, rhs.Path);
+                fingerprintCache[episode.EpisodeId] = FFmpegWrapper.Fingerprint(episode);
 
-                var (lhsIntro, rhsIntro) = FingerprintEpisodes(lhs, rhs);
-                seasonIntros[lhsIntro.EpisodeId] = lhsIntro;
-                seasonIntros[rhsIntro.EpisodeId] = rhsIntro;
-                analysisStatistics.TotalAnalyzedEpisodes.Add(2);
-
-                if (!lhsIntro.Valid)
+                if (cancellationToken.IsCancellationRequested)
                 {
-                    failures += 2;
-                    continue;
+                    return episodes.Count;
                 }
-
-                everFoundIntro = true;
             }
             catch (FingerprintException ex)
             {
-                _logger.LogError("Caught fingerprint error: {Ex}", ex);
+                _logger.LogWarning("Caught fingerprint error: {Ex}", ex);
+
+                // Fallback to an empty fingerprint on any error
+                fingerprintCache[episode.EpisodeId] = Array.Empty<uint>();
             }
         }
+
+        // While there are still episodes in the queue
+        while (episodeAnalysisQueue.Count > 0)
+        {
+            // Pop the first episode from the queue
+            var currentEpisode = episodeAnalysisQueue[0];
+            episodeAnalysisQueue.RemoveAt(0);
+
+            // Search through all remaining episodes.
+            foreach (var remainingEpisode in episodeAnalysisQueue)
+            {
+                // Compare the current episode to all remaining episodes in the queue.
+                var (currentIntro, remainingIntro) = CompareEpisodes(
+                    currentEpisode.EpisodeId,
+                    fingerprintCache[currentEpisode.EpisodeId],
+                    remainingEpisode.EpisodeId,
+                    fingerprintCache[remainingEpisode.EpisodeId]);
+
+                // Ignore this comparison result if:
+                // - one of the intros isn't valid, or
+                // - the introduction exceeds the configured limit
+                if (
+                    !remainingIntro.Valid ||
+                    remainingIntro.Duration > Plugin.Instance!.Configuration.MaximumIntroDuration)
+                {
+                    continue;
+                }
+
+                // Only save the discovered intro if it is:
+                // - the first intro discovered for this episode
+                // - longer than the previously discovered intro
+                if (
+                    !seasonIntros.TryGetValue(currentIntro.EpisodeId, out var savedCurrentIntro) ||
+                    currentIntro.Duration > savedCurrentIntro.Duration)
+                {
+                    seasonIntros[currentIntro.EpisodeId] = currentIntro;
+                }
+
+                if (
+                    !seasonIntros.TryGetValue(remainingIntro.EpisodeId, out var savedRemainingIntro) ||
+                    remainingIntro.Duration > savedRemainingIntro.Duration)
+                {
+                    seasonIntros[remainingIntro.EpisodeId] = remainingIntro;
+                }
+
+                break;
+            }
+
+            // If no intro is found at this point, the popped episode is not reinserted into the queue.
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return episodes.Count;
+        }
+
+        // Adjust all introduction end times so that they end at silence.
+        seasonIntros = AdjustIntroEndTimes(episodes, seasonIntros);
 
         // Ensure only one thread at a time can update the shared intro dictionary.
         lock (_introsLock)
@@ -373,17 +338,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
             {
                 Plugin.Instance!.Intros[intro.Key] = intro.Value;
             }
-        }
-
-        // Only run the second pass if the user hasn't requested cancellation and we found an intro
-        if (!cancellationToken.IsCancellationRequested && everFoundIntro)
-        {
-            var start = DateTime.Now;
-
-            // Run a second pass over this season to remove outliers and fix episodes that failed in the first pass.
-            RunSecondPass(season.Value);
-
-            analysisStatistics.SecondPassCPUTime.AddDuration(start);
         }
 
         lock (_introsLock)
@@ -397,99 +351,34 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Analyze two episodes to find an introduction sequence shared between them.
     /// </summary>
-    /// <param name="lhsEpisode">First episode to analyze.</param>
-    /// <param name="rhsEpisode">Second episode to analyze.</param>
-    /// <returns>Intros for the first and second episodes.</returns>
-    public (Intro Lhs, Intro Rhs) FingerprintEpisodes(QueuedEpisode lhsEpisode, QueuedEpisode rhsEpisode)
-    {
-        var start = DateTime.Now;
-        var lhsFingerprint = Chromaprint.Fingerprint(lhsEpisode);
-        var rhsFingerprint = Chromaprint.Fingerprint(rhsEpisode);
-        analysisStatistics.FingerprintCPUTime.AddDuration(start);
-
-        // Cache the fingerprints for quicker recall in the second pass (if one is needed).
-        lock (_fingerprintCacheLock)
-        {
-            _fingerprintCache[lhsEpisode.EpisodeId] = lhsFingerprint;
-            _fingerprintCache[rhsEpisode.EpisodeId] = rhsFingerprint;
-        }
-
-        return FingerprintEpisodes(
-            lhsEpisode.EpisodeId,
-            lhsFingerprint,
-            rhsEpisode.EpisodeId,
-            rhsFingerprint,
-            true);
-    }
-
-    /// <summary>
-    /// Analyze two episodes to find an introduction sequence shared between them.
-    /// </summary>
     /// <param name="lhsId">First episode id.</param>
     /// <param name="lhsPoints">First episode fingerprint points.</param>
     /// <param name="rhsId">Second episode id.</param>
     /// <param name="rhsPoints">Second episode fingerprint points.</param>
-    /// <param name="isFirstPass">If this was called as part of the first analysis pass, add the elapsed time to the statistics.</param>
     /// <returns>Intros for the first and second episodes.</returns>
-    public (Intro Lhs, Intro Rhs) FingerprintEpisodes(
+    public (Intro Lhs, Intro Rhs) CompareEpisodes(
         Guid lhsId,
         uint[] lhsPoints,
         Guid rhsId,
-        uint[] rhsPoints,
-        bool isFirstPass)
+        uint[] rhsPoints)
     {
-        // If this isn't running as part of the first analysis pass, don't count this CPU time as first pass time.
-        var start = isFirstPass ? DateTime.Now : DateTime.MinValue;
+        var start = DateTime.Now;
 
-        // ===== Method 1: Inverted indexes =====
         // Creates an inverted fingerprint point index for both episodes.
         // For every point which is a 100% match, search for an introduction at that point.
-        var (lhsRanges, rhsRanges) = SearchInvertedIndex(lhsPoints, rhsPoints);
+        var (lhsRanges, rhsRanges) = SearchInvertedIndex(lhsId, lhsPoints, rhsId, rhsPoints);
 
         if (lhsRanges.Count > 0)
         {
             _logger.LogTrace("Index search successful");
-            analysisStatistics.IndexSearches.Increment();
-            analysisStatistics.FirstPassCPUTime.AddDuration(start);
 
             return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
         }
-
-        // ===== Method 2: Quick scan =====
-        // Tests if an intro can be found within the first 5 seconds of the episodes. ±5/0.128 = ±40 samples.
-        (lhsRanges, rhsRanges) = ShiftEpisodes(lhsPoints, rhsPoints, -40, 40);
-
-        if (lhsRanges.Count > 0)
-        {
-            _logger.LogTrace("Quick scan successful");
-            analysisStatistics.QuickScans.Increment();
-            analysisStatistics.FirstPassCPUTime.AddDuration(start);
-
-            return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
-        }
-
-        // ===== Method 3: Full scan =====
-        // Compares all elements of the shortest fingerprint to the other fingerprint.
-        var limit = Math.Min(lhsPoints.Length, rhsPoints.Length);
-        (lhsRanges, rhsRanges) = ShiftEpisodes(lhsPoints, rhsPoints, -1 * limit, limit);
-
-        if (lhsRanges.Count > 0)
-        {
-            _logger.LogTrace("Full scan successful");
-            analysisStatistics.FullScans.Increment();
-            analysisStatistics.FirstPassCPUTime.AddDuration(start);
-
-            return GetLongestTimeRange(lhsId, lhsRanges, rhsId, rhsRanges);
-        }
-
-        // No method was able to find an introduction, return nothing.
 
         _logger.LogTrace(
             "Unable to find a shared introduction sequence between {LHS} and {RHS}",
             lhsId,
             rhsId);
-
-        analysisStatistics.FirstPassCPUTime.AddDuration(start);
 
         return (new Intro(lhsId), new Intro(rhsId));
     }
@@ -533,32 +422,41 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Search for a shared introduction sequence using inverted indexes.
     /// </summary>
+    /// <param name="lhsId">LHS ID.</param>
     /// <param name="lhsPoints">Left episode fingerprint points.</param>
+    /// <param name="rhsId">RHS ID.</param>
     /// <param name="rhsPoints">Right episode fingerprint points.</param>
     /// <returns>List of shared TimeRanges between the left and right episodes.</returns>
     private (List<TimeRange> Lhs, List<TimeRange> Rhs) SearchInvertedIndex(
+        Guid lhsId,
         uint[] lhsPoints,
+        Guid rhsId,
         uint[] rhsPoints)
     {
         var lhsRanges = new List<TimeRange>();
         var rhsRanges = new List<TimeRange>();
 
         // Generate inverted indexes for the left and right episodes.
-        var lhsIndex = Chromaprint.CreateInvertedIndex(lhsPoints);
-        var rhsIndex = Chromaprint.CreateInvertedIndex(rhsPoints);
+        var lhsIndex = FFmpegWrapper.CreateInvertedIndex(lhsId, lhsPoints);
+        var rhsIndex = FFmpegWrapper.CreateInvertedIndex(rhsId, rhsPoints);
         var indexShifts = new HashSet<int>();
 
         // For all audio points in the left episode, check if the right episode has a point which matches exactly.
         // If an exact match is found, calculate the shift that must be used to align the points.
         foreach (var kvp in lhsIndex)
         {
-            var point = kvp.Key;
+            var originalPoint = kvp.Key;
 
-            if (rhsIndex.ContainsKey(point))
+            for (var i = -1 * invertedIndexShift; i <= invertedIndexShift; i++)
             {
-                var lhsFirst = (int)lhsIndex[point];
-                var rhsFirst = (int)rhsIndex[point];
-                indexShifts.Add(rhsFirst - lhsFirst);
+                var modifiedPoint = (uint)(originalPoint + i);
+
+                if (rhsIndex.ContainsKey(modifiedPoint))
+                {
+                    var lhsFirst = (int)lhsIndex[originalPoint];
+                    var rhsFirst = (int)rhsIndex[modifiedPoint];
+                    indexShifts.Add(rhsFirst - lhsFirst);
+                }
             }
         }
 
@@ -643,7 +541,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             var diff = lhs[lhsPosition] ^ rhs[rhsPosition];
 
             // If the difference between the samples is small, flag both times as similar.
-            if (CountBits(diff) > MaximumDifferences)
+            if (CountBits(diff) > maximumDifferences)
             {
                 continue;
             }
@@ -660,28 +558,108 @@ public class AnalyzeEpisodesTask : IScheduledTask
         rhsTimes.Add(double.MaxValue);
 
         // Now that both fingerprints have been compared at this shift, see if there's a contiguous time range.
-        var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), MaximumDistance);
+        var lContiguous = TimeRangeHelpers.FindContiguous(lhsTimes.ToArray(), maximumTimeSkip);
         if (lContiguous is null || lContiguous.Duration < minimumIntroDuration)
         {
             return (new TimeRange(), new TimeRange());
         }
 
         // Since LHS had a contiguous time range, RHS must have one also.
-        var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), MaximumDistance)!;
+        var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), maximumTimeSkip)!;
 
         // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
         if (lContiguous.Duration >= 90)
         {
-            lContiguous.End -= 2 * MaximumDistance;
-            rContiguous.End -= 2 * MaximumDistance;
+            lContiguous.End -= 2 * maximumTimeSkip;
+            rContiguous.End -= 2 * maximumTimeSkip;
         }
         else if (lContiguous.Duration >= 30)
         {
-            lContiguous.End -= MaximumDistance;
-            rContiguous.End -= MaximumDistance;
+            lContiguous.End -= maximumTimeSkip;
+            rContiguous.End -= maximumTimeSkip;
         }
 
         return (lContiguous, rContiguous);
+    }
+
+    /// <summary>
+    /// Adjusts the end timestamps of all intros so that they end at silence.
+    /// </summary>
+    /// <param name="episodes">QueuedEpisodes to adjust.</param>
+    /// <param name="originalIntros">Original introductions.</param>
+    private Dictionary<Guid, Intro> AdjustIntroEndTimes(
+        ReadOnlyCollection<QueuedEpisode> episodes,
+        Dictionary<Guid, Intro> originalIntros)
+    {
+        // The minimum duration of audio that must be silent before adjusting the intro's end.
+        var minimumSilence = Plugin.Instance!.Configuration.SilenceDetectionMinimumDuration;
+
+        Dictionary<Guid, Intro> modifiedIntros = new();
+
+        // For all episodes
+        foreach (var episode in episodes)
+        {
+            _logger.LogTrace(
+                "Adjusting introduction end time for {Name} ({Id})",
+                episode.Name,
+                episode.EpisodeId);
+
+            // If no intro was found for this episode, skip it.
+            if (!originalIntros.TryGetValue(episode.EpisodeId, out var originalIntro))
+            {
+                _logger.LogTrace("{Name} does not have an intro", episode.Name);
+                continue;
+            }
+
+            // Only adjust the end timestamp of the intro
+            var originalIntroEnd = new TimeRange(originalIntro.IntroEnd - 15, originalIntro.IntroEnd);
+
+            _logger.LogTrace(
+                "{Name} original intro: {Start} - {End}",
+                episode.Name,
+                originalIntro.IntroStart,
+                originalIntro.IntroEnd);
+
+            // Detect silence in the media file up to the end of the intro.
+            var silence = FFmpegWrapper.DetectSilence(episode, (int)originalIntro.IntroEnd + 2);
+
+            // For all periods of silence
+            foreach (var currentRange in silence)
+            {
+                _logger.LogTrace(
+                    "{Name} silence: {Start} - {End}",
+                    episode.Name,
+                    currentRange.Start,
+                    currentRange.End);
+
+                // Ignore any silence that:
+                // * doesn't intersect the ending of the intro, or
+                // * is shorter than the user defined minimum duration, or
+                // * starts before the introduction does
+                if (
+                    !originalIntroEnd.Intersects(currentRange) ||
+                    currentRange.Duration < silenceDetectionMinimumDuration ||
+                    currentRange.Start < originalIntro.IntroStart)
+                {
+                    continue;
+                }
+
+                // Adjust the end timestamp of the intro to match the start of the silence region.
+                originalIntro.IntroEnd = currentRange.Start;
+                break;
+            }
+
+            _logger.LogTrace(
+                "{Name} adjusted intro: {Start} - {End}",
+                episode.Name,
+                originalIntro.IntroStart,
+                originalIntro.IntroEnd);
+
+            // Add the (potentially) modified intro back.
+            modifiedIntros[episode.EpisodeId] = originalIntro;
+        }
+
+        return modifiedIntros;
     }
 
     /// <summary>
@@ -692,194 +670,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
     public static int CountBits(uint number)
     {
         return BitOperations.PopCount(number);
-    }
-
-    /// <summary>
-    /// Reanalyze the most recently analyzed season.
-    /// Looks for and fixes intro durations that were either not found or are statistical outliers.
-    /// </summary>
-    /// <param name="episodes">List of episodes that was just analyzed.</param>
-    private void RunSecondPass(List<QueuedEpisode> episodes)
-    {
-        // First, assert that at least half of the episodes in this season have an intro.
-        var validCount = 0;
-        var totalCount = episodes.Count;
-
-        foreach (var episode in episodes)
-        {
-            if (Plugin.Instance!.Intros.TryGetValue(episode.EpisodeId, out var intro) && intro.Valid)
-            {
-                validCount++;
-            }
-        }
-
-        var percentValid = (validCount * 100) / totalCount;
-        _logger.LogTrace("Found intros in {Valid}/{Total} ({Percent}%) of episodes", validCount, totalCount, percentValid);
-        if (percentValid < 50)
-        {
-            return;
-        }
-
-        // Create a histogram of all episode durations
-        var histogram = new Dictionary<int, SeasonHistogram>();
-        foreach (var episode in episodes)
-        {
-            var id = episode.EpisodeId;
-            var duration = GetIntroDuration(id);
-
-            if (duration < minimumIntroDuration)
-            {
-                continue;
-            }
-
-            // Bucket the duration into equally sized groups
-            var bucket = Convert.ToInt32(Math.Floor(duration / ReanalysisBucketWidth)) * ReanalysisBucketWidth;
-
-            // TryAdd returns true when the key was successfully added (i.e. for newly created buckets).
-            // Newly created buckets are initialized with the provided episode ID, so nothing else needs to be done for them.
-            if (histogram.TryAdd(bucket, new SeasonHistogram(id)))
-            {
-                continue;
-            }
-
-            histogram[bucket].Episodes.Add(id);
-        }
-
-        // Find the bucket that was seen most often, as this is likely to be the true intro length.
-        var maxDuration = 0;
-        var maxBucket = new SeasonHistogram(Guid.Empty);
-        foreach (var entry in histogram)
-        {
-            if (entry.Value.Count > maxBucket.Count)
-            {
-                maxDuration = entry.Key;
-                maxBucket = entry.Value;
-            }
-        }
-
-        // Ensure that the most frequently seen bucket has a majority
-        percentValid = (maxBucket.Count * 100) / validCount;
-        _logger.LogTrace(
-            "Intro duration {Duration} appeared {Frequency} times ({Percent}%)",
-            maxDuration,
-            maxBucket.Count,
-            percentValid);
-
-        if (percentValid < 50 || maxBucket.Episodes[0].Equals(Guid.Empty))
-        {
-            return;
-        }
-
-        _logger.LogTrace("Second pass is processing {Count} episodes", totalCount - maxBucket.Count);
-
-        // Calculate a range of intro durations that are most likely to be correct.
-        var maxEpisode = episodes.Find(x => x.EpisodeId == maxBucket.Episodes[0]);
-        if (maxEpisode is null)
-        {
-            _logger.LogError("Second pass failed to get episode from bucket");
-            return;
-        }
-
-        var lhsDuration = GetIntroDuration(maxEpisode.EpisodeId);
-        var (lowTargetDuration, highTargetDuration) = (
-            lhsDuration - ReanalysisTolerance,
-            lhsDuration + ReanalysisTolerance);
-
-        // TODO: add limit and make it customizable
-        var count = maxBucket.Episodes.Count - 1;
-        var goodFingerprints = new List<uint[]>();
-        foreach (var id in maxBucket.Episodes)
-        {
-            if (!_fingerprintCache.TryGetValue(id, out var fp))
-            {
-                _logger.LogTrace("Second pass: max bucket episode {Id} not in cache, skipping", id);
-                continue;
-            }
-
-            goodFingerprints.Add(fp);
-        }
-
-        foreach (var episode in episodes)
-        {
-            // Don't reanalyze episodes from the max bucket
-            if (maxBucket.Episodes.Contains(episode.EpisodeId))
-            {
-                continue;
-            }
-
-            var oldDuration = GetIntroDuration(episode.EpisodeId);
-
-            // If the episode's intro duration is close enough to the targeted bucket, leave it alone.
-            if (Math.Abs(lhsDuration - oldDuration) <= ReanalysisTolerance)
-            {
-                _logger.LogTrace(
-                    "Not reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
-                    episode.Path,
-                    Math.Round(oldDuration, 2),
-                    maxDuration);
-
-                continue;
-            }
-
-            _logger.LogTrace(
-                "Reanalyzing episode {Path} (intro is {Initial}, target is {Max})",
-                episode.Path,
-                Math.Round(oldDuration, 2),
-                maxDuration);
-
-            // Analyze the episode again, ignoring whatever is returned for the known good episode.
-            foreach (var lhsFingerprint in goodFingerprints)
-            {
-                if (!_fingerprintCache.TryGetValue(episode.EpisodeId, out var fp))
-                {
-                    _logger.LogTrace("Unable to get cached fingerprint for {Id}, skipping", episode.EpisodeId);
-                    continue;
-                }
-
-                var (_, newRhs) = FingerprintEpisodes(
-                    maxEpisode.EpisodeId,
-                    lhsFingerprint,
-                    episode.EpisodeId,
-                    fp,
-                    false);
-
-                // Ensure that the new intro duration is within the targeted bucket and longer than what was found previously.
-                var newDuration = Math.Round(newRhs.IntroEnd - newRhs.IntroStart, 2);
-                if (newDuration < oldDuration || newDuration < lowTargetDuration || newDuration > highTargetDuration)
-                {
-                    _logger.LogTrace(
-                        "Ignoring reanalysis for {Path} (was {Initial}, now is {New})",
-                        episode.Path,
-                        oldDuration,
-                        newDuration);
-
-                    continue;
-                }
-
-                _logger.LogTrace(
-                    "Reanalysis succeeded for {Path} (was {Initial}, now is {New})",
-                    episode.Path,
-                    oldDuration,
-                    newDuration);
-
-                lock (_introsLock)
-                {
-                    Plugin.Instance!.Intros[episode.EpisodeId] = newRhs;
-                }
-
-                break;
-            }
-        }
-    }
-
-    private double GetIntroDuration(Guid id)
-    {
-        if (!Plugin.Instance!.Intros.TryGetValue(id, out var episode))
-        {
-            return 0;
-        }
-
-        return episode.Valid ? Math.Round(episode.IntroEnd - episode.IntroStart, 2) : 0;
     }
 
     /// <summary>
