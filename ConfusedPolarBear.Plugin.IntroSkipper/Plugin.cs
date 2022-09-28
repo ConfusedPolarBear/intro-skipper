@@ -40,28 +40,25 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         ILogger<Plugin> logger)
         : base(applicationPaths, xmlSerializer)
     {
+        Instance = this;
+
         _xmlSerializer = xmlSerializer;
         _libraryManager = libraryManager;
         _logger = logger;
 
-        // Create the base & cache directories (if needed).
         FingerprintCachePath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "cache");
+        FFmpegPath = serverConfiguration.GetEncodingOptions().EncoderAppPathDisplay;
+        _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
+
+        // Create the base & cache directories (if needed).
         if (!Directory.Exists(FingerprintCachePath))
         {
             Directory.CreateDirectory(FingerprintCachePath);
         }
 
-        _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
-
-        // Get the path to FFmpeg.
-        FFmpegPath = serverConfiguration.GetEncodingOptions().EncoderAppPathDisplay;
-
-        Intros = new Dictionary<Guid, Intro>();
-        AnalysisQueue = new Dictionary<Guid, List<QueuedEpisode>>();
-        Instance = this;
-
         ConfigurationChanged += OnConfigurationChanged;
 
+        // TODO: remove when https://github.com/jellyfin/jellyfin-meta/discussions/30 is complete
         try
         {
             RestoreTimestamps();
@@ -80,12 +77,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <summary>
     /// Gets the results of fingerprinting all episodes.
     /// </summary>
-    public Dictionary<Guid, Intro> Intros { get; }
+    public Dictionary<Guid, Intro> Intros { get; } = new();
 
     /// <summary>
     /// Gets the mapping of season ids to episodes that have been queued for fingerprinting.
     /// </summary>
-    public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; }
+    public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; } = new();
 
     /// <summary>
     /// Gets or sets the total number of episodes in the queue.
