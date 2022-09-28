@@ -9,6 +9,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
@@ -20,6 +21,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     private readonly object _serializationLock = new object();
     private IXmlSerializer _xmlSerializer;
     private ILibraryManager _libraryManager;
+    private ILogger<Plugin> _logger;
     private string _introPath;
 
     /// <summary>
@@ -29,15 +31,18 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
     /// <param name="serverConfiguration">Server configuration manager.</param>
     /// <param name="libraryManager">Library manager.</param>
+    /// <param name="logger">Logger.</param>
     public Plugin(
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
         IServerConfigurationManager serverConfiguration,
-        ILibraryManager libraryManager)
+        ILibraryManager libraryManager,
+        ILogger<Plugin> logger)
         : base(applicationPaths, xmlSerializer)
     {
         _xmlSerializer = xmlSerializer;
         _libraryManager = libraryManager;
+        _logger = logger;
 
         // Create the base & cache directories (if needed).
         FingerprintCachePath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "cache");
@@ -57,7 +62,14 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
         ConfigurationChanged += OnConfigurationChanged;
 
-        RestoreTimestamps();
+        try
+        {
+            RestoreTimestamps();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Unable to load introduction timestamps: {Exception}", ex);
+        }
     }
 
     /// <summary>
