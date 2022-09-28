@@ -10,6 +10,7 @@
     * Amount played is customizable and defaults to 2 seconds
   * Support modifying introduction detection algorithm settings
   * Add option to not skip the introduction in the first episode of a season
+  * Add option to analyze show extras (specials)
 
 * Fixes
   * Fix scheduled task interval (#79)

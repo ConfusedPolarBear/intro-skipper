@@ -235,16 +235,18 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Episode analysis queue.
         var episodeAnalysisQueue = new List<QueuedEpisode>(episodes);
 
-        /* Don't analyze specials or seasons with an insufficient number of episodes.
-         * A season with only 1 episode can't be analyzed as it would compare the episode to itself,
-         * which would result in the entire episode being marked as an introduction, as the audio is identical.
-         */
-        if (episodes.Count < 2 || episodes[0].SeasonNumber == 0)
+        // Skip seasons with an insufficient number of episodes.
+        if (episodes.Count <= 1)
         {
             return episodes.Count;
         }
 
+        // Only analyze specials (season 0) if the user has opted in.
         var first = episodes[0];
+        if (first.SeasonNumber == 0 && !Plugin.Instance!.Configuration.AnalyzeSeasonZero)
+        {
+            return 0;
+        }
 
         _logger.LogInformation(
             "Analyzing {Count} episodes from {Name} season {Season}",

@@ -16,14 +16,12 @@
 
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
-                                <input id="CacheFingerprints" type="checkbox" is="emby-checkbox" />
-                                <span>Cache fingerprints to disk</span>
+                                <input id="AnalyzeSeasonZero" type="checkbox" is="emby-checkbox" />
+                                <span>Analyze show extras</span>
                             </label>
 
                             <div class="fieldDescription">
-                                If checked, will store the audio fingerprints for all subsequently scanned files to
-                                disk. Caching fingerprints avoids having to re-run ffmpeg on each file, at the expense
-                                of disk usage.
+                                Analyze show extras (specials).
                             </div>
                         </div>
 
@@ -203,8 +201,8 @@
                             </label>
 
                             <div class="fieldDescription">
-                                If checked, intros will be automatically skipped. Will only work if web
-                                sockets are configured correctly.<br />
+                                If checked, intros will be automatically skipped. If you access Jellyfin through a reverse proxy, it must be configured to proxy web
+                                sockets.<br />
                             </div>
                         </div>
 
@@ -400,7 +398,7 @@
             ]
 
             var booleanConfigurationFields = [
-                "CacheFingerprints",
+                "AnalyzeSeasonZero",
                 "RegenerateEdlFiles",
                 "AutoSkip",
                 "SkipFirstEpisode"

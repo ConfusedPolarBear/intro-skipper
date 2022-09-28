@@ -31,6 +31,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public string SelectedLibraries { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether to analyze season 0.
+    /// </summary>
+    public bool AnalyzeSeasonZero { get; set; } = false;
+
     // ===== EDL handling =====
 
     /// <summary>
