@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -138,8 +139,12 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
+            var episodes = VerifyEpisodes(season.Value.AsReadOnly());
+            if (episodes.Count == 0)
+            {
+                return;
+            }
 
-            var episodes = season.Value.AsReadOnly();
             var first = episodes[0];
             var writeEdl = false;
 
@@ -190,6 +195,39 @@ public class AnalyzeEpisodesTask : IScheduledTask
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Verify that all episodes in a season exist in Jellyfin and as a file in storage.
+    /// </summary>
+    /// <param name="candidates">QueuedEpisodes.</param>
+    /// <returns>Verified QueuedEpisodes.</returns>
+    private ReadOnlyCollection<QueuedEpisode> VerifyEpisodes(ReadOnlyCollection<QueuedEpisode> candidates)
+    {
+        var verified = new List<QueuedEpisode>();
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                var path = Plugin.Instance!.GetItemPath(candidate.EpisodeId);
+
+                if (File.Exists(path))
+                {
+                    verified.Add(candidate);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    "Skipping analysis of {Name} ({Id}): {Exception}",
+                    candidate.Name,
+                    candidate.EpisodeId,
+                    ex);
+            }
+        }
+
+        return verified.AsReadOnly();
     }
 
     /// <summary>
