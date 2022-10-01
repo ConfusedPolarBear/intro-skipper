@@ -10,13 +10,15 @@ If you use the custom web interface on your server, you will be able to click a 
 
 ![Skip intro button](images/skip-button.png)
 
-However, if you want to use an unmodified installation of Jellyfin 10.8.0 or use clients that do not use the web interface provided by the server, the plugin can be configured to automatically skip intros.
+However, if you want to use an unmodified installation of Jellyfin 10.8.z or use clients that do not use the web interface provided by the server, the plugin can be configured to automatically skip intros.
 
 ## System requirements
 
-Plugin versions v0.1.5 and newer require `jellyfin-ffmpeg >= 5.0.1-5` to be installed. This is installed by default in the official Jellyfin 10.8.0 container and available as `jellyfin-ffmpeg5` on Debian Linux based systems.
-
-Plugin versions v0.1.0 and older require `fpcalc` to be installed.
+* Jellyfin 10.8.4 (or newer)
+* Jellyfin's [fork](https://github.com/jellyfin/jellyfin-ffmpeg) of `ffmpeg` must be installed, version `5.0.1-5` or newer
+  * `jellyfin/jellyfin` 10.8.z container: preinstalled
+  * `linuxserver/jellyfin` 10.8.z container: preinstalled
+  * Debian Linux based native installs: provided by the `jellyfin-ffmpeg5` package
 
 ## Introduction requirements
 
@@ -27,12 +29,14 @@ Show introductions will only be detected if they are:
 
 All of these requirements can be customized as needed.
 
-## Step 1: Optional: use the modified web interface
-While this plugin is fully compatible with an unmodified version of Jellyfin 10.8.0, using a modified web interface allows you to click a button to skip intros. If you skip this step and do not use the modified web interface, you will have to enable the "Automatically skip intros" option in the plugin settings.
+## Installation instructions
+
+### Step 1: Install the modified web interface (optional)
+While this plugin is fully compatible with an unmodified version of Jellyfin 10.8.z, using a modified web interface allows you to click a button to skip intros. If you skip this step and do not use the modified web interface, you will have to enable the "Automatically skip intros" option in the plugin settings.
 
 Instructions on how to switch web interface versions are located [here](docs/web_interface.md).
 
-## Step 2: Install the plugin
+### Step 2: Install the plugin
 1. Add this plugin repository to your server: `https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/manifest.json`
 2. Install the Intro Skipper plugin from the General section
 3. Restart Jellyfin
