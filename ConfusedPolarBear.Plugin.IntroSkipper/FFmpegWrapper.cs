@@ -457,51 +457,57 @@ public static class FFmpegWrapper
     /// <returns>Markdown formatted logs.</returns>
     public static string GetChromaprintLogs()
     {
-        var logs = new StringBuilder(1024);
-
         // Print the FFmpeg detection status at the top.
         // Format: "* FFmpeg: `error`"
-        logs.Append("* FFmpeg: `");
-        logs.Append(ChromaprintLogs["error"]);
-        logs.Append("`\n\n"); // Use two newlines to separate the bulleted list from the logs
+        // Append two newlines to separate the bulleted list from the logs
+        var logs = string.Format(
+            CultureInfo.InvariantCulture,
+            "* FFmpeg: `{0}`\n\n",
+            ChromaprintLogs["error"]);
 
-        // Don't print FFmpeg's logs if no error was detected during initialization.
+        // Always include ffmpeg version information
+        logs += FormatFFmpegLog("version");
+
+        // Don't print feature detection logs if the plugin started up okay
         if (ChromaprintLogs["error"] == "okay")
         {
-            return logs.ToString();
+            return logs;
         }
 
         // Print all remaining logs
         foreach (var kvp in ChromaprintLogs)
         {
-            var name = kvp.Key;
-            var contents = kvp.Value;
-
-            if (string.Equals(name, "error", StringComparison.OrdinalIgnoreCase))
+            if (kvp.Key == "error" || kvp.Key == "version")
             {
                 continue;
             }
 
-            /* Format:
-             * FFmpeg NAME:
-             * ```
-             * LOGS
-             * ```
-             */
-            logs.Append("FFmpeg ");
-            logs.Append(name);
-            logs.Append(":\n```\n");
-            logs.Append(contents);
-
-            // ensure the closing triple backtick is on a separate line
-            if (!contents.EndsWith('\n'))
-            {
-                logs.Append('\n');
-            }
-
-            logs.Append("```\n\n");
+            logs += FormatFFmpegLog(kvp.Key);
         }
 
-        return logs.ToString();
+        return logs;
+    }
+
+    private static string FormatFFmpegLog(string key)
+    {
+        /* Format:
+        * FFmpeg NAME:
+        * ```
+        * LOGS
+        * ```
+        */
+
+        var formatted = string.Format(CultureInfo.InvariantCulture, "FFmpeg {0}:\n```\n", key);
+        formatted += ChromaprintLogs[key];
+
+        // Ensure the closing triple backtick is on a separate line
+        if (!formatted.EndsWith('\n'))
+        {
+            formatted += "\n";
+        }
+
+        formatted += "```\n\n";
+
+        return formatted;
     }
 }
