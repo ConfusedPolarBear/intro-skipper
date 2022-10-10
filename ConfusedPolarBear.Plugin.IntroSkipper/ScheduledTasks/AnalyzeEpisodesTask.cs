@@ -139,7 +139,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
-            var episodes = VerifyEpisodes(season.Value.AsReadOnly());
+            var (episodes, unanalyzed) = VerifyEpisodes(season.Value.AsReadOnly());
             if (episodes.Count == 0)
             {
                 return;
@@ -147,6 +147,16 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
             var first = episodes[0];
             var writeEdl = false;
+
+            if (!unanalyzed)
+            {
+                _logger.LogDebug(
+                    "All episodes in {Name} season {Season} have already been analyzed",
+                    first.SeriesName,
+                    first.SeasonNumber);
+
+                return;
+            }
 
             try
             {
@@ -201,20 +211,31 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// Verify that all episodes in a season exist in Jellyfin and as a file in storage.
     /// </summary>
     /// <param name="candidates">QueuedEpisodes.</param>
-    /// <returns>Verified QueuedEpisodes.</returns>
-    private ReadOnlyCollection<QueuedEpisode> VerifyEpisodes(ReadOnlyCollection<QueuedEpisode> candidates)
+    /// <returns>Verified QueuedEpisodes and a flag indicating if any episode in this season has not been analyzed yet.</returns>
+    private (
+        ReadOnlyCollection<QueuedEpisode> VerifiedEpisodes,
+        bool AnyUnanalyzed)
+        VerifyEpisodes(ReadOnlyCollection<QueuedEpisode> candidates)
     {
+        var unanalyzed = false;
         var verified = new List<QueuedEpisode>();
 
         foreach (var candidate in candidates)
         {
             try
             {
+                // Verify that the episode exists in Jellyfin and in storage
                 var path = Plugin.Instance!.GetItemPath(candidate.EpisodeId);
 
                 if (File.Exists(path))
                 {
                     verified.Add(candidate);
+                }
+
+                // Flag this season for analysis if the current episode hasn't been analyzed yet
+                if (!Plugin.Instance.Intros.ContainsKey(candidate.EpisodeId))
+                {
+                    unanalyzed = true;
                 }
             }
             catch (Exception ex)
@@ -227,7 +248,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
             }
         }
 
-        return verified.AsReadOnly();
+        return (verified.AsReadOnly(), unanalyzed);
     }
 
     /// <summary>
