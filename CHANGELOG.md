@@ -68,14 +68,14 @@
 * Switch to new fingerprint comparison algorithm
   * If you would like to test the new comparison algorithm, you will have to erase all previously discovered introduction timestamps.
 
-## v0.0.0.3 (2022-06-21)
+## v0.0.0.3 (2022-05-21)
 * Fix `fpcalc` version check
 
-## v0.0.0.2 (2022-06-21)
+## v0.0.0.2 (2022-05-21)
 * Analyze multiple seasons in parallel
 * Reanalyze episodes with an unusually short or long intro sequence
 * Check installed `fpcalc` version
 * Clarify installation instructions
 
-## v0.0.0.1 (2022-06-10)
+## v0.0.0.1 (2022-05-10)
 * First alpha build
