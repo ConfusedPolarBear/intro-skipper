@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.7.0 (no eta)
+## v0.1.7.0 (2022-10-25)
 * New features
   * Rewrote fingerprint comparison algorithm to be faster (~30x speedup) and detect more introductions
   * Add support for the `silencedetect` filter in ffmpeg
