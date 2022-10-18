@@ -1,7 +1,7 @@
 version: "3"
 services:
   chrome:
-    image: selenium/standalone-chrome:103.0
+    image: selenium/standalone-chrome:106.0
     shm_size: 2gb
     ports:
       - 4444:4444
@@ -9,7 +9,7 @@ services:
       - SE_NODE_SESSION_TIMEOUT=10
 
   firefox:
-    image: selenium/standalone-firefox:103.0
+    image: selenium/standalone-firefox:105.0
     shm_size: 2gb
     ports:
       - 4445:4444
