@@ -97,7 +97,7 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>
     /// Gets or sets the amount of intro to play (in seconds).
     /// </summary>
-    public int SecondsOfIntroToPlay { get; set; } = 3;
+    public int SecondsOfIntroToPlay { get; set; } = 2;
 
     // ===== Internal algorithm settings =====
 
