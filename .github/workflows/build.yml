@@ -2,7 +2,7 @@ name: 'Build Plugin'
 
 on:
   push:
-    branches: [ "master", "algorithm_rewrite" ]
+    branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
 
