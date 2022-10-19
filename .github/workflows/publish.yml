@@ -20,7 +20,7 @@ jobs:
       run: |
         tag="$(git tag --sort=committerdate | tail -n 1)"
         git checkout "$tag"
-        echo "::set-output name=tag::$tag"
+        echo "tag=$tag" >> $GITHUB_OUTPUT
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v2
