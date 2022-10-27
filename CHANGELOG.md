@@ -1,9 +1,10 @@
 # Changelog
 
-## v0.1.7.0 (2022-10-25)
+## v0.1.7.0 (2022-10-26)
 * New features
   * Rewrote fingerprint comparison algorithm to be faster (~30x speedup) and detect more introductions
   * Detect silence at the end of introductions and use it to avoid skipping over the beginning of an episode
+    * If you are upgrading from a previous release and want to use the silence detection feature on shows that have already been analyzed, you must click the `Erase introduction timestamps` button at the bottom of the plugin settings page
   * Add support bundle
   * Add maximum introduction duration
   * Support playing a few seconds from the end of the introduction to verify that no episode content was skipped over
