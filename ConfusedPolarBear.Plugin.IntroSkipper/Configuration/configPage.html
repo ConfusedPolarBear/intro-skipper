@@ -456,27 +456,20 @@
                 const bundle = await fetchWithAuth("IntroSkipper/SupportBundle", "GET", null);
                 const bundleText = await bundle.text();
 
-                // Display it to the user
-                document.querySelector("textarea#supportBundle").value = bundleText;
-
-                // Attempt to copy it to the clipboard automatically, falling back to selecting
-                // all text and prompting the user to press ctrl c.
-                try {
-                    navigator.clipboard.writeText(bundleText)
-                    Dashboard.alert("Support bundle copied to clipboard");
-                } catch {
-                    supportBundleCopyFailed();
-                }
-            }
-
-            // if the automatic bundle copy fails (likely due to an insecure context), have the
-            // user copy it manually.
-            function supportBundleCopyFailed() {
+                // Display it to the user and select all
                 const ta = document.querySelector("textarea#supportBundle");
+                ta.value = bundleText;
                 ta.focus();
                 ta.setSelectionRange(0, ta.value.length);
 
-                Dashboard.alert("Press Ctrl+C to copy support bundle");
+                // Attempt to copy it to the clipboard automatically, falling back
+                // to prompting the user to press Ctrl + C.
+                try {
+                    navigator.clipboard.writeText(bundleText);
+                    Dashboard.alert("Support bundle copied to clipboard");
+                } catch {
+                    Dashboard.alert("Press Ctrl+C to copy support bundle");
+                }
             }
 
             // show changed, populate seasons
