@@ -8,15 +8,20 @@ assignees: ''
 ---
 
 **Describe the bug**
+
 A clear and concise description of what the bug is.
 
 **System information**
-- Plugin version: 
-- Jellyfin version: 
-- Jellyfin installation method: 
-- OS: 
+
+- Jellyfin installation method:
+- OS:
+
+**Support bundle**
+
+[go to Dashboard -> Plugins -> Intro Skipper -> Support Bundle (at the bottom of the page) and paste the contents of the textbox here]
 
 **Jellyfin logs**
+
 ```
 paste logs here
 ```

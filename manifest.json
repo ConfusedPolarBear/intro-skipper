@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png",
         "versions": [
             {
+                "version": "0.1.7.0",
+                "changelog": "- See the full changelog at [GitHub](https://github.com/ConfusedPolarBear/intro-skipper/blob/master/CHANGELOG.md)\n",
+                "targetAbi": "10.8.4.0",
+                "sourceUrl": "https://github.com/ConfusedPolarBear/intro-skipper/releases/download/v0.1.7/intro-skipper-v0.1.7.zip",
+                "checksum": "76676ea60b270879c831b50f6cb21ae1",
+                "timestamp": "2022-10-27T03:27:27Z"
+            },
+            {
                 "version": "0.1.6.0",
                 "changelog": "- See the full changelog at [GitHub](https://github.com/ConfusedPolarBear/intro-skipper/blob/master/CHANGELOG.md)\n",
                 "targetAbi": "10.8.1.0",
