@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.8.0 (no eta)
+* Internal changes
+  * Move Chromaprint analysis code out of the episode analysis task
+  * Add support for multiple analysis techinques
+
 ## v0.1.7.0 (2022-10-26)
 * New features
   * Rewrote fingerprint comparison algorithm to be faster (~30x speedup) and detect more introductions
