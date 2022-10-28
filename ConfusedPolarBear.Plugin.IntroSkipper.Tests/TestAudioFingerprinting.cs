@@ -26,7 +26,8 @@ public class TestAudioFingerprinting
     [InlineData(19, 2_465_585_877)]
     public void TestBitCounting(int expectedBits, uint number)
     {
-        Assert.Equal(expectedBits, AnalyzeEpisodesTask.CountBits(number));
+        var chromaprint = CreateChromaprintAnalyzer();
+        Assert.Equal(expectedBits, chromaprint.CountBits(number));
     }
 
     [FactSkipFFmpegTests]
@@ -86,14 +87,14 @@ public class TestAudioFingerprinting
     [FactSkipFFmpegTests]
     public void TestIntroDetection()
     {
-        var task = new AnalyzeEpisodesTask(new LoggerFactory());
+        var chromaprint = CreateChromaprintAnalyzer();
 
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
         var lhsFingerprint = FFmpegWrapper.Fingerprint(lhsEpisode);
         var rhsFingerprint = FFmpegWrapper.Fingerprint(rhsEpisode);
 
-        var (lhs, rhs) = task.CompareEpisodes(
+        var (lhs, rhs) = chromaprint.CompareEpisodes(
             lhsEpisode.EpisodeId,
             lhsFingerprint,
             rhsEpisode.EpisodeId,
@@ -139,6 +140,12 @@ public class TestAudioFingerprinting
             Path = "../../../" + path,
             FingerprintDuration = 60
         };
+    }
+
+    private ChromaprintAnalyzer CreateChromaprintAnalyzer()
+    {
+        var logger = new LoggerFactory().CreateLogger<ChromaprintAnalyzer>();
+        return new(logger);
     }
 }
 

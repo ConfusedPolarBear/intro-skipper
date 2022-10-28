@@ -18,7 +18,8 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 /// </summary>
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
-    private readonly object _serializationLock = new object();
+    private readonly object _serializationLock = new();
+    private readonly object _introsLock = new();
     private IXmlSerializer _xmlSerializer;
     private ILibraryManager _libraryManager;
     private ILogger<Plugin> _logger;
@@ -160,6 +161,19 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     internal string GetItemPath(Guid id)
     {
         return GetItem(id).Path;
+    }
+
+    internal void UpdateTimestamps(Dictionary<Guid, Intro> newIntros)
+    {
+        lock (_introsLock)
+        {
+            foreach (var intro in newIntros)
+            {
+                Plugin.Instance!.Intros[intro.Key] = intro.Value;
+            }
+
+            Plugin.Instance!.SaveTimestamps();
+        }
     }
 
     /// <inheritdoc />
