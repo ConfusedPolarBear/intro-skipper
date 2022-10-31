@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -77,7 +78,6 @@ func generateReport(hostAddress, apiKey, reportDestination string, keepTimestamp
 	fmt.Println()
 	fmt.Println("[+] Saving report")
 
-	// TODO: also save analysis statistics
 	// Store timing data, server information, and plugin configuration
 	report.StartedAt = start
 	report.FinishedAt = time.Now()
@@ -94,6 +94,9 @@ func generateReport(hostAddress, apiKey, reportDestination string, keepTimestamp
 	if err := os.WriteFile(reportDestination, marshalled, 0600); err != nil {
 		panic(err)
 	}
+
+	// Change report permissions
+	exec.Command("chown", "1000:1000", reportDestination).Run()
 
 	fmt.Println("[+] Done")
 }
