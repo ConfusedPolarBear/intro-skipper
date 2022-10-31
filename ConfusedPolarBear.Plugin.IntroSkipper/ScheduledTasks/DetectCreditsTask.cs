@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Library;
@@ -10,24 +9,27 @@ using Microsoft.Extensions.Logging;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
+#if !DEBUG
+#error Fix all FIXMEs introduced during initial credit implementation before release
+#endif
+
 /// <summary>
-/// Analyze all television episodes for introduction sequences.
-/// TODO: FIXME: rename task and file to DetectIntroductionsTask.
+/// Analyze all television episodes for credits.
 /// </summary>
-public class AnalyzeEpisodesTask : IScheduledTask
+public class DetectCreditsTask : IScheduledTask
 {
-    private readonly ILogger<AnalyzeEpisodesTask> _logger;
+    private readonly ILogger<DetectCreditsTask> _logger;
 
     private readonly ILoggerFactory _loggerFactory;
 
     private readonly ILibraryManager? _libraryManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
+    /// Initializes a new instance of the <see cref="DetectCreditsTask"/> class.
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
     /// <param name="libraryManager">Library manager.</param>
-    public AnalyzeEpisodesTask(
+    public DetectCreditsTask(
         ILoggerFactory loggerFactory,
         ILibraryManager libraryManager) : this(loggerFactory)
     {
@@ -35,21 +37,19 @@ public class AnalyzeEpisodesTask : IScheduledTask
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
+    /// Initializes a new instance of the <see cref="DetectCreditsTask"/> class.
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
-    public AnalyzeEpisodesTask(ILoggerFactory loggerFactory)
+    public DetectCreditsTask(ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<AnalyzeEpisodesTask>();
+        _logger = loggerFactory.CreateLogger<DetectCreditsTask>();
         _loggerFactory = loggerFactory;
-
-        EdlManager.Initialize(_logger);
     }
 
     /// <summary>
     /// Gets the task name.
     /// </summary>
-    public string Name => "Detect Introductions";
+    public string Name => "Detect Credits";
 
     /// <summary>
     /// Gets the task category.
@@ -59,12 +59,12 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <summary>
     /// Gets the task description.
     /// </summary>
-    public string Description => "Analyzes the audio of all television episodes to find introduction sequences.";
+    public string Description => "Analyzes the audio and video of all television episodes to find credits.";
 
     /// <summary>
     /// Gets the task key.
     /// </summary>
-    public string Key => "CPBIntroSkipperDetectIntroductions";
+    public string Key => "CPBIntroSkipperDetectCredits";
 
     /// <summary>
     /// Analyze all episodes in the queue. Only one instance of this task should be run at a time.
@@ -94,39 +94,26 @@ public class AnalyzeEpisodesTask : IScheduledTask
                 "No episodes to analyze. If you are limiting the list of libraries to analyze, check that all library names have been spelled correctly.");
         }
 
-        // Log EDL settings
-        EdlManager.LogConfiguration();
-
         var totalProcessed = 0;
         var options = new ParallelOptions()
         {
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
         };
 
-        // TODO: if the queue is modified while the task is running, the task will fail.
+        // TODO: FIXME: if the queue is modified while the task is running, the task will fail.
         // clone the queue before running the task to prevent this.
 
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
-            var (episodes, unanalyzed) = VerifyEpisodes(season.Value.AsReadOnly());
+            // TODO: FIXME: use VerifyEpisodes
+            var episodes = season.Value.AsReadOnly();
             if (episodes.Count == 0)
             {
                 return;
             }
 
             var first = episodes[0];
-            var writeEdl = false;
-
-            if (!unanalyzed)
-            {
-                _logger.LogDebug(
-                    "All episodes in {Name} season {Season} have already been analyzed",
-                    first.SeriesName,
-                    first.SeasonNumber);
-
-                return;
-            }
 
             try
             {
@@ -139,7 +126,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
                 // (instead of just using the number of episodes in the current season).
                 var analyzed = AnalyzeSeason(episodes, cancellationToken);
                 Interlocked.Add(ref totalProcessed, analyzed);
-                writeEdl = analyzed > 0 || Plugin.Instance!.Configuration.RegenerateEdlFiles;
             }
             catch (FingerprintException ex)
             {
@@ -158,68 +144,10 @@ public class AnalyzeEpisodesTask : IScheduledTask
                     ex);
             }
 
-            if (writeEdl && Plugin.Instance!.Configuration.EdlAction != EdlAction.None)
-            {
-                EdlManager.UpdateEDLFiles(episodes);
-            }
-
             progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
         });
 
-        // Turn the regenerate EDL flag off after the scan completes.
-        if (Plugin.Instance!.Configuration.RegenerateEdlFiles)
-        {
-            _logger.LogInformation("Turning EDL file regeneration flag off");
-            Plugin.Instance!.Configuration.RegenerateEdlFiles = false;
-            Plugin.Instance!.SaveConfiguration();
-        }
-
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Verify that all episodes in a season exist in Jellyfin and as a file in storage.
-    /// TODO: FIXME: move to queue manager.
-    /// </summary>
-    /// <param name="candidates">QueuedEpisodes.</param>
-    /// <returns>Verified QueuedEpisodes and a flag indicating if any episode in this season has not been analyzed yet.</returns>
-    private (
-        ReadOnlyCollection<QueuedEpisode> VerifiedEpisodes,
-        bool AnyUnanalyzed)
-        VerifyEpisodes(ReadOnlyCollection<QueuedEpisode> candidates)
-    {
-        var unanalyzed = false;
-        var verified = new List<QueuedEpisode>();
-
-        foreach (var candidate in candidates)
-        {
-            try
-            {
-                // Verify that the episode exists in Jellyfin and in storage
-                var path = Plugin.Instance!.GetItemPath(candidate.EpisodeId);
-
-                if (File.Exists(path))
-                {
-                    verified.Add(candidate);
-                }
-
-                // Flag this season for analysis if the current episode hasn't been analyzed yet
-                if (!Plugin.Instance.Intros.ContainsKey(candidate.EpisodeId))
-                {
-                    unanalyzed = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(
-                    "Skipping analysis of {Name} ({Id}): {Exception}",
-                    candidate.Name,
-                    candidate.EpisodeId,
-                    ex);
-            }
-        }
-
-        return (verified.AsReadOnly(), unanalyzed);
     }
 
     /// <summary>
@@ -253,7 +181,7 @@ public class AnalyzeEpisodesTask : IScheduledTask
 
         // Analyze the season with Chromaprint
         var chromaprint = new ChromaprintAnalyzer(_loggerFactory.CreateLogger<ChromaprintAnalyzer>());
-        chromaprint.AnalyzeMediaFiles(episodes, AnalysisMode.Introduction, cancellationToken);
+        chromaprint.AnalyzeMediaFiles(episodes, AnalysisMode.Credits, cancellationToken);
 
         return episodes.Count;
     }
@@ -264,13 +192,6 @@ public class AnalyzeEpisodesTask : IScheduledTask
     /// <returns>Task triggers.</returns>
     public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
     {
-        return new[]
-        {
-            new TaskTriggerInfo
-            {
-                Type = TaskTriggerInfo.TriggerDaily,
-                TimeOfDayTicks = TimeSpan.FromHours(0).Ticks
-            }
-        };
+        return Array.Empty<TaskTriggerInfo>();
     }
 }

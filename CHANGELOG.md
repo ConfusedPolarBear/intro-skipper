@@ -1,6 +1,8 @@
 # Changelog
 
 ## v0.1.8.0 (no eta)
+* New features
+  * Detect ending credits in television episodes
 * Internal changes
   * Move Chromaprint analysis code out of the episode analysis task
   * Add support for multiple analysis techinques

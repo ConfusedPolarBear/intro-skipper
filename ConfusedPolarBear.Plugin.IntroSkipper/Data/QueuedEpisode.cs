@@ -33,7 +33,17 @@ public class QueuedEpisode
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the seconds of media file to fingerprint.
+    /// Gets or sets the timestamp (in seconds) to stop searching for an introduction.
     /// </summary>
-    public int FingerprintDuration { get; set; }
+    public int IntroFingerprintEnd { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timestamp (in seconds) to start looking for end credits.
+    /// </summary>
+    public int CreditsFingerprintStart { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total duration of this media file (in seconds).
+    /// </summary>
+    public int Duration { get; set; }
 }

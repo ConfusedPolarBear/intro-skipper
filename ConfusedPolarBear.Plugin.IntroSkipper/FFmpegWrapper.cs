@@ -134,27 +134,60 @@ public static class FFmpegWrapper
     /// Fingerprint a queued episode.
     /// </summary>
     /// <param name="episode">Queued episode to fingerprint.</param>
+    /// <param name="mode">Portion of media file to fingerprint. Introduction = first 25% / 10 minutes and Credits = last 4 minutes.</param>
     /// <returns>Numerical fingerprint points.</returns>
-    public static uint[] Fingerprint(QueuedEpisode episode)
+    public static uint[] Fingerprint(QueuedEpisode episode, AnalysisMode mode)
+    {
+        int start, end;
+
+        if (mode == AnalysisMode.Introduction)
+        {
+            start = 0;
+            end = episode.IntroFingerprintEnd;
+        }
+        else if (mode == AnalysisMode.Credits)
+        {
+            start = episode.CreditsFingerprintStart;
+            end = episode.Duration;
+        }
+        else
+        {
+            throw new ArgumentException("Unknown analysis mode " + mode.ToString());
+        }
+
+        return Fingerprint(episode, mode, start, end);
+    }
+
+    /// <summary>
+    /// Fingerprint a queued episode.
+    /// </summary>
+    /// <param name="episode">Queued episode to fingerprint.</param>
+    /// <param name="mode">Portion of media file to fingerprint.</param>
+    /// <param name="start">Time (in seconds) relative to the start of the file to start fingerprinting from.</param>
+    /// <param name="end">Time (in seconds) relative to the start of the file to stop fingerprinting at.</param>
+    /// <returns>Numerical fingerprint points.</returns>
+    private static uint[] Fingerprint(QueuedEpisode episode, AnalysisMode mode, int start, int end)
     {
         // Try to load this episode from cache before running ffmpeg.
-        if (LoadCachedFingerprint(episode, out uint[] cachedFingerprint))
+        if (LoadCachedFingerprint(episode, mode, out uint[] cachedFingerprint))
         {
             Logger?.LogTrace("Fingerprint cache hit on {File}", episode.Path);
             return cachedFingerprint;
         }
 
         Logger?.LogDebug(
-            "Fingerprinting {Duration} seconds from \"{File}\" (id {Id})",
-            episode.FingerprintDuration,
+            "Fingerprinting [{Start}, {End}] from \"{File}\" (id {Id})",
+            start,
+            end,
             episode.Path,
             episode.EpisodeId);
 
         var args = string.Format(
             CultureInfo.InvariantCulture,
-            "-i \"{0}\" -to {1} -ac 2 -f chromaprint -fp_format raw -",
+            "-ss {0} -i \"{1}\" -to {2} -ac 2 -f chromaprint -fp_format raw -",
+            start,
             episode.Path,
-            episode.FingerprintDuration);
+            end - start);
 
         // Returns all fingerprint points as raw 32 bit unsigned integers (little endian).
         var rawPoints = GetOutput(args, string.Empty);
@@ -172,7 +205,7 @@ public static class FFmpegWrapper
         }
 
         // Try to cache this fingerprint.
-        CacheFingerprint(episode, results);
+        CacheFingerprint(episode, mode, results);
 
         return results.ToArray();
     }
@@ -225,9 +258,6 @@ public static class FFmpegWrapper
             episode.Path,
             limit,
             episode.EpisodeId);
-
-        // TODO: select the audio track that matches the user's preferred language, falling
-        //     back to the first track if nothing matches
 
         // -vn, -sn, -dn: ignore video, subtitle, and data tracks
         var args = string.Format(
@@ -367,9 +397,13 @@ public static class FFmpegWrapper
     /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode to try to load from cache.</param>
+    /// <param name="mode">Analysis mode.</param>
     /// <param name="fingerprint">Array to store the fingerprint in.</param>
     /// <returns>true if the episode was successfully loaded from cache, false on any other error.</returns>
-    private static bool LoadCachedFingerprint(QueuedEpisode episode, out uint[] fingerprint)
+    private static bool LoadCachedFingerprint(
+        QueuedEpisode episode,
+        AnalysisMode mode,
+        out uint[] fingerprint)
     {
         fingerprint = Array.Empty<uint>();
 
@@ -379,7 +413,7 @@ public static class FFmpegWrapper
             return false;
         }
 
-        var path = GetFingerprintCachePath(episode);
+        var path = GetFingerprintCachePath(episode, mode);
 
         // If this episode isn't cached, bail out.
         if (!File.Exists(path))
@@ -387,7 +421,6 @@ public static class FFmpegWrapper
             return false;
         }
 
-        // TODO: make async
         var raw = File.ReadAllLines(path, Encoding.UTF8);
         var result = new List<uint>();
 
@@ -421,8 +454,12 @@ public static class FFmpegWrapper
     /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode to store in cache.</param>
+    /// <param name="mode">Analysis mode.</param>
     /// <param name="fingerprint">Fingerprint of the episode to store.</param>
-    private static void CacheFingerprint(QueuedEpisode episode, List<uint> fingerprint)
+    private static void CacheFingerprint(
+        QueuedEpisode episode,
+        AnalysisMode mode,
+        List<uint> fingerprint)
     {
         // Bail out if caching isn't enabled.
         if (!(Plugin.Instance?.Configuration.CacheFingerprints ?? false))
@@ -438,7 +475,10 @@ public static class FFmpegWrapper
         }
 
         // Cache the episode.
-        File.WriteAllLinesAsync(GetFingerprintCachePath(episode), lines, Encoding.UTF8).ConfigureAwait(false);
+        File.WriteAllLinesAsync(
+            GetFingerprintCachePath(episode, mode),
+            lines,
+            Encoding.UTF8).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -446,9 +486,25 @@ public static class FFmpegWrapper
     /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode.</param>
-    private static string GetFingerprintCachePath(QueuedEpisode episode)
+    /// <param name="mode">Analysis mode.</param>
+    private static string GetFingerprintCachePath(QueuedEpisode episode, AnalysisMode mode)
     {
-        return Path.Join(Plugin.Instance!.FingerprintCachePath, episode.EpisodeId.ToString("N"));
+        var basePath = Path.Join(
+            Plugin.Instance!.FingerprintCachePath,
+            episode.EpisodeId.ToString("N"));
+
+        if (mode == AnalysisMode.Introduction)
+        {
+            return basePath;
+        }
+        else if (mode == AnalysisMode.Credits)
+        {
+            return basePath + "-credits";
+        }
+        else
+        {
+            throw new ArgumentException("Unknown analysis mode " + mode.ToString());
+        }
     }
 
     /// <summary>

@@ -4,7 +4,7 @@
 <img alt="Plugin Banner" src="https://raw.githubusercontent.com/ConfusedPolarBear/intro-skipper/master/images/logo.png" />
 </div>
 
-Analyzes the audio of television episodes to detect and skip over intros.
+Analyzes the audio of television episodes to detect and skip over introductions and ending credits.
 
 If you use the custom web interface on your server, you will be able to click a button to skip intros, like this:
 
@@ -20,12 +20,14 @@ However, if you want to use an unmodified installation of Jellyfin 10.8.z or use
   * `linuxserver/jellyfin` 10.8.z container: preinstalled
   * Debian Linux based native installs: provided by the `jellyfin-ffmpeg5` package
 
-## Introduction requirements
+## Introduction and end credit requirements
 
 Show introductions will only be detected if they are:
 
 * Located within the first 25% of an episode, or the first 10 minutes, whichever is smaller
 * Between 15 seconds and 2 minutes long
+
+Ending credits will only be detected if they are shorter than 4 minutes.
 
 All of these requirements can be customized as needed.
 

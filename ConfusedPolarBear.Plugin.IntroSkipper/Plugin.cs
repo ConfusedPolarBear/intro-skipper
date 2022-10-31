@@ -6,6 +6,7 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
@@ -24,6 +25,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     private ILibraryManager _libraryManager;
     private ILogger<Plugin> _logger;
     private string _introPath;
+    private string _creditsPath;  // TODO: FIXME: remove this
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
@@ -51,6 +53,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         FFmpegPath = serverConfiguration.GetEncodingOptions().EncoderAppPathDisplay;
         _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
 
+        // TODO: FIXME: remove this
+        _creditsPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "credits.csv");
+
         // Create the base & cache directories (if needed).
         if (!Directory.Exists(FingerprintCachePath))
         {
@@ -67,6 +72,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         catch (Exception ex)
         {
             _logger.LogWarning("Unable to load introduction timestamps: {Exception}", ex);
+        }
+
+        // TODO: FIXME: remove this
+        if (File.Exists(_creditsPath))
+        {
+            File.Delete(_creditsPath);
         }
     }
 
@@ -163,16 +174,52 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         return GetItem(id).Path;
     }
 
-    internal void UpdateTimestamps(Dictionary<Guid, Intro> newIntros)
+    internal void UpdateTimestamps(Dictionary<Guid, Intro> newIntros, AnalysisMode mode)
     {
-        lock (_introsLock)
+        switch (mode)
         {
-            foreach (var intro in newIntros)
-            {
-                Plugin.Instance!.Intros[intro.Key] = intro.Value;
-            }
+            case AnalysisMode.Introduction:
+                lock (_introsLock)
+                {
+                    foreach (var intro in newIntros)
+                    {
+                        Plugin.Instance!.Intros[intro.Key] = intro.Value;
+                    }
 
-            Plugin.Instance!.SaveTimestamps();
+                    Plugin.Instance!.SaveTimestamps();
+                }
+
+                break;
+
+            case AnalysisMode.Credits:
+                // TODO: FIXME: implement properly
+
+                lock (_introsLock)
+                {
+                    foreach (var credit in newIntros)
+                    {
+                        var item = GetItem(credit.Value.EpisodeId) as Episode;
+                        if (item is null)
+                        {
+                            continue;
+                        }
+
+                        // Format: series, season number, episode number, title, start, end
+                        var contents = string.Format(
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            "{0},{1},{2},{3},{4},{5}\n",
+                            item.SeriesName.Replace(",", string.Empty, StringComparison.Ordinal),
+                            item.AiredSeasonNumber ?? 0,
+                            item.IndexNumber ?? 0,
+                            item.Name.Replace(",", string.Empty, StringComparison.Ordinal),
+                            Math.Round(credit.Value.IntroStart, 2),
+                            Math.Round(credit.Value.IntroEnd, 2));
+
+                        File.AppendAllText(_creditsPath, contents);
+                    }
+                }
+
+                break;
         }
     }
 

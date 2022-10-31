@@ -72,6 +72,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public int MaximumIntroDuration { get; set; } = 120;
 
+    /// <summary>
+    /// Gets or sets the upper limit (in minutes) on the length of each episode's audio track that will be analyzed when searching for ending credits.
+    /// </summary>
+    public int MaximumEpisodeCreditsDuration { get; set; } = 4;
+
     // ===== Playback settings =====
 
     /// <summary>

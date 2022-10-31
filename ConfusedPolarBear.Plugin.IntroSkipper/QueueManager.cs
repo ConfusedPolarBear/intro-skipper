@@ -186,17 +186,22 @@ public class QueueManager
         // Limit analysis to the first X% of the episode and at most Y minutes.
         // X and Y default to 25% and 10 minutes.
         var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
-        if (duration >= 5 * 60)
+        var fingerprintDuration = duration;
+
+        if (fingerprintDuration >= 5 * 60)
         {
-            duration *= analysisPercent;
+            fingerprintDuration *= analysisPercent;
         }
 
-        duration = Math.Min(duration, 60 * Plugin.Instance!.Configuration.AnalysisLengthLimit);
+        fingerprintDuration = Math.Min(
+            fingerprintDuration,
+            60 * Plugin.Instance!.Configuration.AnalysisLengthLimit);
 
         // Allocate a new list for each new season
         Plugin.Instance!.AnalysisQueue.TryAdd(episode.SeasonId, new List<QueuedEpisode>());
 
         // Queue the episode for analysis
+        var maxCreditsDuration = Plugin.Instance!.Configuration.MaximumEpisodeCreditsDuration * 60;
         Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode()
         {
             SeriesName = episode.SeriesName,
@@ -204,7 +209,9 @@ public class QueueManager
             EpisodeId = episode.Id,
             Name = episode.Name,
             Path = episode.Path,
-            FingerprintDuration = Convert.ToInt32(duration)
+            Duration = Convert.ToInt32(duration),
+            IntroFingerprintEnd = Convert.ToInt32(fingerprintDuration),
+            CreditsFingerprintStart = Convert.ToInt32(duration - maxCreditsDuration),
         });
 
         Plugin.Instance!.TotalQueued++;
