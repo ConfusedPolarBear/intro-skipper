@@ -75,7 +75,7 @@ jobs:
         if-no-files-found: error
 
     - name: Publish container
-      uses: docker/build-push-action@v3.1.1
+      uses: docker/build-push-action@v3.2.0
       with:
         file: docker/Dockerfile
         context: docker/
