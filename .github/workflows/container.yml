@@ -68,7 +68,7 @@ jobs:
         tar czf dist.tar.gz dist
 
     - name: Upload web interface
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v3.1.1
       with:
         name: jellyfin-web-10.8.0+${{ steps.web-commit.outputs.commit }}.tar.gz
         path: web/dist.tar.gz
