@@ -16,15 +16,16 @@ public static class FFmpegWrapper
 {
     private static readonly object InvertedIndexCacheLock = new();
 
-    // FFmpeg logs lines similar to the following:
-    // [silencedetect @ 0x000000000000] silence_start: 12.34
-    // [silencedetect @ 0x000000000000] silence_end: 56.123 | silence_duration: 43.783
-
     /// <summary>
     /// Used with FFmpeg's silencedetect filter to extract the start and end times of silence.
     /// </summary>
     private static readonly Regex SilenceDetectionExpression = new(
         "silence_(?<type>start|end): (?<time>[0-9\\.]+)");
+
+    /// <summary>
+    /// Used with FFmpeg's blackframe filter to extract the time and percentage of black pixels.
+    /// </summary>
+    private static readonly Regex BlackFrameRegex = new("(pblack|t):[0-9.]+");
 
     /// <summary>
     /// Gets or sets the logger.
@@ -190,7 +191,12 @@ public static class FFmpegWrapper
         var currentRange = new TimeRange();
         var silenceRanges = new List<TimeRange>();
 
-        // Each match will have a type (either "start" or "end") and a timecode (a double).
+        /* Each match will have a type (either "start" or "end") and a timecode (a double).
+         *
+         * Sample output:
+         * [silencedetect @ 0x000000000000] silence_start: 12.34
+         * [silencedetect @ 0x000000000000] silence_end: 56.123 | silence_duration: 43.783
+        */
         var raw = Encoding.UTF8.GetString(GetOutput(args, cacheKey, true));
         foreach (Match match in SilenceDetectionExpression.Matches(raw))
         {
@@ -209,6 +215,61 @@ public static class FFmpegWrapper
         }
 
         return silenceRanges.ToArray();
+    }
+
+    /// <summary>
+    /// Finds the location of all black frames in a media file within a time range.
+    /// </summary>
+    /// <param name="episode">Media file to analyze.</param>
+    /// <param name="range">Time range to search.</param>
+    /// <returns>Array of frames that are at least 50% black.</returns>
+    public static BlackFrame[] DetectBlackFrames(QueuedEpisode episode, TimeRange range)
+    {
+        // Seek to the start of the time range and find frames that are at least 50% black.
+        var args = string.Format(
+            CultureInfo.InvariantCulture,
+            "-ss {0} -i \"{1}\" -to {2} -an -dn -sn -vf \"blackframe=amount=50\" -f null -",
+            range.Start,
+            episode.Path,
+            range.End - range.Start);
+
+        // Cache the results to GUID-blackframes-v1-START-END.
+        var cacheKey = string.Format(
+            CultureInfo.InvariantCulture,
+            "{0}-blackframes-v1-{1}-{2}",
+            episode.EpisodeId.ToString("N"),
+            range.Start,
+            range.End);
+
+        var blackFrames = new List<BlackFrame>();
+
+        /* Run the blackframe filter.
+         *
+         * Sample output:
+         * [Parsed_blackframe_0 @ 0x0000000] frame:1 pblack:99 pts:43 t:0.043000 type:B last_keyframe:0
+         * [Parsed_blackframe_0 @ 0x0000000] frame:2 pblack:99 pts:85 t:0.085000 type:B last_keyframe:0
+         */
+        var raw = Encoding.UTF8.GetString(GetOutput(args, cacheKey, true));
+        foreach (var line in raw.Split('\n'))
+        {
+            var matches = BlackFrameRegex.Matches(line);
+            if (matches.Count != 2)
+            {
+                continue;
+            }
+
+            var (strPercent, strTime) = (
+                matches[0].Value.Split(':')[1],
+                matches[1].Value.Split(':')[1]
+            );
+
+            blackFrames.Add(new(
+                Convert.ToInt32(strPercent, CultureInfo.InvariantCulture),
+                Convert.ToDouble(strTime, CultureInfo.InvariantCulture)
+            ));
+        }
+
+        return blackFrames.ToArray();
     }
 
     /// <summary>
@@ -296,10 +357,11 @@ public static class FFmpegWrapper
     {
         var ffmpegPath = Plugin.Instance?.FFmpegPath ?? "ffmpeg";
 
-        // The silencedetect filter outputs silence timestamps at the info log level.
-        var logLevel = args.Contains("silencedetect", StringComparison.OrdinalIgnoreCase) ?
-            "info" :
-            "warning";
+        // The silencedetect and blackframe filters output data at the info log level.
+        var useInfoLevel = args.Contains("silencedetect", StringComparison.OrdinalIgnoreCase) ||
+            args.Contains("blackframe", StringComparison.OrdinalIgnoreCase);
+
+        var logLevel = useInfoLevel ? "info" : "warning";
 
         var cacheOutput =
             (Plugin.Instance?.Configuration.CacheFingerprints ?? false) &&

@@ -77,6 +77,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public int MaximumEpisodeCreditsDuration { get; set; } = 4;
 
+    /// <summary>
+    /// Gets or sets the minimum percentage of a frame that must consist of black pixels before it is considered a black frame.
+    /// </summary>
+    public int BlackFrameMinimumPercentage { get; set; } = 85;
+
     // ===== Playback settings =====
 
     /// <summary>
