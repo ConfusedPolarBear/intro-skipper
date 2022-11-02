@@ -12,22 +12,21 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
 /// Analyze all television episodes for introduction sequences.
-/// TODO: FIXME: rename task and file to DetectIntroductionsTask.
 /// </summary>
-public class AnalyzeEpisodesTask : IScheduledTask
+public class DetectIntroductionsTask : IScheduledTask
 {
-    private readonly ILogger<AnalyzeEpisodesTask> _logger;
+    private readonly ILogger<DetectIntroductionsTask> _logger;
 
     private readonly ILoggerFactory _loggerFactory;
 
     private readonly ILibraryManager? _libraryManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
+    /// Initializes a new instance of the <see cref="DetectIntroductionsTask"/> class.
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
     /// <param name="libraryManager">Library manager.</param>
-    public AnalyzeEpisodesTask(
+    public DetectIntroductionsTask(
         ILoggerFactory loggerFactory,
         ILibraryManager libraryManager) : this(loggerFactory)
     {
@@ -35,12 +34,12 @@ public class AnalyzeEpisodesTask : IScheduledTask
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AnalyzeEpisodesTask"/> class.
+    /// Initializes a new instance of the <see cref="DetectIntroductionsTask"/> class.
     /// </summary>
     /// <param name="loggerFactory">Logger factory.</param>
-    public AnalyzeEpisodesTask(ILoggerFactory loggerFactory)
+    public DetectIntroductionsTask(ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<AnalyzeEpisodesTask>();
+        _logger = loggerFactory.CreateLogger<DetectIntroductionsTask>();
         _loggerFactory = loggerFactory;
 
         EdlManager.Initialize(_logger);
