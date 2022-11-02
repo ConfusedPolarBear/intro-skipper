@@ -2,6 +2,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper.Tests;
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 public class TestBlackFrames
@@ -9,22 +10,34 @@ public class TestBlackFrames
     [FactSkipFFmpegTests]
     public void TestBlackFrameDetection()
     {
+        var range = 1e-5;
+
         var expected = new List<BlackFrame>();
         expected.AddRange(CreateFrameSequence(2, 3));
         expected.AddRange(CreateFrameSequence(5, 6));
         expected.AddRange(CreateFrameSequence(8, 9.96));
 
-        var actual = FFmpegWrapper.DetectBlackFrames(
-            queueFile("rainbow.mp4"),
-            new TimeRange(0, 10)
-        );
+        var actual = FFmpegWrapper.DetectBlackFrames(queueFile("rainbow.mp4"), new(0, 10), 85);
 
         for (var i = 0; i < expected.Count; i++)
         {
             var (e, a) = (expected[i], actual[i]);
             Assert.Equal(e.Percentage, a.Percentage);
-            Assert.True(Math.Abs(e.Time - a.Time) <= 0.005);
+            Assert.InRange(a.Time, e.Time - range, e.Time + range);
         }
+    }
+
+    [FactSkipFFmpegTests]
+    public void TestEndCreditDetection()
+    {
+        var analyzer = CreateBlackFrameAnalyzer();
+
+        var episode = queueFile("credits.mp4");
+        episode.Duration = (int)new TimeSpan(0, 5, 30).TotalSeconds;
+
+        var result = analyzer.AnalyzeMediaFile(episode, AnalysisMode.Credits, 85);
+        Assert.NotNull(result);
+        Assert.Equal(300, result.IntroStart);
     }
 
     private QueuedEpisode queueFile(string path)
@@ -32,6 +45,7 @@ public class TestBlackFrames
         return new()
         {
             EpisodeId = Guid.NewGuid(),
+            Name = path,
             Path = "../../../video/" + path
         };
     }
@@ -46,5 +60,11 @@ public class TestBlackFrames
         }
 
         return frames.ToArray();
+    }
+
+    private BlackFrameAnalyzer CreateBlackFrameAnalyzer()
+    {
+        var logger = new LoggerFactory().CreateLogger<BlackFrameAnalyzer>();
+        return new(logger);
     }
 }

@@ -122,10 +122,8 @@ public class DetectCreditsTask : IScheduledTask
                     return;
                 }
 
-                // Increment totalProcessed by the number of episodes in this season that were actually analyzed
-                // (instead of just using the number of episodes in the current season).
-                var analyzed = AnalyzeSeason(episodes, cancellationToken);
-                Interlocked.Add(ref totalProcessed, analyzed);
+                AnalyzeSeason(episodes, cancellationToken);
+                Interlocked.Add(ref totalProcessed, episodes.Count);
             }
             catch (FingerprintException ex)
             {
@@ -151,39 +149,49 @@ public class DetectCreditsTask : IScheduledTask
     }
 
     /// <summary>
-    /// Fingerprints all episodes in the provided season and stores the timestamps of all introductions.
+    /// Analyzes all episodes in the season for end credits.
     /// </summary>
     /// <param name="episodes">Episodes in this season.</param>
     /// <param name="cancellationToken">Cancellation token provided by the scheduled task.</param>
-    /// <returns>Number of episodes from the provided season that were analyzed.</returns>
-    private int AnalyzeSeason(
+    private void AnalyzeSeason(
         ReadOnlyCollection<QueuedEpisode> episodes,
         CancellationToken cancellationToken)
     {
-        // Skip seasons with an insufficient number of episodes.
-        if (episodes.Count <= 1)
-        {
-            return episodes.Count;
-        }
-
         // Only analyze specials (season 0) if the user has opted in.
-        var first = episodes[0];
-        if (first.SeasonNumber == 0 && !Plugin.Instance!.Configuration.AnalyzeSeasonZero)
+        if (episodes[0].SeasonNumber == 0 && !Plugin.Instance!.Configuration.AnalyzeSeasonZero)
         {
-            return 0;
+            return;
         }
 
+        // Analyze with Chromaprint first and fall back to the black frame detector
+        var analyzers = new IMediaFileAnalyzer[]
+        {
+            // TODO: FIXME: new ChromaprintAnalyzer(_loggerFactory.CreateLogger<ChromaprintAnalyzer>()),
+            new BlackFrameAnalyzer(_loggerFactory.CreateLogger<BlackFrameAnalyzer>())
+        };
+
+        // Use each analyzer to find credits in all media files, removing successfully analyzed files
+        // from the queue.
+        var remaining = new ReadOnlyCollection<QueuedEpisode>(episodes);
+        foreach (var analyzer in analyzers)
+        {
+            remaining = AnalyzeFiles(remaining, analyzer, cancellationToken);
+        }
+    }
+
+    private ReadOnlyCollection<QueuedEpisode> AnalyzeFiles(
+        ReadOnlyCollection<QueuedEpisode> episodes,
+        IMediaFileAnalyzer analyzer,
+        CancellationToken cancellationToken)
+    {
         _logger.LogInformation(
-            "Analyzing {Count} episodes from {Name} season {Season}",
+            "Analyzing {Count} episodes from {Name} season {Season} with {Analyzer}",
             episodes.Count,
-            first.SeriesName,
-            first.SeasonNumber);
+            episodes[0].SeriesName,
+            episodes[0].SeasonNumber,
+            analyzer.GetType().Name);
 
-        // Analyze the season with Chromaprint
-        var chromaprint = new ChromaprintAnalyzer(_loggerFactory.CreateLogger<ChromaprintAnalyzer>());
-        chromaprint.AnalyzeMediaFiles(episodes, AnalysisMode.Credits, cancellationToken);
-
-        return episodes.Count;
+        return analyzer.AnalyzeMediaFiles(episodes, AnalysisMode.Credits, cancellationToken);
     }
 
     /// <summary>

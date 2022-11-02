@@ -222,8 +222,12 @@ public static class FFmpegWrapper
     /// </summary>
     /// <param name="episode">Media file to analyze.</param>
     /// <param name="range">Time range to search.</param>
-    /// <returns>Array of frames that are at least 50% black.</returns>
-    public static BlackFrame[] DetectBlackFrames(QueuedEpisode episode, TimeRange range)
+    /// <param name="minimum">Percentage of the frame that must be black.</param>
+    /// <returns>Array of frames that are mostly black.</returns>
+    public static BlackFrame[] DetectBlackFrames(
+        QueuedEpisode episode,
+        TimeRange range,
+        int minimum)
     {
         // Seek to the start of the time range and find frames that are at least 50% black.
         var args = string.Format(
@@ -233,10 +237,10 @@ public static class FFmpegWrapper
             episode.Path,
             range.End - range.Start);
 
-        // Cache the results to GUID-blackframes-v1-START-END.
+        // Cache the results to GUID-blackframes-START-END-v1.
         var cacheKey = string.Format(
             CultureInfo.InvariantCulture,
-            "{0}-blackframes-v1-{1}-{2}",
+            "{0}-blackframes-{1}-{2}-v1",
             episode.EpisodeId.ToString("N"),
             range.Start,
             range.End);
@@ -263,10 +267,14 @@ public static class FFmpegWrapper
                 matches[1].Value.Split(':')[1]
             );
 
-            blackFrames.Add(new(
+            var bf = new BlackFrame(
                 Convert.ToInt32(strPercent, CultureInfo.InvariantCulture),
-                Convert.ToDouble(strTime, CultureInfo.InvariantCulture)
-            ));
+                Convert.ToDouble(strTime, CultureInfo.InvariantCulture));
+
+            if (bf.Percentage > minimum)
+            {
+                blackFrames.Add(bf);
+            }
         }
 
         return blackFrames.ToArray();
