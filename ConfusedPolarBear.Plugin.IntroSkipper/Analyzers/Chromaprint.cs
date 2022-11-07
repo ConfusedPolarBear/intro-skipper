@@ -78,7 +78,8 @@ public class ChromaprintAnalyzer : IMediaFileAnalyzer
             }
             catch (FingerprintException ex)
             {
-                _logger.LogWarning("Caught fingerprint error: {Ex}", ex);
+                _logger.LogDebug("Caught fingerprint error: {Ex}", ex);
+                WarningManager.SetFlag(PluginWarning.InvalidChromaprintFingerprint);
 
                 // Fallback to an empty fingerprint on any error
                 fingerprintCache[episode.EpisodeId] = Array.Empty<uint>();

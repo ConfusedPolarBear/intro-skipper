@@ -80,7 +80,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         }
         catch (Exception ex)
         {
-            // WarningManager.SetFlag(PluginWarning.UnableToAddSkipButton);
+            WarningManager.SetFlag(PluginWarning.UnableToAddSkipButton);
 
             if (ex is UnauthorizedAccessException)
             {

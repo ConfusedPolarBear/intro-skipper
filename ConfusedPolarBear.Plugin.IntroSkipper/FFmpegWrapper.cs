@@ -51,6 +51,7 @@ public static class FFmpegWrapper
                 "Unknown error with FFmpeg version"))
             {
                 ChromaprintLogs["error"] = "unknown_error";
+                WarningManager.SetFlag(PluginWarning.IncompatibleFFmpegBuild);
                 return false;
             }
 
@@ -62,6 +63,7 @@ public static class FFmpegWrapper
                 "The installed version of ffmpeg does not support chromaprint"))
             {
                 ChromaprintLogs["error"] = "chromaprint_not_supported";
+                WarningManager.SetFlag(PluginWarning.IncompatibleFFmpegBuild);
                 return false;
             }
 
@@ -73,6 +75,7 @@ public static class FFmpegWrapper
                 "The installed version of ffmpeg does not support raw binary fingerprints"))
             {
                 ChromaprintLogs["error"] = "fp_format_not_supported";
+                WarningManager.SetFlag(PluginWarning.IncompatibleFFmpegBuild);
                 return false;
             }
 
@@ -84,6 +87,7 @@ public static class FFmpegWrapper
                 "The installed version of ffmpeg does not support the silencedetect filter"))
             {
                 ChromaprintLogs["error"] = "silencedetect_not_supported";
+                WarningManager.SetFlag(PluginWarning.IncompatibleFFmpegBuild);
                 return false;
             }
 
@@ -94,6 +98,7 @@ public static class FFmpegWrapper
         catch
         {
             ChromaprintLogs["error"] = "unknown_error";
+            WarningManager.SetFlag(PluginWarning.IncompatibleFFmpegBuild);
             return false;
         }
     }

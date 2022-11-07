@@ -58,6 +58,10 @@ public class TroubleshootingController : ControllerBase
         bundle.Append(" seasons");
         bundle.Append('\n');
 
+        bundle.Append("* Warnings: `");
+        bundle.Append(WarningManager.GetWarnings());
+        bundle.Append("`\n");
+
         bundle.Append(FFmpegWrapper.GetChromaprintLogs());
 
         return bundle.ToString();
