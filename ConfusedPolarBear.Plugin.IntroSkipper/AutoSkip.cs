@@ -163,18 +163,21 @@ public class AutoSkip : IServerEntryPoint
             }
 
             // Notify the user that an introduction is being skipped for them.
-            _sessionManager.SendMessageCommand(
+            var notificationText = Plugin.Instance!.Configuration.AutoSkipNotificationText;
+            if (!string.IsNullOrWhiteSpace(notificationText))
+            {
+                _sessionManager.SendMessageCommand(
                 session.Id,
                 session.Id,
                 new MessageCommand()
                 {
                     Header = string.Empty,      // some clients require header to be a string instead of null
-                    Text = "Automatically skipped intro",
+                    Text = notificationText,
                     TimeoutMs = 2000,
                 },
                 CancellationToken.None);
+            }
 
-            // Send the seek command
             _logger.LogDebug("Sending seek command to {Session}", deviceId);
 
             var introEnd = (long)intro.IntroEnd - Plugin.Instance!.Configuration.SecondsOfIntroToPlay;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Mime;
+using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
 using MediaBrowser.Controller.Entities.TV;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -103,5 +104,17 @@ public class SkipIntroController : ControllerBase
         }
 
         return intros;
+    }
+
+    /// <summary>
+    /// Gets the user interface configuration.
+    /// </summary>
+    /// <response code="200">UserInterfaceConfiguration returned.</response>
+    /// <returns>UserInterfaceConfiguration.</returns>
+    [Route("Intros/UserInterfaceConfiguration")]
+    public ActionResult<UserInterfaceConfiguration> GetUserInterfaceConfiguration()
+    {
+        var config = Plugin.Instance!.Configuration;
+        return new UserInterfaceConfiguration(config.SkipButtonVisible, config.SkipButtonText);
     }
 }

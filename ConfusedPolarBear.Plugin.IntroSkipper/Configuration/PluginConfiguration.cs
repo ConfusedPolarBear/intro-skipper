@@ -75,6 +75,11 @@ public class PluginConfiguration : BasePluginConfiguration
     // ===== Playback settings =====
 
     /// <summary>
+    /// Gets or sets a value indicating whether to show the skip intro button.
+    /// </summary>
+    public bool SkipButtonVisible { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets a value indicating whether introductions should be automatically skipped.
     /// </summary>
     public bool AutoSkip { get; set; }
@@ -127,4 +132,16 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the minimum duration of audio (in seconds) that is considered silent.
     /// </summary>
     public double SilenceDetectionMinimumDuration { get; set; } = 0.33;
+
+    // ===== Localization support =====
+
+    /// <summary>
+    /// Gets or sets the text to display in the Skip Intro button.
+    /// </summary>
+    public string SkipButtonText { get; set; } = "Skip Intro";
+
+    /// <summary>
+    /// Gets or sets the notification text sent after automatically skipping an introduction.
+    /// </summary>
+    public string AutoSkipNotificationText { get; set; } = "Automatically skipped intro";
 }

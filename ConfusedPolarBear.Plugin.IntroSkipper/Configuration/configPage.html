@@ -196,12 +196,26 @@
 
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
+                                <input id="SkipButtonVisible" type="checkbox" is="emby-checkbox" />
+                                <span>Show skip intro button</span>
+                            </label>
+
+                            <div class="fieldDescription">
+                                If checked, a skip button will be displayed at the start of an episode's introduction.
+                                <strong>This setting only applies to the web interface.</strong>
+                                <br />
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
                                 <input id="AutoSkip" type="checkbox" is="emby-checkbox" />
                                 <span>Automatically skip intros</span>
                             </label>
 
                             <div class="fieldDescription">
-                                If checked, intros will be automatically skipped. If you access Jellyfin through a reverse proxy, it must be configured to proxy web
+                                If checked, intros will be automatically skipped. If you access Jellyfin through a
+                                reverse proxy, it must be configured to proxy web
                                 sockets.<br />
                             </div>
                         </div>
@@ -246,6 +260,30 @@
                                 Seconds of introduction that should be played. Defaults to 2.
                             </div>
                         </div>
+
+                        <details>
+                            <summary>User Interface Customization</summary>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel" for="SkipButtonText">
+                                    Skip intro button text
+                                </label>
+                                <input id="SkipButtonText" type="text" is="emby-input" />
+                                <div class="fieldDescription">
+                                    Text to display in the skip intro button.
+                                </div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel" for="AutoSkipNotificationText">
+                                    Automatic skip notification message
+                                </label>
+                                <input id="AutoSkipNotificationText" type="text" is="emby-input" />
+                                <div class="fieldDescription">
+                                    Message sent to a user after automatically skipping an introduction. Leave blank to skip sending a notification.
+                                </div>
+                            </div>
+                        </details>
                     </fieldset>
 
                     <div>
@@ -395,13 +433,16 @@
                 // internals
                 "SilenceDetectionMaximumNoise",
                 "SilenceDetectionMinimumDuration",
+                "SkipButtonText",
+                "AutoSkipNotificationText"
             ]
 
             var booleanConfigurationFields = [
                 "AnalyzeSeasonZero",
                 "RegenerateEdlFiles",
                 "AutoSkip",
-                "SkipFirstEpisode"
+                "SkipFirstEpisode",
+                "SkipButtonVisible",
             ]
 
             // visualizer elements

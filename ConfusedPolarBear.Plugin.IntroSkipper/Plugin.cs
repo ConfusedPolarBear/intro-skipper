@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using ConfusedPolarBear.Plugin.IntroSkipper.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
@@ -47,9 +48,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         _libraryManager = libraryManager;
         _logger = logger;
 
-        FingerprintCachePath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "cache");
         FFmpegPath = serverConfiguration.GetEncodingOptions().EncoderAppPathDisplay;
-        _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
+
+        var introsDirectory = Path.Join(applicationPaths.PluginConfigurationsPath, "intros");
+        FingerprintCachePath = Path.Join(introsDirectory, "cache");
+        _introPath = Path.Join(introsDirectory, "intros.xml");
 
         // Create the base & cache directories (if needed).
         if (!Directory.Exists(FingerprintCachePath))
@@ -67,6 +70,35 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         catch (Exception ex)
         {
             _logger.LogWarning("Unable to load introduction timestamps: {Exception}", ex);
+        }
+
+        // Inject the skip intro button code into the web interface.
+        var indexPath = Path.Join(applicationPaths.WebPath, "index.html");
+        try
+        {
+            InjectSkipButton(indexPath, Path.Join(introsDirectory, "index-pre-skip-button.html"));
+        }
+        catch (Exception ex)
+        {
+            // WarningManager.SetFlag(PluginWarning.UnableToAddSkipButton);
+
+            if (ex is UnauthorizedAccessException)
+            {
+                var suggestion = OperatingSystem.IsLinux() ?
+                    "running `sudo chown jellyfin PATH` (if this is a native installation)" :
+                    "changing the permissions of PATH";
+
+                suggestion = suggestion.Replace("PATH", indexPath, StringComparison.Ordinal);
+
+                _logger.LogError(
+                    "Failed to add skip button to web interface. Try {Suggestion} and restarting the server. Error: {Error}",
+                    suggestion,
+                    ex);
+            }
+            else
+            {
+                _logger.LogError("Unknown error encountered while adding skip button: {Error}", ex);
+            }
         }
     }
 
@@ -148,6 +180,29 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         }
     }
 
+    /// <inheritdoc />
+    public IEnumerable<PluginPageInfo> GetPages()
+    {
+        return new[]
+        {
+            new PluginPageInfo
+            {
+                Name = this.Name,
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html"
+            },
+            new PluginPageInfo
+            {
+                Name = "visualizer.js",
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.visualizer.js"
+            },
+            new PluginPageInfo
+            {
+                Name = "skip-intro-button.js",
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.inject.js"
+            }
+        };
+    }
+
     internal BaseItem GetItem(Guid id)
     {
         return _libraryManager.GetItemById(id);
@@ -176,26 +231,50 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         }
     }
 
-    /// <inheritdoc />
-    public IEnumerable<PluginPageInfo> GetPages()
-    {
-        return new[]
-        {
-            new PluginPageInfo
-            {
-                Name = this.Name,
-                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html"
-            },
-            new PluginPageInfo
-            {
-                Name = "visualizer.js",
-                EmbeddedResourcePath = GetType().Namespace + ".Configuration.visualizer.js"
-            }
-        };
-    }
-
     private void OnConfigurationChanged(object? sender, BasePluginConfiguration e)
     {
         AutoSkipChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Inject the skip button script into the web interface.
+    /// </summary>
+    /// <param name="indexPath">Full path to index.html.</param>
+    /// <param name="backupPath">Full path to create a backup of index.html at.</param>
+    private void InjectSkipButton(string indexPath, string backupPath)
+    {
+        // Parts of this code are based off of JellyScrub's script injection code.
+        // https://github.com/nicknsy/jellyscrub/blob/4ce806f602988a662cfe3cdbaac35ee8046b7ec4/Nick.Plugin.Jellyscrub/JellyscrubPlugin.cs
+
+        _logger.LogInformation("Adding skip button to {Path}", indexPath);
+
+        _logger.LogDebug("Reading index.html from {Path}", indexPath);
+        var contents = File.ReadAllText(indexPath);
+        _logger.LogDebug("Successfully read index.html");
+
+        var scriptTag = "<script src=\"configurationpage?name=skip-intro-button.js\"></script>";
+
+        // Only inject the script tag once
+        if (contents.Contains(scriptTag, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Skip button already added");
+            return;
+        }
+
+        // Backup the original version of the web interface
+        _logger.LogInformation("Backing up index.html to {Backup}", backupPath);
+        File.WriteAllText(backupPath, contents);
+
+        // Inject a link to the script at the end of the <head> section.
+        // A regex is used here to ensure the replacement is only done once.
+        _logger.LogDebug("Injecting script tag");
+        var headEnd = new Regex("</head>", RegexOptions.IgnoreCase);
+        contents = headEnd.Replace(contents, scriptTag + "</head>", 1);
+
+        // Write the modified file contents
+        _logger.LogDebug("Saving modified file");
+        File.WriteAllText(indexPath, contents);
+
+        _logger.LogInformation("Skip intro button successfully added to web interface");
     }
 }
