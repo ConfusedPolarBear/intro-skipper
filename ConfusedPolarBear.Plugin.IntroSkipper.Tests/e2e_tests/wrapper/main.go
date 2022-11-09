@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
@@ -173,6 +174,13 @@ func main() {
 				fmt.Sprintf("reports/%s-%d.json", server.Comment, start.Unix())},
 			5*time.Minute)
 		fmt.Print("\033[39;0m") // reset terminal text color
+
+		// Pause for any manual tests
+		if server.ManualTests {
+			fmt.Println("  [!] Pausing for manual tests")
+			reader := bufio.NewReader(os.Stdin)
+			reader.ReadString('\n')
+		}
 
 		// Setup base Selenium arguments
 		seleniumArgs = []string{
