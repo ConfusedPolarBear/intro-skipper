@@ -152,7 +152,7 @@ def test_skip_button(driver, server):
 
     # Find the skip intro button and click it, logging the new video position after the seek is preformed
     print("  [+] Clicking skip intro button")
-    driver.find_element(By.CSS_SELECTOR, "button.btnSkipIntro").click()
+    driver.find_element(By.CSS_SELECTOR, "div#skipIntro").click()
     time.sleep(1)
     screenshot(driver, "skip_button_post_skip")
     assert_video_playing(driver)
