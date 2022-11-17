@@ -1,5 +1,6 @@
 let nowPlayingItemSkipSegments = {};
 let videoPlayer = {};
+let originalFetch = window.fetch;
 
 function d(msg) {
     console.debug("[intro skipper]", msg);
@@ -8,7 +9,39 @@ function d(msg) {
 /** Setup event listeners */
 function setup() {
     document.addEventListener("viewshow", viewshow);
+    window.fetch = fetchWrapper;
     d("Registered hooks");
+}
+
+/** Wrapper around fetch() that retrieves skip segments for the currently playing item. */
+async function fetchWrapper(...args) {
+    // Based on JellyScrub's trickplay.js
+    let [resource, options] = args;
+    let response = await originalFetch(resource, options);
+
+    // Bail early if this isn't a playback info URL
+    let path = new URL(resource).pathname;
+    if (!path.includes("/PlaybackInfo")) {
+        return response;
+    }
+
+    try
+    {
+        d("retrieving skip segments from URL");
+        d(path);
+
+        let id = path.split("/")[2];
+        nowPlayingItemSkipSegments = await authenticatedFetch(`Episode/${id}/IntroTimestamps/v1`);
+
+        d("successfully retrieved skip segments");
+        d(nowPlayingItemSkipSegments);
+    }
+    catch (e)
+    {
+        console.error("unable to get skip segments from", path, e);
+    }
+
+    return response;
 }
 
 /**
@@ -31,21 +64,6 @@ function viewshow() {
     d("Hooking video timeupdate");
     videoPlayer = document.querySelector("video");
     videoPlayer.addEventListener("timeupdate", videoPositionChanged);
-
-    d("Getting timestamps of introduction");
-    getIntroTimestamps();
-}
-
-/** Get skip button UI configuration */
-async function getUserInterfaceConfiguration() {
-    const reqInit = {
-        headers: {
-            "Authorization": "MediaBrowser Token=" + ApiClient.accessToken()
-        }
-    }
-
-    const res = await fetch("/Intros/UserInterfaceConfiguration", reqInit);
-    return await res.json();
 }
 
 /**
@@ -119,7 +137,7 @@ async function injectSkipButtonElement() {
 
     d("Adding button");
 
-    let config = await getUserInterfaceConfiguration();
+    let config = await authenticatedFetch("Intros/UserInterfaceConfiguration");
     if (!config.SkipButtonVisible) {
         d("Not adding button: not visible");
         return;
@@ -151,30 +169,6 @@ async function injectSkipButtonElement() {
     document.querySelector("#btnSkipIntroText").textContent = config.SkipButtonText;
 }
 
-/** Gets the introduction timestamps of the currently playing item. */
-async function getIntroTimestamps() {
-    let id = await getNowPlayingItemId();
-
-    const address = ApiClient.serverAddress();
-
-    const url = `${address}/Episode/${id}/IntroTimestamps`;
-    const reqInit = {
-        headers: {
-            "Authorization": `MediaBrowser Token=${ApiClient.accessToken()}`
-        }
-    };
-
-    fetch(url, reqInit).then(r => {
-        if (!r.ok) {
-            return;
-        }
-
-        return r.json();
-    }).then(intro => {
-        nowPlayingItemSkipSegments = intro;
-    });
-}
-
 /** Playback position changed, check if the skip button needs to be displayed. */
 function videoPositionChanged() {
     // Ensure a skip segment was found.
@@ -204,21 +198,26 @@ function skipIntro(e) {
     videoPlayer.currentTime = nowPlayingItemSkipSegments.IntroEnd;
 }
 
-/** Looks up the ID of the currently playing item. */
-async function getNowPlayingItemId() {
-    d("Looking up ID of currently playing item");
-
-    let id = await ApiClient.getCurrentUserId();
-
-    let sessions = await ApiClient.getSessions();
-    let filtered = sessions.filter(x => (x.UserId === id) && x.NowPlayingItem);
-
-    d("Filtered " + sessions.length + " sessions down to " + filtered.length);
-
-    return filtered[0].NowPlayingItem.Id;
-}
-
 /** Tests if an element with the provided selector exists. */
 function testElement(selector) { return document.querySelector(selector); }
+
+/** Make an authenticated fetch to the Jellyfin server and parse the response body as JSON. */
+async function authenticatedFetch(url) {
+    url = ApiClient.serverAddress() + "/" + url;
+
+    const reqInit = {
+        headers: {
+            "Authorization": "MediaBrowser Token=" + ApiClient.accessToken()
+        }
+    };
+
+    const res = await fetch(url, reqInit);
+
+    if (res.status !== 200) {
+        throw new Error(`Expected status 200 from ${url}, but got ${res.status}`);
+    }
+
+    return await res.json();
+}
 
 setup();
