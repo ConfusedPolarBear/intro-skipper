@@ -2,12 +2,12 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -19,7 +19,8 @@ public class QueueManager
     private ILogger<QueueManager> _logger;
 
     private double analysisPercent;
-    private IList<string> selectedLibraries;
+    private List<string> selectedLibraries;
+    private Dictionary<Guid, List<QueuedEpisode>> _queuedEpisodes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueManager"/> class.
@@ -31,13 +32,15 @@ public class QueueManager
         _logger = logger;
         _libraryManager = libraryManager;
 
-        selectedLibraries = new List<string>();
+        selectedLibraries = new();
+        _queuedEpisodes = new();
     }
 
     /// <summary>
     /// Iterates through all libraries on the server and queues all episodes for analysis.
     /// </summary>
-    public void EnqueueAllEpisodes()
+    /// <returns>Queued media items.</returns>
+    public ReadOnlyDictionary<Guid, List<QueuedEpisode>> EnqueueAllEpisodes()
     {
         // Assert that ffmpeg with chromaprint is installed
         if (!FFmpegWrapper.CheckFFmpegVersion())
@@ -46,20 +49,13 @@ public class QueueManager
                 "ffmpeg with chromaprint is not installed on this system - episodes will not be analyzed. If Jellyfin is running natively, install jellyfin-ffmpeg5. If Jellyfin is running in a container, upgrade it to the latest version of 10.8.0.");
         }
 
-        Plugin.Instance!.AnalysisQueue.Clear();
         Plugin.Instance!.TotalQueued = 0;
 
         LoadAnalysisSettings();
 
-        // For all selected TV show libraries, enqueue all contained items.
+        // For all selected libraries, enqueue all contained episodes.
         foreach (var folder in _libraryManager.GetVirtualFolders())
         {
-            if (folder.CollectionType != CollectionTypeOptions.TvShows)
-            {
-                _logger.LogDebug("Not analyzing library \"{Name}\": not a TV show library", folder.Name);
-                continue;
-            }
-
             // If libraries have been selected for analysis, ensure this library was selected.
             if (selectedLibraries.Count > 0 && !selectedLibraries.Contains(folder.Name))
             {
@@ -81,6 +77,14 @@ public class QueueManager
                 _logger.LogError("Failed to enqueue items from library {Name}: {Exception}", folder.Name, ex);
             }
         }
+
+        Plugin.Instance!.QueuedMediaItems.Clear();
+        foreach (var kvp in _queuedEpisodes)
+        {
+            Plugin.Instance!.QueuedMediaItems[kvp.Key] = kvp.Value;
+        }
+
+        return new(_queuedEpisodes);
     }
 
     /// <summary>
@@ -156,7 +160,7 @@ public class QueueManager
         {
             if (item is not Episode episode)
             {
-                _logger.LogError("Item {Name} is not an episode", item.Name);
+                _logger.LogDebug("Item {Name} is not an episode", item.Name);
                 continue;
             }
 
@@ -198,11 +202,11 @@ public class QueueManager
             60 * Plugin.Instance!.Configuration.AnalysisLengthLimit);
 
         // Allocate a new list for each new season
-        Plugin.Instance!.AnalysisQueue.TryAdd(episode.SeasonId, new List<QueuedEpisode>());
+        _queuedEpisodes.TryAdd(episode.SeasonId, new List<QueuedEpisode>());
 
         // Queue the episode for analysis
         var maxCreditsDuration = Plugin.Instance!.Configuration.MaximumEpisodeCreditsDuration * 60;
-        Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode()
+        _queuedEpisodes[episode.SeasonId].Add(new QueuedEpisode()
         {
             SeriesName = episode.SeriesName,
             SeasonNumber = episode.AiredSeasonNumber ?? 0,

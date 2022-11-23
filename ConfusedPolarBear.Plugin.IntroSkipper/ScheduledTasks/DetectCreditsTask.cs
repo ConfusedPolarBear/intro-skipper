@@ -84,9 +84,7 @@ public class DetectCreditsTask : IScheduledTask
             _loggerFactory.CreateLogger<QueueManager>(),
             _libraryManager);
 
-        queueManager.EnqueueAllEpisodes();
-
-        var queue = Plugin.Instance!.AnalysisQueue;
+        var queue = queueManager.EnqueueAllEpisodes();
 
         if (queue.Count == 0)
         {
@@ -142,7 +140,11 @@ public class DetectCreditsTask : IScheduledTask
                     ex);
             }
 
-            progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
+            var total = Plugin.Instance!.TotalQueued;
+            if (total > 0)
+            {
+                progress.Report((totalProcessed * 100) / total);
+            }
         });
 
         return Task.CompletedTask;

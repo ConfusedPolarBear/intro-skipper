@@ -53,10 +53,7 @@ public class TroubleshootingController : ControllerBase
 
         bundle.Append("* Queue contents: ");
         bundle.Append(Plugin.Instance!.TotalQueued);
-        bundle.Append(" episodes, ");
-        bundle.Append(Plugin.Instance!.AnalysisQueue.Count);
-        bundle.Append(" seasons");
-        bundle.Append('\n');
+        bundle.Append(" episodes\n");
 
         bundle.Append(FFmpegWrapper.GetChromaprintLogs());
 

@@ -92,9 +92,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public Dictionary<Guid, Intro> Intros { get; } = new();
 
     /// <summary>
-    /// Gets the mapping of season ids to episodes that have been queued for fingerprinting.
+    /// Gets the most recent media item queue.
     /// </summary>
-    public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; } = new();
+    public Dictionary<Guid, List<QueuedEpisode>> QueuedMediaItems { get; } = new();
 
     /// <summary>
     /// Gets or sets the total number of episodes in the queue.

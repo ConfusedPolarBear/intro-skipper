@@ -83,9 +83,7 @@ public class DetectIntroductionsTask : IScheduledTask
             _loggerFactory.CreateLogger<QueueManager>(),
             _libraryManager);
 
-        queueManager.EnqueueAllEpisodes();
-
-        var queue = Plugin.Instance!.AnalysisQueue;
+        var queue = queueManager.EnqueueAllEpisodes();
 
         if (queue.Count == 0)
         {
@@ -162,7 +160,11 @@ public class DetectIntroductionsTask : IScheduledTask
                 EdlManager.UpdateEDLFiles(episodes);
             }
 
-            progress.Report((totalProcessed * 100) / Plugin.Instance!.TotalQueued);
+            var total = Plugin.Instance!.TotalQueued;
+            if (total > 0)
+            {
+                progress.Report((totalProcessed * 100) / total);
+            }
         });
 
         // Turn the regenerate EDL flag off after the scan completes.
