@@ -48,10 +48,6 @@ public class Entrypoint : IServerEntryPoint
     {
         FFmpegWrapper.Logger = _logger;
 
-#if DEBUG
-        LogVersion();
-#endif
-
         // TODO: when a new item is added to the server, immediately analyze the season it belongs to
         // instead of waiting for the next task interval. The task start should be debounced by a few seconds.
 
@@ -74,40 +70,6 @@ public class Entrypoint : IServerEntryPoint
 
         return Task.CompletedTask;
     }
-
-#if DEBUG
-    /// <summary>
-    /// Logs the exact commit that created this version of the plugin. Only used in unstable builds.
-    /// </summary>
-    private void LogVersion()
-    {
-        var assembly = GetType().Assembly;
-        var path = GetType().Namespace + ".Configuration.version.txt";
-
-        using (var stream = assembly.GetManifestResourceStream(path))
-        {
-            if (stream is null)
-            {
-                _logger.LogWarning("Unable to read embedded version information");
-                return;
-            }
-
-            var version = string.Empty;
-            using (var reader = new StreamReader(stream))
-            {
-                version = reader.ReadToEnd().TrimEnd();
-            }
-
-            if (version == "unknown")
-            {
-                _logger.LogTrace("Embedded version information was not valid, ignoring");
-                return;
-            }
-
-            _logger.LogInformation("Unstable version built from commit {Version}", version);
-        }
-    }
-#endif
 
     /// <summary>
     /// Dispose.

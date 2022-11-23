@@ -1,3 +1,4 @@
+using System;
 using System.Net.Mime;
 using System.Text;
 using MediaBrowser.Common;
@@ -47,8 +48,23 @@ public class TroubleshootingController : ControllerBase
         bundle.Append(_applicationHost.ApplicationVersionString);
         bundle.Append('\n');
 
+        var version = Plugin.Instance!.Version.ToString(3);
+
+        try
+        {
+            var commit = Plugin.Instance!.GetCommit();
+            if (!string.IsNullOrWhiteSpace(commit))
+            {
+                version += string.Concat("+", commit.AsSpan(0, 12));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Unable to append commit to version: {Exception}", ex);
+        }
+
         bundle.Append("* Plugin version: ");
-        bundle.Append(Plugin.Instance!.Version.ToString(3));
+        bundle.Append(version);
         bundle.Append('\n');
 
         bundle.Append("* Queue contents: ");
