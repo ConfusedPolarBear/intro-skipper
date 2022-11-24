@@ -2,7 +2,11 @@
 
 ## v0.1.8.0 (no eta)
 * New features
+  * Support adding skip intro button to web interface without using a fork
+  * Add localization support for the skip intro button and the automatic skip notification message
   * Detect ending credits in television episodes
+  * Add support for using chapter names to locate introductions and ending credits
+  * Add support for using black frames to locate ending credits
 * Internal changes
   * Move Chromaprint analysis code out of the episode analysis task
   * Add support for multiple analysis techinques
