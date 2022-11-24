@@ -73,18 +73,24 @@ public class SkipIntroController : ControllerBase
     }
 
     /// <summary>
-    /// Get all introductions. Only used by the end to end testing script.
+    /// Get all introductions or credits. Only used by the end to end testing script.
     /// </summary>
-    /// <response code="200">All introductions have been returned.</response>
+    /// <param name="mode">Mode.</param>
+    /// <response code="200">All timestamps have been returned.</response>
     /// <returns>List of IntroWithMetadata objects.</returns>
     [Authorize(Policy = "RequiresElevation")]
     [HttpGet("Intros/All")]
-    public ActionResult<List<IntroWithMetadata>> GetAllIntros()
+    public ActionResult<List<IntroWithMetadata>> GetAllTimestamps(
+        [FromQuery] AnalysisMode mode = AnalysisMode.Introduction)
     {
         List<IntroWithMetadata> intros = new();
 
+        var timestamps = mode == AnalysisMode.Introduction ?
+            Plugin.Instance!.Intros :
+            Plugin.Instance!.Credits;
+
         // Get metadata for all intros
-        foreach (var intro in Plugin.Instance!.Intros)
+        foreach (var intro in timestamps)
         {
             // Get the details of the item from Jellyfin
             var rawItem = Plugin.Instance!.GetItem(intro.Key);

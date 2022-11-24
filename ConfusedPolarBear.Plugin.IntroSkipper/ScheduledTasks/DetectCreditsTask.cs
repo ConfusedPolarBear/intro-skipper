@@ -98,9 +98,6 @@ public class DetectCreditsTask : IScheduledTask
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
         };
 
-        // TODO: FIXME: if the queue is modified while the task is running, the task will fail.
-        // clone the queue before running the task to prevent this.
-
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {

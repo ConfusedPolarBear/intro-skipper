@@ -8,6 +8,8 @@ using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Persistence;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using Microsoft.Extensions.Logging;
@@ -23,9 +25,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     private readonly object _introsLock = new();
     private IXmlSerializer _xmlSerializer;
     private ILibraryManager _libraryManager;
+    private IItemRepository _itemRepository;
     private ILogger<Plugin> _logger;
     private string _introPath;
-    private string _creditsPath;  // TODO: FIXME: remove this
+    private string _creditsPath;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
@@ -34,12 +37,14 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
     /// <param name="serverConfiguration">Server configuration manager.</param>
     /// <param name="libraryManager">Library manager.</param>
+    /// <param name="itemRepository">Item repository.</param>
     /// <param name="logger">Logger.</param>
     public Plugin(
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
         IServerConfigurationManager serverConfiguration,
         ILibraryManager libraryManager,
+        IItemRepository itemRepository,
         ILogger<Plugin> logger)
         : base(applicationPaths, xmlSerializer)
     {
@@ -47,14 +52,13 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
         _xmlSerializer = xmlSerializer;
         _libraryManager = libraryManager;
+        _itemRepository = itemRepository;
         _logger = logger;
 
         FingerprintCachePath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "cache");
         FFmpegPath = serverConfiguration.GetEncodingOptions().EncoderAppPathDisplay;
         _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
-
-        // TODO: FIXME: remove this
-        _creditsPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "credits.csv");
+        _creditsPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "credits.xml");
 
         // Create the base & cache directories (if needed).
         if (!Directory.Exists(FingerprintCachePath))
@@ -73,12 +77,6 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             _logger.LogWarning("Unable to load introduction timestamps: {Exception}", ex);
         }
-
-        // TODO: FIXME: remove this
-        if (File.Exists(_creditsPath))
-        {
-            File.Delete(_creditsPath);
-        }
     }
 
     /// <summary>
@@ -90,6 +88,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// Gets the results of fingerprinting all episodes.
     /// </summary>
     public Dictionary<Guid, Intro> Intros { get; } = new();
+
+    /// <summary>
+    /// Gets all discovered ending credits.
+    /// </summary>
+    public Dictionary<Guid, Intro> Credits { get; } = new();
 
     /// <summary>
     /// Gets the most recent media item queue.
@@ -131,12 +134,23 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             var introList = new List<Intro>();
 
+            // Serialize intros
             foreach (var intro in Plugin.Instance!.Intros)
             {
                 introList.Add(intro.Value);
             }
 
             _xmlSerializer.SerializeToFile(introList, _introPath);
+
+            // Serialize credits
+            introList.Clear();
+
+            foreach (var intro in Plugin.Instance!.Credits)
+            {
+                introList.Add(intro.Value);
+            }
+
+            _xmlSerializer.SerializeToFile(introList, _creditsPath);
         }
     }
 
@@ -145,17 +159,29 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// </summary>
     public void RestoreTimestamps()
     {
-        if (!File.Exists(_introPath))
+        if (File.Exists(_introPath))
         {
-            return;
+            // Since dictionaries can't be easily serialized, analysis results are stored on disk as a list.
+            var introList = (List<Intro>)_xmlSerializer.DeserializeFromFile(
+                typeof(List<Intro>),
+                _introPath);
+
+            foreach (var intro in introList)
+            {
+                Plugin.Instance!.Intros[intro.EpisodeId] = intro;
+            }
         }
 
-        // Since dictionaries can't be easily serialized, analysis results are stored on disk as a list.
-        var introList = (List<Intro>)_xmlSerializer.DeserializeFromFile(typeof(List<Intro>), _introPath);
-
-        foreach (var intro in introList)
+        if (File.Exists(_creditsPath))
         {
-            Plugin.Instance!.Intros[intro.EpisodeId] = intro;
+            var creditList = (List<Intro>)_xmlSerializer.DeserializeFromFile(
+                typeof(List<Intro>),
+                _creditsPath);
+
+            foreach (var credit in creditList)
+            {
+                Plugin.Instance!.Credits[credit.EpisodeId] = credit;
+            }
         }
     }
 
@@ -174,52 +200,33 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         return GetItem(id).Path;
     }
 
-    internal void UpdateTimestamps(Dictionary<Guid, Intro> newIntros, AnalysisMode mode)
+    /// <summary>
+    /// Gets all chapters for this item.
+    /// </summary>
+    /// <param name="id">Item id.</param>
+    /// <returns>List of chapters.</returns>
+    internal List<ChapterInfo> GetChapters(Guid id)
     {
-        switch (mode)
+        return _itemRepository.GetChapters(GetItem(id));
+    }
+
+    internal void UpdateTimestamps(Dictionary<Guid, Intro> newTimestamps, AnalysisMode mode)
+    {
+        lock (_introsLock)
         {
-            case AnalysisMode.Introduction:
-                lock (_introsLock)
+            foreach (var intro in newTimestamps)
+            {
+                if (mode == AnalysisMode.Introduction)
                 {
-                    foreach (var intro in newIntros)
-                    {
-                        Plugin.Instance!.Intros[intro.Key] = intro.Value;
-                    }
-
-                    Plugin.Instance!.SaveTimestamps();
+                    Plugin.Instance!.Intros[intro.Key] = intro.Value;
                 }
-
-                break;
-
-            case AnalysisMode.Credits:
-                // TODO: FIXME: implement properly
-
-                lock (_introsLock)
+                else if (mode == AnalysisMode.Credits)
                 {
-                    foreach (var credit in newIntros)
-                    {
-                        var item = GetItem(credit.Value.EpisodeId) as Episode;
-                        if (item is null)
-                        {
-                            continue;
-                        }
-
-                        // Format: series, season number, episode number, title, start, end
-                        var contents = string.Format(
-                            System.Globalization.CultureInfo.InvariantCulture,
-                            "{0},{1},{2},{3},{4},{5}\n",
-                            item.SeriesName.Replace(",", string.Empty, StringComparison.Ordinal),
-                            item.AiredSeasonNumber ?? 0,
-                            item.IndexNumber ?? 0,
-                            item.Name.Replace(",", string.Empty, StringComparison.Ordinal),
-                            Math.Round(credit.Value.IntroStart, 2),
-                            Math.Round(credit.Value.IntroEnd, 2));
-
-                        File.AppendAllText(_creditsPath, contents);
-                    }
+                    Plugin.Instance!.Credits[intro.Key] = intro.Value;
                 }
+            }
 
-                break;
+            Plugin.Instance!.SaveTimestamps();
         }
     }
 

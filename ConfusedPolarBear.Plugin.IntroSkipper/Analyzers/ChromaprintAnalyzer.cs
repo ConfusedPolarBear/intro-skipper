@@ -82,7 +82,6 @@ public class ChromaprintAnalyzer : IMediaFileAnalyzer
             }
             catch (FingerprintException ex)
             {
-                // TODO: FIXME: move to debug level?
                 _logger.LogWarning("Caught fingerprint error: {Ex}", ex);
 
                 // Fallback to an empty fingerprint on any error
