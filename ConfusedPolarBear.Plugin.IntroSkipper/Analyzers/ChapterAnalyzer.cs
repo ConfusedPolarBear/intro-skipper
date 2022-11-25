@@ -3,6 +3,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,9 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
         AnalysisMode mode,
         CancellationToken cancellationToken)
     {
+        var unsuccessful = new List<QueuedEpisode>();
         var skippableRanges = new Dictionary<Guid, Intro>();
+
         var expression = mode == AnalysisMode.Introduction ?
             Plugin.Instance!.Configuration.ChapterAnalyzerIntroductionPattern :
             Plugin.Instance!.Configuration.ChapterAnalyzerEndCreditsPattern;
@@ -43,14 +46,14 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
             }
 
             var skipRange = FindMatchingChapter(
-                episode.EpisodeId,
-                episode.Duration,
+                episode,
                 new(Plugin.Instance!.GetChapters(episode.EpisodeId)),
                 expression,
                 mode);
 
             if (skipRange is null)
             {
+                unsuccessful.Add(episode);
                 continue;
             }
 
@@ -59,22 +62,20 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
 
         Plugin.Instance!.UpdateTimestamps(skippableRanges, mode);
 
-        return analysisQueue;
+        return unsuccessful.AsReadOnly();
     }
 
     /// <summary>
     /// Searches a list of chapter names for one that matches the provided regular expression.
     /// Only public to allow for unit testing.
     /// </summary>
-    /// <param name="id">Item id.</param>
-    /// <param name="duration">Duration of media file in seconds.</param>
+    /// <param name="episode">Episode.</param>
     /// <param name="chapters">Media item chapters.</param>
     /// <param name="expression">Regular expression pattern.</param>
     /// <param name="mode">Analysis mode.</param>
     /// <returns>Intro object containing skippable time range, or null if no chapter matched.</returns>
     public Intro? FindMatchingChapter(
-        Guid id,
-        int duration,
+        QueuedEpisode episode,
         Collection<ChapterInfo> chapters,
         string expression,
         AnalysisMode mode)
@@ -82,6 +83,7 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
         Intro? matchingChapter = null;
 
         var config = Plugin.Instance?.Configuration ?? new Configuration.PluginConfiguration();
+
         var minDuration = config.MinimumIntroDuration;
         int maxDuration = mode == AnalysisMode.Introduction ?
             config.MaximumIntroDuration :
@@ -91,28 +93,38 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
         {
             // Since the ending credits chapter may be the last chapter in the file, append a virtual
             // chapter at the very end of the file.
-            chapters.Add(new ChapterInfo()
+            chapters.Add(new()
             {
-                StartPositionTicks = TimeSpan.FromSeconds(duration).Ticks
+                StartPositionTicks = TimeSpan.FromSeconds(episode.Duration).Ticks
             });
         }
 
         // Check all chapters
         for (int i = 0; i < chapters.Count - 1; i++)
         {
-            // Calculate chapter position and duration
             var current = chapters[i];
             var next = chapters[i + 1];
+
+            if (string.IsNullOrWhiteSpace(current.Name))
+            {
+                continue;
+            }
 
             var currentRange = new TimeRange(
                 TimeSpan.FromTicks(current.StartPositionTicks).TotalSeconds,
                 TimeSpan.FromTicks(next.StartPositionTicks).TotalSeconds);
 
-            // Skip chapters with that don't have a name or are too short/long
-            if (string.IsNullOrEmpty(current.Name) ||
-                currentRange.Duration < minDuration ||
-                currentRange.Duration > maxDuration)
+            var baseMessage = string.Format(
+                CultureInfo.InvariantCulture,
+                "{0}: Chapter \"{1}\" ({2} - {3})",
+                episode.Path,
+                current.Name,
+                currentRange.Start,
+                currentRange.End);
+
+            if (currentRange.Duration < minDuration || currentRange.Duration > maxDuration)
             {
+                _logger.LogTrace("{Base}: ignoring (invalid duration)", baseMessage);
                 continue;
             }
 
@@ -126,10 +138,12 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
 
             if (!match)
             {
+                _logger.LogTrace("{Base}: ignoring (does not match regular expression)", baseMessage);
                 continue;
             }
 
-            matchingChapter = new Intro(id, currentRange);
+            matchingChapter = new(episode.EpisodeId, currentRange);
+            _logger.LogTrace("{Base}: okay", baseMessage);
             break;
         }
 

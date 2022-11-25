@@ -51,7 +51,7 @@ public class TestChapterAnalyzer
             config.ChapterAnalyzerIntroductionPattern :
             config.ChapterAnalyzerEndCreditsPattern;
 
-        return analyzer.FindMatchingChapter(Guid.Empty, 2000, chapters, expression, mode);
+        return analyzer.FindMatchingChapter(new() { Duration = 2000 }, chapters, expression, mode);
     }
 
     private Collection<ChapterInfo> CreateChapters(string name, AnalysisMode mode)

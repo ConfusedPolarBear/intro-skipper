@@ -254,7 +254,7 @@ public class DetectIntroductionsTask : IScheduledTask
 
         // Chapter analyzer
         var chapter = new ChapterAnalyzer(_loggerFactory.CreateLogger<ChapterAnalyzer>());
-        chapter.AnalyzeMediaFiles(episodes, AnalysisMode.Introduction, cancellationToken);
+        episodes = chapter.AnalyzeMediaFiles(episodes, AnalysisMode.Introduction, cancellationToken);
 
         // Analyze the season with Chromaprint
         var chromaprint = new ChromaprintAnalyzer(_loggerFactory.CreateLogger<ChromaprintAnalyzer>());
