@@ -1,44 +1,46 @@
-let nowPlayingItemSkipSegments = {};
-let videoPlayer = {};
-let originalFetch = window.fetch;
+let introSkipper = {
+    skipSegments: {},
+    videoPlayer: {},
 
-function d(msg) {
+    // .bind() is used here to prevent illegal invocation errors
+    originalFetch: window.fetch.bind(window),
+};
+
+introSkipper.d = function (msg) {
     console.debug("[intro skipper]", msg);
 }
 
 /** Setup event listeners */
-function setup() {
-    document.addEventListener("viewshow", viewshow);
-    window.fetch = fetchWrapper;
-    d("Registered hooks");
+introSkipper.setup = function () {
+    document.addEventListener("viewshow", introSkipper.viewShow);
+    window.fetch = introSkipper.fetchWrapper;
+    introSkipper.d("Registered hooks");
 }
 
 /** Wrapper around fetch() that retrieves skip segments for the currently playing item. */
-async function fetchWrapper(...args) {
+introSkipper.fetchWrapper = async function (...args) {
     // Based on JellyScrub's trickplay.js
     let [resource, options] = args;
-    let response = await originalFetch(resource, options);
+    let response = await introSkipper.originalFetch(resource, options);
 
     // Bail early if this isn't a playback info URL
-    let path = new URL(resource).pathname;
-    if (!path.includes("/PlaybackInfo")) {
-        return response;
-    }
+    try {
+        let path = new URL(resource).pathname;
+        if (!path.includes("/PlaybackInfo")) {
+            return response;
+        }
 
-    try
-    {
-        d("retrieving skip segments from URL");
-        d(path);
+        introSkipper.d("retrieving skip segments from URL");
+        introSkipper.d(path);
 
         let id = path.split("/")[2];
-        nowPlayingItemSkipSegments = await authenticatedFetch(`Episode/${id}/IntroTimestamps/v1`);
+        introSkipper.skipSegments = await introSkipper.secureFetch(`Episode/${id}/IntroTimestamps/v1`);
 
-        d("successfully retrieved skip segments");
-        d(nowPlayingItemSkipSegments);
+        introSkipper.d("successfully retrieved skip segments");
+        introSkipper.d(introSkipper.skipSegments);
     }
-    catch (e)
-    {
-        console.error("unable to get skip segments from", path, e);
+    catch (e) {
+        console.error("unable to get skip segments from", resource, e);
     }
 
     return response;
@@ -48,36 +50,35 @@ async function fetchWrapper(...args) {
  * Event handler that runs whenever the current view changes.
  * Used to detect the start of video playback.
  */
-function viewshow() {
+introSkipper.viewShow = function () {
     const location = window.location.hash;
-    d("Location changed to " + location);
+    introSkipper.d("Location changed to " + location);
 
     if (location !== "#!/video") {
-        d("Ignoring location change");
+        introSkipper.d("Ignoring location change");
         return;
     }
 
-    d("Adding button CSS and element");
-    injectSkipButtonCss();
-    injectSkipButtonElement();
+    introSkipper.d("Adding button CSS and element");
+    introSkipper.injectCss();
+    introSkipper.injectButton();
 
-    d("Hooking video timeupdate");
-    videoPlayer = document.querySelector("video");
-    videoPlayer.addEventListener("timeupdate", videoPositionChanged);
+    introSkipper.d("Hooking video timeupdate");
+    introSkipper.videoPlayer = document.querySelector("video");
+    introSkipper.videoPlayer.addEventListener("timeupdate", introSkipper.videoPositionChanged);
 }
 
 /**
  * Injects the CSS used by the skip intro button.
  * Calling this function is a no-op if the CSS has already been injected.
  */
-function injectSkipButtonCss() {
-    if (testElement("style#introSkipperCss"))
-    {
-        d("CSS already added");
+introSkipper.injectCss = function () {
+    if (introSkipper.testElement("style#introSkipperCss")) {
+        introSkipper.d("CSS already added");
         return;
     }
 
-    d("Adding CSS");
+    introSkipper.d("Adding CSS");
 
     let styleElement = document.createElement("style");
     styleElement.id = "introSkipperCss";
@@ -129,17 +130,17 @@ function injectSkipButtonCss() {
  * Inject the skip intro button into the video player.
  * Calling this function is a no-op if the CSS has already been injected.
  */
-async function injectSkipButtonElement() {
-    if (testElement(".btnSkipIntro")) {
-        d("Button already added");
+introSkipper.injectButton = async function () {
+    if (introSkipper.testElement(".btnSkipIntro")) {
+        introSkipper.d("Button already added");
         return;
     }
 
-    d("Adding button");
+    introSkipper.d("Adding button");
 
-    let config = await authenticatedFetch("Intros/UserInterfaceConfiguration");
+    let config = await introSkipper.secureFetch("Intros/UserInterfaceConfiguration");
     if (!config.SkipButtonVisible) {
-        d("Not adding button: not visible");
+        introSkipper.d("Not adding button: not visible");
         return;
     }
 
@@ -147,7 +148,7 @@ async function injectSkipButtonElement() {
     const button = document.createElement("div");
     button.id = "skipIntro"
     button.classList.add("hide");
-    button.addEventListener("click", skipIntro);
+    button.addEventListener("click", introSkipper.doSkip);
     button.innerHTML = `
     <button is="paper-icon-button-light" class="btnSkipIntro paper-icon-button-light">
         <span id="btnSkipIntroText"></span>
@@ -170,9 +171,9 @@ async function injectSkipButtonElement() {
 }
 
 /** Playback position changed, check if the skip button needs to be displayed. */
-function videoPositionChanged() {
+introSkipper.videoPositionChanged = function () {
     // Ensure a skip segment was found.
-    if (!nowPlayingItemSkipSegments?.Valid) {
+    if (!introSkipper.skipSegments?.Valid) {
         return;
     }
 
@@ -181,28 +182,28 @@ function videoPositionChanged() {
         return;
     }
 
-    const position = videoPlayer.currentTime;
-    if (position >= nowPlayingItemSkipSegments.ShowSkipPromptAt &&
-        position < nowPlayingItemSkipSegments.HideSkipPromptAt) {
-            skipButton.classList.remove("hide");
-            return;
-        }
+    const position = introSkipper.videoPlayer.currentTime;
+    if (position >= introSkipper.skipSegments.ShowSkipPromptAt &&
+        position < introSkipper.skipSegments.HideSkipPromptAt) {
+        skipButton.classList.remove("hide");
+        return;
+    }
 
     skipButton.classList.add("hide");
 }
 
 /** Seeks to the end of the intro. */
-function skipIntro(e) {
-    d("Skipping intro");
-    d(nowPlayingItemSkipSegments);
-    videoPlayer.currentTime = nowPlayingItemSkipSegments.IntroEnd;
+introSkipper.doSkip = function (e) {
+    introSkipper.d("Skipping intro");
+    introSkipper.d(introSkipper.skipSegments);
+    introSkipper.videoPlayer.currentTime = introSkipper.skipSegments.IntroEnd;
 }
 
 /** Tests if an element with the provided selector exists. */
-function testElement(selector) { return document.querySelector(selector); }
+introSkipper.testElement = function (selector) { return document.querySelector(selector); }
 
 /** Make an authenticated fetch to the Jellyfin server and parse the response body as JSON. */
-async function authenticatedFetch(url) {
+introSkipper.secureFetch = async function (url) {
     url = ApiClient.serverAddress() + "/" + url;
 
     const reqInit = {
@@ -220,4 +221,4 @@ async function authenticatedFetch(url) {
     return await res.json();
 }
 
-setup();
+introSkipper.setup();
