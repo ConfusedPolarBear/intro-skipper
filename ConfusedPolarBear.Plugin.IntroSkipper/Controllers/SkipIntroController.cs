@@ -26,14 +26,17 @@ public class SkipIntroController : ControllerBase
     /// Returns the timestamps of the introduction in a television episode. Responses are in API version 1 format.
     /// </summary>
     /// <param name="id">ID of the episode. Required.</param>
+    /// <param name="mode">Timestamps to return. Optional. Defaults to Introduction for backwards compatibility.</param>
     /// <response code="200">Episode contains an intro.</response>
     /// <response code="404">Failed to find an intro in the provided episode.</response>
     /// <returns>Detected intro.</returns>
     [HttpGet("Episode/{id}/IntroTimestamps")]
     [HttpGet("Episode/{id}/IntroTimestamps/v1")]
-    public ActionResult<Intro> GetIntroTimestamps([FromRoute] Guid id)
+    public ActionResult<Intro> GetIntroTimestamps(
+        [FromRoute] Guid id,
+        [FromQuery] AnalysisMode mode = AnalysisMode.Introduction)
     {
-        var intro = GetIntro(id);
+        var intro = GetIntro(id, mode);
 
         if (intro is null || !intro.Valid)
         {
@@ -49,13 +52,25 @@ public class SkipIntroController : ControllerBase
         return intro;
     }
 
-    /// <summary>Lookup and return the intro timestamps for the provided item.</summary>
+    /// <summary>Lookup and return the skippable timestamps for the provided item.</summary>
     /// <param name="id">Unique identifier of this episode.</param>
+    /// <param name="mode">Mode.</param>
     /// <returns>Intro object if the provided item has an intro, null otherwise.</returns>
-    private Intro? GetIntro(Guid id)
+    private Intro? GetIntro(Guid id, AnalysisMode mode)
     {
-        // Returns a copy to avoid mutating the original Intro object stored in the dictionary.
-        return Plugin.Instance!.Intros.TryGetValue(id, out var intro) ? new Intro(intro) : null;
+        try
+        {
+            var timestamp = mode == AnalysisMode.Introduction ?
+                Plugin.Instance!.Intros[id] :
+                Plugin.Instance!.Credits[id];
+
+            // A copy is returned to avoid mutating the original Intro object stored in the dictionary.
+            return new(timestamp);
+        }
+        catch (KeyNotFoundException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
