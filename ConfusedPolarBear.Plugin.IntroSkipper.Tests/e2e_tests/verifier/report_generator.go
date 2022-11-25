@@ -113,11 +113,13 @@ func runAnalysisAndWait(hostAddress, apiKey string, pollInterval time.Duration) 
 	SendRequest("POST", hostAddress+"/Intros/EraseTimestamps", apiKey)
 	fmt.Println()
 
-	// The task ID changed with v0.1.7.
-	// Old task ID: 8863329048cc357f7dfebf080f2fe204
-	// New task ID: 6adda26c5261c40e8fa4a7e7df568be2
+	var taskIds = []string{
+		"f64d8ad58e3d7b98548e1a07697eb100", // v0.1.8
+		"8863329048cc357f7dfebf080f2fe204",
+		"6adda26c5261c40e8fa4a7e7df568be2"}
+
 	fmt.Println("[+] Starting analysis task")
-	for _, id := range []string{"8863329048cc357f7dfebf080f2fe204", "6adda26c5261c40e8fa4a7e7df568be2"} {
+	for _, id := range taskIds {
 		body := SendRequest("POST", hostAddress+"/ScheduledTasks/Running/"+id, apiKey)
 		fmt.Println()
 
