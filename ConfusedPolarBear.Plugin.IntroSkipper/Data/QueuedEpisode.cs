@@ -33,12 +33,12 @@ public class QueuedEpisode
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the timestamp (in seconds) to stop searching for an introduction.
+    /// Gets or sets the timestamp (in seconds) to stop searching for an introduction at.
     /// </summary>
     public int IntroFingerprintEnd { get; set; }
 
     /// <summary>
-    /// Gets or sets the timestamp (in seconds) to start looking for end credits.
+    /// Gets or sets the timestamp (in seconds) to start looking for end credits at.
     /// </summary>
     public int CreditsFingerprintStart { get; set; }
 

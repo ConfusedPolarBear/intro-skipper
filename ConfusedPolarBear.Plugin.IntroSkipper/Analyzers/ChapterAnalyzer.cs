@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,6 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
         AnalysisMode mode,
         CancellationToken cancellationToken)
     {
-        var unsuccessful = new List<QueuedEpisode>();
         var skippableRanges = new Dictionary<Guid, Intro>();
 
         var expression = mode == AnalysisMode.Introduction ?
@@ -53,7 +53,6 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
 
             if (skipRange is null)
             {
-                unsuccessful.Add(episode);
                 continue;
             }
 
@@ -62,7 +61,10 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
 
         Plugin.Instance!.UpdateTimestamps(skippableRanges, mode);
 
-        return unsuccessful.AsReadOnly();
+        return analysisQueue
+            .Where(x => !skippableRanges.ContainsKey(x.EpisodeId))
+            .ToList()
+            .AsReadOnly();
     }
 
     /// <summary>

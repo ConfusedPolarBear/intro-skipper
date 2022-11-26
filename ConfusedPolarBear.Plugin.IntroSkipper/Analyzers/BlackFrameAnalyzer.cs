@@ -76,8 +76,10 @@ public class BlackFrameAnalyzer : IMediaFileAnalyzer
     /// <returns>Credits timestamp.</returns>
     public Intro? AnalyzeMediaFile(QueuedEpisode episode, AnalysisMode mode, int minimum)
     {
-        // Start by analyzing the last four minutes of the file.
-        var start = TimeSpan.FromMinutes(4);
+        var config = Plugin.Instance?.Configuration ?? new Configuration.PluginConfiguration();
+
+        // Start by analyzing the last N minutes of the file.
+        var start = TimeSpan.FromSeconds(config.MaximumEpisodeCreditsDuration);
         var end = TimeSpan.Zero;
         var firstFrameTime = 0.0;
 
@@ -100,7 +102,11 @@ public class BlackFrameAnalyzer : IMediaFileAnalyzer
                 tr.End);
 
             var frames = FFmpegWrapper.DetectBlackFrames(episode, tr, minimum);
-            _logger.LogTrace("{Episode}, black frames: {Count}", episode.Name, frames.Length);
+            _logger.LogTrace(
+                "{Episode} at {Start} has {Count} black frames",
+                episode.Name,
+                tr.Start,
+                frames.Length);
 
             if (frames.Length == 0)
             {
