@@ -12,7 +12,7 @@ If you do not run Jellyfin as a container, you can follow the [native installati
     1. Click the most recent action run
     2. In the Artifacts section, click the `jellyfin-web-VERSION+COMMIT.tar.gz` link to download a pre-compiled copy of the web interface. This link will only work if you are signed into GitHub.
 2. Extract the archive somewhere on your server and make note of the full path to the `dist` folder
-3. Mount the `dist` folder to your container as `/jellyfin/jellyfin-web` if using the official container or /usr/share/jellyfin/web if using the linuxserver container . Example docker-compose snippet:
+3. Mount the `dist` folder to your container as `/jellyfin/jellyfin-web` if using the official container, or `/usr/share/jellyfin/web` if using the linuxserver container. Example docker-compose snippet:
 ```yaml
 services:
     jellyfin:
