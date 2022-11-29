@@ -76,13 +76,22 @@ public class SkipIntroController : ControllerBase
     /// <summary>
     /// Erases all previously discovered introduction timestamps.
     /// </summary>
+    /// <param name="mode">Mode.</param>
     /// <response code="204">Operation successful.</response>
     /// <returns>No content.</returns>
     [Authorize(Policy = "RequiresElevation")]
     [HttpPost("Intros/EraseTimestamps")]
-    public ActionResult ResetIntroTimestamps()
+    public ActionResult ResetIntroTimestamps([FromQuery] AnalysisMode mode)
     {
-        Plugin.Instance!.Intros.Clear();
+        if (mode == AnalysisMode.Introduction)
+        {
+            Plugin.Instance!.Intros.Clear();
+        }
+        else if (mode == AnalysisMode.Credits)
+        {
+            Plugin.Instance!.Credits.Clear();
+        }
+
         Plugin.Instance!.SaveTimestamps();
         return NoContent();
     }
