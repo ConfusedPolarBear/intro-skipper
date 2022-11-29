@@ -165,7 +165,7 @@ public class DetectCreditsTask : IScheduledTask
         // Analyze with Chromaprint first and fall back to the black frame detector
         var analyzers = new IMediaFileAnalyzer[]
         {
-            // TODO: FIXME: new ChromaprintAnalyzer(_loggerFactory.CreateLogger<ChromaprintAnalyzer>()),
+            new ChromaprintAnalyzer(_loggerFactory.CreateLogger<ChromaprintAnalyzer>()),
             new BlackFrameAnalyzer(_loggerFactory.CreateLogger<BlackFrameAnalyzer>())
         };
 
