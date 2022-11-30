@@ -38,6 +38,11 @@ public class ChapterAnalyzer : IMediaFileAnalyzer
             Plugin.Instance!.Configuration.ChapterAnalyzerIntroductionPattern :
             Plugin.Instance!.Configuration.ChapterAnalyzerEndCreditsPattern;
 
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            return analysisQueue;
+        }
+
         foreach (var episode in analysisQueue)
         {
             if (cancellationToken.IsCancellationRequested)
