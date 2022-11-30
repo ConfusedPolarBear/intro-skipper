@@ -73,6 +73,11 @@ public class PluginConfiguration : BasePluginConfiguration
     public int MaximumIntroDuration { get; set; } = 120;
 
     /// <summary>
+    /// Gets or sets the minimum length of similar audio that will be considered ending credits.
+    /// </summary>
+    public int MinimumCreditsDuration { get; set; } = 15;
+
+    /// <summary>
     /// Gets or sets the upper limit (in seconds) on the length of each episode's audio track that will be analyzed when searching for ending credits.
     /// </summary>
     public int MaximumEpisodeCreditsDuration { get; set; } = 240;

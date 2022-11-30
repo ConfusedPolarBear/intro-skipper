@@ -30,6 +30,8 @@ public class TestBlackFrames
     [FactSkipFFmpegTests]
     public void TestEndCreditDetection()
     {
+        var range = 1;
+
         var analyzer = CreateBlackFrameAnalyzer();
 
         var episode = queueFile("credits.mp4");
@@ -37,7 +39,7 @@ public class TestBlackFrames
 
         var result = analyzer.AnalyzeMediaFile(episode, AnalysisMode.Credits, 85);
         Assert.NotNull(result);
-        Assert.Equal(300, result.IntroStart);
+        Assert.InRange(result.IntroStart, 300 - range, 300 + range);
     }
 
     private QueuedEpisode queueFile(string path)

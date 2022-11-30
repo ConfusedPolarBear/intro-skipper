@@ -80,7 +80,7 @@ public class BlackFrameAnalyzer : IMediaFileAnalyzer
 
         // Start by analyzing the last N minutes of the file.
         var start = TimeSpan.FromSeconds(config.MaximumEpisodeCreditsDuration);
-        var end = TimeSpan.Zero;
+        var end = TimeSpan.FromSeconds(config.MinimumCreditsDuration);
         var firstFrameTime = 0.0;
 
         // Continue bisecting the end of the file until the range that contains the first black
