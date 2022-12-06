@@ -9,10 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
-#if !DEBUG
-#error Fix all FIXMEs introduced during initial credit implementation before release
-#endif
-
 /// <summary>
 /// Analyze all television episodes for credits.
 /// </summary>
@@ -84,7 +80,7 @@ public class DetectCreditsTask : IScheduledTask
             _loggerFactory.CreateLogger<QueueManager>(),
             _libraryManager);
 
-        var queue = queueManager.EnqueueAllEpisodes();
+        var queue = queueManager.GetMediaItems();
 
         if (queue.Count == 0)
         {
@@ -101,9 +97,11 @@ public class DetectCreditsTask : IScheduledTask
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
-            // TODO: FIXME: use VerifyEpisodes
-            var episodes = season.Value.AsReadOnly();
-            if (episodes.Count == 0)
+            var (episodes, unanalyzed) = queueManager.VerifyQueue(
+                season.Value.AsReadOnly(),
+                AnalysisMode.Credits);
+
+            if (episodes.Count == 0 || unanalyzed)
             {
                 return;
             }

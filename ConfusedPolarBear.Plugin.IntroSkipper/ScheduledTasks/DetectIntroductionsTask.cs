@@ -83,7 +83,7 @@ public class DetectIntroductionsTask : IScheduledTask
             _loggerFactory.CreateLogger<QueueManager>(),
             _libraryManager);
 
-        var queue = queueManager.EnqueueAllEpisodes();
+        var queue = queueManager.GetMediaItems();
 
         if (queue.Count == 0)
         {
@@ -100,13 +100,15 @@ public class DetectIntroductionsTask : IScheduledTask
             MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
         };
 
-        // TODO: if the queue is modified while the task is running, the task will fail.
-        // clone the queue before running the task to prevent this.
-
         // Analyze all episodes in the queue using the degrees of parallelism the user specified.
         Parallel.ForEach(queue, options, (season) =>
         {
-            var (episodes, unanalyzed) = VerifyEpisodes(season.Value.AsReadOnly());
+            // Since the first run of the task can run for multiple hours, ensure that none
+            // of the current media items were deleted from Jellyfin since the task was started.
+            var (episodes, unanalyzed) = queueManager.VerifyQueue(
+                season.Value.AsReadOnly(),
+                AnalysisMode.Introduction);
+
             if (episodes.Count == 0)
             {
                 return;
@@ -176,51 +178,6 @@ public class DetectIntroductionsTask : IScheduledTask
         }
 
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Verify that all episodes in a season exist in Jellyfin and as a file in storage.
-    /// TODO: FIXME: move to queue manager.
-    /// </summary>
-    /// <param name="candidates">QueuedEpisodes.</param>
-    /// <returns>Verified QueuedEpisodes and a flag indicating if any episode in this season has not been analyzed yet.</returns>
-    private (
-        ReadOnlyCollection<QueuedEpisode> VerifiedEpisodes,
-        bool AnyUnanalyzed)
-        VerifyEpisodes(ReadOnlyCollection<QueuedEpisode> candidates)
-    {
-        var unanalyzed = false;
-        var verified = new List<QueuedEpisode>();
-
-        foreach (var candidate in candidates)
-        {
-            try
-            {
-                // Verify that the episode exists in Jellyfin and in storage
-                var path = Plugin.Instance!.GetItemPath(candidate.EpisodeId);
-
-                if (File.Exists(path))
-                {
-                    verified.Add(candidate);
-                }
-
-                // Flag this season for analysis if the current episode hasn't been analyzed yet
-                if (!Plugin.Instance.Intros.ContainsKey(candidate.EpisodeId))
-                {
-                    unanalyzed = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(
-                    "Skipping analysis of {Name} ({Id}): {Exception}",
-                    candidate.Name,
-                    candidate.EpisodeId,
-                    ex);
-            }
-        }
-
-        return (verified.AsReadOnly(), unanalyzed);
     }
 
     /// <summary>

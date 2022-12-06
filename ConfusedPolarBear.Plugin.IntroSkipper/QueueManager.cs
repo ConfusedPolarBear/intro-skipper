@@ -3,6 +3,7 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
@@ -37,10 +38,10 @@ public class QueueManager
     }
 
     /// <summary>
-    /// Iterates through all libraries on the server and queues all episodes for analysis.
+    /// Gets all media items on the server.
     /// </summary>
     /// <returns>Queued media items.</returns>
-    public ReadOnlyDictionary<Guid, List<QueuedEpisode>> EnqueueAllEpisodes()
+    public ReadOnlyDictionary<Guid, List<QueuedEpisode>> GetMediaItems()
     {
         // Assert that ffmpeg with chromaprint is installed
         if (!FFmpegWrapper.CheckFFmpegVersion())
@@ -219,5 +220,52 @@ public class QueueManager
         });
 
         Plugin.Instance!.TotalQueued++;
+    }
+
+    /// <summary>
+    /// Verify that a collection of queued media items still exist in Jellyfin and in storage.
+    /// This is done to ensure that we don't analyze items that were deleted between the call to GetMediaItems() and popping them from the queue.
+    /// </summary>
+    /// <param name="candidates">Queued media items.</param>
+    /// <param name="mode">Analysis mode.</param>
+    /// <returns>Media items that have been verified to exist in Jellyfin and in storage.</returns>
+    public (ReadOnlyCollection<QueuedEpisode> VerifiedItems, bool AnyUnanalyzed)
+        VerifyQueue(ReadOnlyCollection<QueuedEpisode> candidates, AnalysisMode mode)
+    {
+        var unanalyzed = false;
+        var verified = new List<QueuedEpisode>();
+
+        var timestamps = mode == AnalysisMode.Introduction ?
+                Plugin.Instance!.Intros :
+                Plugin.Instance!.Credits;
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                var path = Plugin.Instance!.GetItemPath(candidate.EpisodeId);
+
+                if (File.Exists(path))
+                {
+                    verified.Add(candidate);
+                }
+
+                if (!timestamps.ContainsKey(candidate.EpisodeId))
+                {
+                    unanalyzed = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    "Skipping {Mode} analysis of {Name} ({Id}): {Exception}",
+                    mode,
+                    candidate.Name,
+                    candidate.EpisodeId,
+                    ex);
+            }
+        }
+
+        return (verified.AsReadOnly(), unanalyzed);
     }
 }
