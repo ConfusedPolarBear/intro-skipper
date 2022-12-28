@@ -173,7 +173,7 @@ introSkipper.injectButton = async function () {
 /** Playback position changed, check if the skip button needs to be displayed. */
 introSkipper.videoPositionChanged = function () {
     // Ensure a skip segment was found.
-    if (!introSkipper.skipSegments?.Valid) {
+    if (!introSkipper.skipSegments || !introSkipper.skipSegments.Valid) {
         return;
     }
 
