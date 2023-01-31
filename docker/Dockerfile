@@ -1,3 +1,3 @@
-FROM jellyfin/jellyfin:10.8.5
+FROM jellyfin/jellyfin:10.8.9
 
 COPY dist/ /jellyfin/jellyfin-web/
