@@ -19,6 +19,7 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x]
+        jellyfin-version: [10.8.9]
 
     steps:
     - uses: actions/checkout@v3
@@ -80,7 +81,9 @@ jobs:
       uses: docker/build-push-action@v4.0.0
       with:
         file: docker/Dockerfile
-        context: docker/
+        context: docker
+        build-args: |
+          JELLYFIN_TAG=${{ matrix.jellyfin-version }}
         push: true
         tags: ${{ env.REGISTRY}}/${{ github.repository.owner }}/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
         provenance: false
