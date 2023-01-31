@@ -7,11 +7,13 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/jellyfin-intro-skipper
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
 
     strategy:
@@ -68,16 +70,17 @@ jobs:
         tar czf dist.tar.gz dist
 
     - name: Upload web interface
-      uses: actions/upload-artifact@v3.1.1
+      uses: actions/upload-artifact@v3.1.2
       with:
         name: jellyfin-web-10.8.0+${{ steps.web-commit.outputs.commit }}.tar.gz
         path: web/dist.tar.gz
         if-no-files-found: error
 
     - name: Publish container
-      uses: docker/build-push-action@v3.2.0
+      uses: docker/build-push-action@v4.0.0
       with:
         file: docker/Dockerfile
         context: docker/
         push: true
-        tags: ${{ env.REGISTRY}}/confusedpolarbear/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
+        tags: ${{ env.REGISTRY}}/${{ github.repository.owner }}/jellyfin-intro-skipper:${{ steps.web-commit.outputs.commit }}
+        provenance: false
