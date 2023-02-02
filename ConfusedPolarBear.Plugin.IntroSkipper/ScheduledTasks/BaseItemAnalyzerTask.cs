@@ -193,6 +193,6 @@ public class BaseItemAnalyzerTask
             items = analyzer.AnalyzeMediaFiles(items, this._analysisMode, cancellationToken);
         }
 
-        return totalItems - items.Count;
+        return totalItems;
     }
 }
