@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Library;
@@ -11,14 +10,13 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 /// <summary>
 /// Analyze all television episodes for credits.
+/// TODO: analyze all media files.
 /// </summary>
 public class DetectCreditsTask : IScheduledTask
 {
-    private readonly ILogger<DetectCreditsTask> _logger;
-
     private readonly ILoggerFactory _loggerFactory;
 
-    private readonly ILibraryManager? _libraryManager;
+    private readonly ILibraryManager _libraryManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DetectCreditsTask"/> class.
@@ -27,19 +25,10 @@ public class DetectCreditsTask : IScheduledTask
     /// <param name="libraryManager">Library manager.</param>
     public DetectCreditsTask(
         ILoggerFactory loggerFactory,
-        ILibraryManager libraryManager) : this(loggerFactory)
+        ILibraryManager libraryManager)
     {
-        _libraryManager = libraryManager;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DetectCreditsTask"/> class.
-    /// </summary>
-    /// <param name="loggerFactory">Logger factory.</param>
-    public DetectCreditsTask(ILoggerFactory loggerFactory)
-    {
-        _logger = loggerFactory.CreateLogger<DetectCreditsTask>();
         _loggerFactory = loggerFactory;
+        _libraryManager = libraryManager;
     }
 
     /// <summary>
@@ -72,123 +61,18 @@ public class DetectCreditsTask : IScheduledTask
     {
         if (_libraryManager is null)
         {
-            throw new InvalidOperationException("Library manager must not be null");
+            throw new InvalidOperationException("Library manager was null");
         }
 
-        // Make sure the analysis queue matches what's currently in Jellyfin.
-        var queueManager = new QueueManager(
-            _loggerFactory.CreateLogger<QueueManager>(),
+        var baseAnalyzer = new BaseItemAnalyzerTask(
+            AnalysisMode.Credits,
+            _loggerFactory.CreateLogger<DetectCreditsTask>(),
+            _loggerFactory,
             _libraryManager);
 
-        var queue = queueManager.GetMediaItems();
-
-        if (queue.Count == 0)
-        {
-            throw new FingerprintException(
-                "No episodes to analyze. If you are limiting the list of libraries to analyze, check that all library names have been spelled correctly.");
-        }
-
-        var totalProcessed = 0;
-        var options = new ParallelOptions()
-        {
-            MaxDegreeOfParallelism = Plugin.Instance!.Configuration.MaxParallelism
-        };
-
-        // Analyze all episodes in the queue using the degrees of parallelism the user specified.
-        Parallel.ForEach(queue, options, (season) =>
-        {
-            var (episodes, unanalyzed) = queueManager.VerifyQueue(
-                season.Value.AsReadOnly(),
-                AnalysisMode.Credits);
-
-            if (episodes.Count == 0 || unanalyzed)
-            {
-                return;
-            }
-
-            var first = episodes[0];
-
-            try
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                AnalyzeSeason(episodes, cancellationToken);
-                Interlocked.Add(ref totalProcessed, episodes.Count);
-            }
-            catch (FingerprintException ex)
-            {
-                _logger.LogWarning(
-                    "Unable to analyze {Series} season {Season}: unable to fingerprint: {Ex}",
-                    first.SeriesName,
-                    first.SeasonNumber,
-                    ex);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                _logger.LogWarning(
-                    "Unable to analyze {Series} season {Season}: cache miss: {Ex}",
-                    first.SeriesName,
-                    first.SeasonNumber,
-                    ex);
-            }
-
-            var total = Plugin.Instance!.TotalQueued;
-            if (total > 0)
-            {
-                progress.Report((totalProcessed * 100) / total);
-            }
-        });
+        baseAnalyzer.AnalyzeItems(progress, cancellationToken);
 
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Analyzes all episodes in the season for end credits.
-    /// </summary>
-    /// <param name="episodes">Episodes in this season.</param>
-    /// <param name="cancellationToken">Cancellation token provided by the scheduled task.</param>
-    private void AnalyzeSeason(
-        ReadOnlyCollection<QueuedEpisode> episodes,
-        CancellationToken cancellationToken)
-    {
-        // Only analyze specials (season 0) if the user has opted in.
-        if (episodes[0].SeasonNumber == 0 && !Plugin.Instance!.Configuration.AnalyzeSeasonZero)
-        {
-            return;
-        }
-
-        // Analyze with Chromaprint first and fall back to the black frame detector
-        var analyzers = new IMediaFileAnalyzer[]
-        {
-            new ChromaprintAnalyzer(_loggerFactory.CreateLogger<ChromaprintAnalyzer>()),
-            new BlackFrameAnalyzer(_loggerFactory.CreateLogger<BlackFrameAnalyzer>())
-        };
-
-        // Use each analyzer to find credits in all media files, removing successfully analyzed files
-        // from the queue.
-        var remaining = new ReadOnlyCollection<QueuedEpisode>(episodes);
-        foreach (var analyzer in analyzers)
-        {
-            remaining = AnalyzeFiles(remaining, analyzer, cancellationToken);
-        }
-    }
-
-    private ReadOnlyCollection<QueuedEpisode> AnalyzeFiles(
-        ReadOnlyCollection<QueuedEpisode> episodes,
-        IMediaFileAnalyzer analyzer,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation(
-            "Analyzing {Count} episodes from {Name} season {Season} with {Analyzer}",
-            episodes.Count,
-            episodes[0].SeriesName,
-            episodes[0].SeasonNumber,
-            analyzer.GetType().Name);
-
-        return analyzer.AnalyzeMediaFiles(episodes, AnalysisMode.Credits, cancellationToken);
     }
 
     /// <summary>
