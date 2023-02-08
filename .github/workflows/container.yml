@@ -19,7 +19,8 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x]
-        jellyfin-version: [10.8.9]
+        jellyfin-container-version: [10.8.9]
+        jellyfin-web-version: [10.8.9]
 
     steps:
       - uses: actions/checkout@v3
@@ -33,7 +34,6 @@ jobs:
         id: npm-cache-dir
         run: |
           echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
-
       - name: Configure npm cache
         uses: actions/cache@v3
         id: npm-cache
@@ -42,7 +42,6 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
       - name: Checkout modified web interface
         uses: actions/checkout@v3
         with:
@@ -55,18 +54,16 @@ jobs:
         run: |
           cd web
           echo "commit=$(git log -1 --format='%H' | cut -c -10)" >> $GITHUB_OUTPUT
-
       - name: Build and copy web interface
         run: |
           cd web
           npm install
           cp -r dist ../docker/
           tar czf dist.tar.gz dist
-
       - name: Upload web interface
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: jellyfin-web-10.8.0+${{ steps.web-commit.outputs.commit }}.tar.gz
+          name: jellyfin-web-${{ matrix.jellyfin-web-version }}+${{ steps.web-commit.outputs.commit }}.tar.gz
           path: web/dist.tar.gz
           if-no-files-found: error
 
@@ -96,8 +93,7 @@ jobs:
           tags: |
             type-raw,value=${{ steps.web-commit.outputs.commit }}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern={{version}},value=${{ matrix.jellyfin-version }}
-
+            type=semver,pattern={{version}},value=${{ matrix.jellyfin-container-version }}
       # Build and push Docker image with Buildx
       # https://github.com/docker/build-push-action
       - name: Publish container image
@@ -109,7 +105,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            JELLYFIN_TAG=${{ matrix.jellyfin-version }}
+            JELLYFIN_TAG=${{ matrix.jellyfin-container-version }}
           platforms: |
             linux/amd64
             linux/arm/v7
