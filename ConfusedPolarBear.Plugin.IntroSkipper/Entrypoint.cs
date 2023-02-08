@@ -53,20 +53,15 @@ public class Entrypoint : IServerEntryPoint
 
         try
         {
-            // Enqueue all episodes at startup so the fingerprint visualizer works before the task is started.
+            // Enqueue all episodes at startup to ensure any FFmpeg errors appear as early as possible
             _logger.LogInformation("Running startup enqueue");
             var queueManager = new QueueManager(_loggerFactory.CreateLogger<QueueManager>(), _libraryManager);
-            queueManager.EnqueueAllEpisodes();
+            queueManager.GetMediaItems();
         }
         catch (Exception ex)
         {
             _logger.LogError("Unable to run startup enqueue: {Exception}", ex);
         }
-
-        _logger.LogDebug(
-            "Total enqueued seasons: {Count} ({Episodes} episodes)",
-            Plugin.Instance!.AnalysisQueue.Count,
-            Plugin.Instance!.TotalQueued);
 
         return Task.CompletedTask;
     }

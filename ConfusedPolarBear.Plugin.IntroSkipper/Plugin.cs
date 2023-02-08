@@ -7,7 +7,10 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Persistence;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using Microsoft.Extensions.Logging;
@@ -23,8 +26,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     private readonly object _introsLock = new();
     private IXmlSerializer _xmlSerializer;
     private ILibraryManager _libraryManager;
+    private IItemRepository _itemRepository;
     private ILogger<Plugin> _logger;
     private string _introPath;
+    private string _creditsPath;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
@@ -33,12 +38,14 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
     /// <param name="serverConfiguration">Server configuration manager.</param>
     /// <param name="libraryManager">Library manager.</param>
+    /// <param name="itemRepository">Item repository.</param>
     /// <param name="logger">Logger.</param>
     public Plugin(
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
         IServerConfigurationManager serverConfiguration,
         ILibraryManager libraryManager,
+        IItemRepository itemRepository,
         ILogger<Plugin> logger)
         : base(applicationPaths, xmlSerializer)
     {
@@ -46,13 +53,15 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
         _xmlSerializer = xmlSerializer;
         _libraryManager = libraryManager;
+        _itemRepository = itemRepository;
         _logger = logger;
 
         FFmpegPath = serverConfiguration.GetEncodingOptions().EncoderAppPathDisplay;
 
         var introsDirectory = Path.Join(applicationPaths.PluginConfigurationsPath, "intros");
         FingerprintCachePath = Path.Join(introsDirectory, "cache");
-        _introPath = Path.Join(introsDirectory, "intros.xml");
+        _introPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "intros.xml");
+        _creditsPath = Path.Join(applicationPaths.PluginConfigurationsPath, "intros", "credits.xml");
 
         // Create the base & cache directories (if needed).
         if (!Directory.Exists(FingerprintCachePath))
@@ -113,9 +122,14 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public Dictionary<Guid, Intro> Intros { get; } = new();
 
     /// <summary>
-    /// Gets the mapping of season ids to episodes that have been queued for fingerprinting.
+    /// Gets all discovered ending credits.
     /// </summary>
-    public Dictionary<Guid, List<QueuedEpisode>> AnalysisQueue { get; } = new();
+    public Dictionary<Guid, Intro> Credits { get; } = new();
+
+    /// <summary>
+    /// Gets the most recent media item queue.
+    /// </summary>
+    public Dictionary<Guid, List<QueuedEpisode>> QueuedMediaItems { get; } = new();
 
     /// <summary>
     /// Gets or sets the total number of episodes in the queue.
@@ -152,12 +166,23 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             var introList = new List<Intro>();
 
+            // Serialize intros
             foreach (var intro in Plugin.Instance!.Intros)
             {
                 introList.Add(intro.Value);
             }
 
             _xmlSerializer.SerializeToFile(introList, _introPath);
+
+            // Serialize credits
+            introList.Clear();
+
+            foreach (var intro in Plugin.Instance!.Credits)
+            {
+                introList.Add(intro.Value);
+            }
+
+            _xmlSerializer.SerializeToFile(introList, _creditsPath);
         }
     }
 
@@ -166,17 +191,29 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// </summary>
     public void RestoreTimestamps()
     {
-        if (!File.Exists(_introPath))
+        if (File.Exists(_introPath))
         {
-            return;
+            // Since dictionaries can't be easily serialized, analysis results are stored on disk as a list.
+            var introList = (List<Intro>)_xmlSerializer.DeserializeFromFile(
+                typeof(List<Intro>),
+                _introPath);
+
+            foreach (var intro in introList)
+            {
+                Plugin.Instance!.Intros[intro.EpisodeId] = intro;
+            }
         }
 
-        // Since dictionaries can't be easily serialized, analysis results are stored on disk as a list.
-        var introList = (List<Intro>)_xmlSerializer.DeserializeFromFile(typeof(List<Intro>), _introPath);
-
-        foreach (var intro in introList)
+        if (File.Exists(_creditsPath))
         {
-            Plugin.Instance!.Intros[intro.EpisodeId] = intro;
+            var creditList = (List<Intro>)_xmlSerializer.DeserializeFromFile(
+                typeof(List<Intro>),
+                _creditsPath);
+
+            foreach (var credit in creditList)
+            {
+                Plugin.Instance!.Credits[credit.EpisodeId] = credit;
+            }
         }
     }
 
@@ -247,13 +284,30 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         return GetItem(id).Path;
     }
 
-    internal void UpdateTimestamps(Dictionary<Guid, Intro> newIntros)
+    /// <summary>
+    /// Gets all chapters for this item.
+    /// </summary>
+    /// <param name="id">Item id.</param>
+    /// <returns>List of chapters.</returns>
+    internal List<ChapterInfo> GetChapters(Guid id)
+    {
+        return _itemRepository.GetChapters(GetItem(id));
+    }
+
+    internal void UpdateTimestamps(Dictionary<Guid, Intro> newTimestamps, AnalysisMode mode)
     {
         lock (_introsLock)
         {
-            foreach (var intro in newIntros)
+            foreach (var intro in newTimestamps)
             {
-                Plugin.Instance!.Intros[intro.Key] = intro.Value;
+                if (mode == AnalysisMode.Introduction)
+                {
+                    Plugin.Instance!.Intros[intro.Key] = intro.Value;
+                }
+                else if (mode == AnalysisMode.Credits)
+                {
+                    Plugin.Instance!.Credits[intro.Key] = intro.Value;
+                }
             }
 
             Plugin.Instance!.SaveTimestamps();

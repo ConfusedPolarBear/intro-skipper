@@ -30,6 +30,8 @@ public class ChromaprintAnalyzer : IMediaFileAnalyzer
 
     private ILogger<ChromaprintAnalyzer> _logger;
 
+    private AnalysisMode _analysisMode;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChromaprintAnalyzer"/> class.
     /// </summary>
@@ -64,12 +66,14 @@ public class ChromaprintAnalyzer : IMediaFileAnalyzer
         // Episodes that were analyzed and do not have an introduction.
         var episodesWithoutIntros = new List<QueuedEpisode>();
 
+        this._analysisMode = mode;
+
         // Compute fingerprints for all episodes in the season
         foreach (var episode in episodeAnalysisQueue)
         {
             try
             {
-                fingerprintCache[episode.EpisodeId] = FFmpegWrapper.Fingerprint(episode);
+                fingerprintCache[episode.EpisodeId] = FFmpegWrapper.Fingerprint(episode, mode);
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -113,6 +117,22 @@ public class ChromaprintAnalyzer : IMediaFileAnalyzer
                     continue;
                 }
 
+                /* Since the Fingerprint() function returns an array of Chromaprint points without time
+                 * information, the times reported from the index search function start from 0.
+                 *
+                 * While this is desired behavior for detecting introductions, it breaks credit
+                 * detection, as the audio we're analyzing was extracted from some point into the file.
+                 *
+                 * To fix this, add the starting time of the fingerprint to the reported time range.
+                 */
+                if (this._analysisMode == AnalysisMode.Credits)
+                {
+                    currentIntro.IntroStart += currentEpisode.CreditsFingerprintStart;
+                    currentIntro.IntroEnd += currentEpisode.CreditsFingerprintStart;
+                    remainingIntro.IntroStart += remainingEpisode.CreditsFingerprintStart;
+                    remainingIntro.IntroEnd += remainingEpisode.CreditsFingerprintStart;
+                }
+
                 // Only save the discovered intro if it is:
                 // - the first intro discovered for this episode
                 // - longer than the previously discovered intro
@@ -143,10 +163,13 @@ public class ChromaprintAnalyzer : IMediaFileAnalyzer
             return analysisQueue;
         }
 
-        // Adjust all introduction end times so that they end at silence.
-        seasonIntros = AdjustIntroEndTimes(analysisQueue, seasonIntros);
+        if (this._analysisMode == AnalysisMode.Introduction)
+        {
+            // Adjust all introduction end times so that they end at silence.
+            seasonIntros = AdjustIntroEndTimes(analysisQueue, seasonIntros);
+        }
 
-        Plugin.Instance!.UpdateTimestamps(seasonIntros);
+        Plugin.Instance!.UpdateTimestamps(seasonIntros, this._analysisMode);
 
         return episodesWithoutIntros.AsReadOnly();
     }
@@ -339,16 +362,20 @@ public class ChromaprintAnalyzer : IMediaFileAnalyzer
         // Since LHS had a contiguous time range, RHS must have one also.
         var rContiguous = TimeRangeHelpers.FindContiguous(rhsTimes.ToArray(), maximumTimeSkip)!;
 
-        // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
-        if (lContiguous.Duration >= 90)
+        if (this._analysisMode == AnalysisMode.Introduction)
         {
-            lContiguous.End -= 2 * maximumTimeSkip;
-            rContiguous.End -= 2 * maximumTimeSkip;
-        }
-        else if (lContiguous.Duration >= 30)
-        {
-            lContiguous.End -= maximumTimeSkip;
-            rContiguous.End -= maximumTimeSkip;
+            // Tweak the end timestamps just a bit to ensure as little content as possible is skipped over.
+            // TODO: remove this
+            if (lContiguous.Duration >= 90)
+            {
+                lContiguous.End -= 2 * maximumTimeSkip;
+                rContiguous.End -= 2 * maximumTimeSkip;
+            }
+            else if (lContiguous.Duration >= 30)
+            {
+                lContiguous.End -= maximumTimeSkip;
+                rContiguous.End -= maximumTimeSkip;
+            }
         }
 
         return (lContiguous, rContiguous);

@@ -59,7 +59,9 @@ public class TestAudioFingerprinting
             3472417825, 3395841056, 3458735136, 3341420624, 1076496560, 1076501168, 1076501136, 1076497024
         };
 
-        var actual = FFmpegWrapper.Fingerprint(queueEpisode("audio/big_buck_bunny_intro.mp3"));
+        var actual = FFmpegWrapper.Fingerprint(
+            queueEpisode("audio/big_buck_bunny_intro.mp3"),
+            AnalysisMode.Introduction);
 
         Assert.Equal(expected, actual);
     }
@@ -91,8 +93,8 @@ public class TestAudioFingerprinting
 
         var lhsEpisode = queueEpisode("audio/big_buck_bunny_intro.mp3");
         var rhsEpisode = queueEpisode("audio/big_buck_bunny_clip.mp3");
-        var lhsFingerprint = FFmpegWrapper.Fingerprint(lhsEpisode);
-        var rhsFingerprint = FFmpegWrapper.Fingerprint(rhsEpisode);
+        var lhsFingerprint = FFmpegWrapper.Fingerprint(lhsEpisode, AnalysisMode.Introduction);
+        var rhsFingerprint = FFmpegWrapper.Fingerprint(rhsEpisode, AnalysisMode.Introduction);
 
         var (lhs, rhs) = chromaprint.CompareEpisodes(
             lhsEpisode.EpisodeId,
@@ -138,7 +140,7 @@ public class TestAudioFingerprinting
         {
             EpisodeId = Guid.NewGuid(),
             Path = "../../../" + path,
-            FingerprintDuration = 60
+            IntroFingerprintEnd = 60
         };
     }
 

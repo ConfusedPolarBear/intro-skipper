@@ -2,12 +2,13 @@ namespace ConfusedPolarBear.Plugin.IntroSkipper;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -19,7 +20,8 @@ public class QueueManager
     private ILogger<QueueManager> _logger;
 
     private double analysisPercent;
-    private IList<string> selectedLibraries;
+    private List<string> selectedLibraries;
+    private Dictionary<Guid, List<QueuedEpisode>> _queuedEpisodes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueManager"/> class.
@@ -31,13 +33,15 @@ public class QueueManager
         _logger = logger;
         _libraryManager = libraryManager;
 
-        selectedLibraries = new List<string>();
+        selectedLibraries = new();
+        _queuedEpisodes = new();
     }
 
     /// <summary>
-    /// Iterates through all libraries on the server and queues all episodes for analysis.
+    /// Gets all media items on the server.
     /// </summary>
-    public void EnqueueAllEpisodes()
+    /// <returns>Queued media items.</returns>
+    public ReadOnlyDictionary<Guid, List<QueuedEpisode>> GetMediaItems()
     {
         // Assert that ffmpeg with chromaprint is installed
         if (!FFmpegWrapper.CheckFFmpegVersion())
@@ -46,20 +50,13 @@ public class QueueManager
                 "ffmpeg with chromaprint is not installed on this system - episodes will not be analyzed. If Jellyfin is running natively, install jellyfin-ffmpeg5. If Jellyfin is running in a container, upgrade it to the latest version of 10.8.0.");
         }
 
-        Plugin.Instance!.AnalysisQueue.Clear();
         Plugin.Instance!.TotalQueued = 0;
 
         LoadAnalysisSettings();
 
-        // For all selected TV show libraries, enqueue all contained items.
+        // For all selected libraries, enqueue all contained episodes.
         foreach (var folder in _libraryManager.GetVirtualFolders())
         {
-            if (folder.CollectionType != CollectionTypeOptions.TvShows)
-            {
-                _logger.LogDebug("Not analyzing library \"{Name}\": not a TV show library", folder.Name);
-                continue;
-            }
-
             // If libraries have been selected for analysis, ensure this library was selected.
             if (selectedLibraries.Count > 0 && !selectedLibraries.Contains(folder.Name))
             {
@@ -81,6 +78,14 @@ public class QueueManager
                 _logger.LogError("Failed to enqueue items from library {Name}: {Exception}", folder.Name, ex);
             }
         }
+
+        Plugin.Instance!.QueuedMediaItems.Clear();
+        foreach (var kvp in _queuedEpisodes)
+        {
+            Plugin.Instance!.QueuedMediaItems[kvp.Key] = kvp.Value;
+        }
+
+        return new(_queuedEpisodes);
     }
 
     /// <summary>
@@ -156,7 +161,7 @@ public class QueueManager
         {
             if (item is not Episode episode)
             {
-                _logger.LogError("Item {Name} is not an episode", item.Name);
+                _logger.LogDebug("Item {Name} is not an episode", item.Name);
                 continue;
             }
 
@@ -186,27 +191,81 @@ public class QueueManager
         // Limit analysis to the first X% of the episode and at most Y minutes.
         // X and Y default to 25% and 10 minutes.
         var duration = TimeSpan.FromTicks(episode.RunTimeTicks ?? 0).TotalSeconds;
-        if (duration >= 5 * 60)
+        var fingerprintDuration = duration;
+
+        if (fingerprintDuration >= 5 * 60)
         {
-            duration *= analysisPercent;
+            fingerprintDuration *= analysisPercent;
         }
 
-        duration = Math.Min(duration, 60 * Plugin.Instance!.Configuration.AnalysisLengthLimit);
+        fingerprintDuration = Math.Min(
+            fingerprintDuration,
+            60 * Plugin.Instance!.Configuration.AnalysisLengthLimit);
 
         // Allocate a new list for each new season
-        Plugin.Instance!.AnalysisQueue.TryAdd(episode.SeasonId, new List<QueuedEpisode>());
+        _queuedEpisodes.TryAdd(episode.SeasonId, new List<QueuedEpisode>());
 
         // Queue the episode for analysis
-        Plugin.Instance.AnalysisQueue[episode.SeasonId].Add(new QueuedEpisode()
+        var maxCreditsDuration = Plugin.Instance!.Configuration.MaximumEpisodeCreditsDuration;
+        _queuedEpisodes[episode.SeasonId].Add(new QueuedEpisode()
         {
             SeriesName = episode.SeriesName,
             SeasonNumber = episode.AiredSeasonNumber ?? 0,
             EpisodeId = episode.Id,
             Name = episode.Name,
             Path = episode.Path,
-            FingerprintDuration = Convert.ToInt32(duration)
+            Duration = Convert.ToInt32(duration),
+            IntroFingerprintEnd = Convert.ToInt32(fingerprintDuration),
+            CreditsFingerprintStart = Convert.ToInt32(duration - maxCreditsDuration),
         });
 
         Plugin.Instance!.TotalQueued++;
+    }
+
+    /// <summary>
+    /// Verify that a collection of queued media items still exist in Jellyfin and in storage.
+    /// This is done to ensure that we don't analyze items that were deleted between the call to GetMediaItems() and popping them from the queue.
+    /// </summary>
+    /// <param name="candidates">Queued media items.</param>
+    /// <param name="mode">Analysis mode.</param>
+    /// <returns>Media items that have been verified to exist in Jellyfin and in storage.</returns>
+    public (ReadOnlyCollection<QueuedEpisode> VerifiedItems, bool AnyUnanalyzed)
+        VerifyQueue(ReadOnlyCollection<QueuedEpisode> candidates, AnalysisMode mode)
+    {
+        var unanalyzed = false;
+        var verified = new List<QueuedEpisode>();
+
+        var timestamps = mode == AnalysisMode.Introduction ?
+                Plugin.Instance!.Intros :
+                Plugin.Instance!.Credits;
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                var path = Plugin.Instance!.GetItemPath(candidate.EpisodeId);
+
+                if (File.Exists(path))
+                {
+                    verified.Add(candidate);
+                }
+
+                if (!timestamps.ContainsKey(candidate.EpisodeId))
+                {
+                    unanalyzed = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    "Skipping {Mode} analysis of {Name} ({Id}): {Exception}",
+                    mode,
+                    candidate.Name,
+                    candidate.EpisodeId,
+                    ex);
+            }
+        }
+
+        return (verified.AsReadOnly(), unanalyzed);
     }
 }

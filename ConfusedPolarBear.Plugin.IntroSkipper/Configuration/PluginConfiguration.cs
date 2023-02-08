@@ -72,6 +72,33 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public int MaximumIntroDuration { get; set; } = 120;
 
+    /// <summary>
+    /// Gets or sets the minimum length of similar audio that will be considered ending credits.
+    /// </summary>
+    public int MinimumCreditsDuration { get; set; } = 15;
+
+    /// <summary>
+    /// Gets or sets the upper limit (in seconds) on the length of each episode's audio track that will be analyzed when searching for ending credits.
+    /// </summary>
+    public int MaximumEpisodeCreditsDuration { get; set; } = 240;
+
+    /// <summary>
+    /// Gets or sets the minimum percentage of a frame that must consist of black pixels before it is considered a black frame.
+    /// </summary>
+    public int BlackFrameMinimumPercentage { get; set; } = 85;
+
+    /// <summary>
+    /// Gets or sets the regular expression used to detect introduction chapters.
+    /// </summary>
+    public string ChapterAnalyzerIntroductionPattern { get; set; } =
+        @"(^|\s)(Intro|Introduction|OP|Opening)(\s|$)";
+
+    /// <summary>
+    /// Gets or sets the regular expression used to detect ending credit chapters.
+    /// </summary>
+    public string ChapterAnalyzerEndCreditsPattern { get; set; } =
+        @"(^|\s)(Credits?|Ending)(\s|$)";
+
     // ===== Playback settings =====
 
     /// <summary>

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -77,7 +78,6 @@ func generateReport(hostAddress, apiKey, reportDestination string, keepTimestamp
 	fmt.Println()
 	fmt.Println("[+] Saving report")
 
-	// TODO: also save analysis statistics
 	// Store timing data, server information, and plugin configuration
 	report.StartedAt = start
 	report.FinishedAt = time.Now()
@@ -95,6 +95,9 @@ func generateReport(hostAddress, apiKey, reportDestination string, keepTimestamp
 		panic(err)
 	}
 
+	// Change report permissions
+	exec.Command("chown", "1000:1000", reportDestination).Run()
+
 	fmt.Println("[+] Done")
 }
 
@@ -110,11 +113,13 @@ func runAnalysisAndWait(hostAddress, apiKey string, pollInterval time.Duration) 
 	SendRequest("POST", hostAddress+"/Intros/EraseTimestamps", apiKey)
 	fmt.Println()
 
-	// The task ID changed with v0.1.7.
-	// Old task ID: 8863329048cc357f7dfebf080f2fe204
-	// New task ID: 6adda26c5261c40e8fa4a7e7df568be2
+	var taskIds = []string{
+		"f64d8ad58e3d7b98548e1a07697eb100", // v0.1.8
+		"8863329048cc357f7dfebf080f2fe204",
+		"6adda26c5261c40e8fa4a7e7df568be2"}
+
 	fmt.Println("[+] Starting analysis task")
-	for _, id := range []string{"8863329048cc357f7dfebf080f2fe204", "6adda26c5261c40e8fa4a7e7df568be2"} {
+	for _, id := range taskIds {
 		body := SendRequest("POST", hostAddress+"/ScheduledTasks/Running/"+id, apiKey)
 		fmt.Println()
 

@@ -40,7 +40,7 @@ public class VisualizationController : ControllerBase
         var showSeasons = new Dictionary<string, HashSet<string>>();
 
         // Loop through all seasons in the analysis queue
-        foreach (var kvp in Plugin.Instance!.AnalysisQueue)
+        foreach (var kvp in Plugin.Instance!.QueuedMediaItems)
         {
             // Check that this season contains at least one episode.
             var episodes = kvp.Value;
@@ -104,16 +104,14 @@ public class VisualizationController : ControllerBase
     [HttpGet("Episode/{Id}/Chromaprint")]
     public ActionResult<uint[]> GetEpisodeFingerprint([FromRoute] Guid id)
     {
-        var queue = Plugin.Instance!.AnalysisQueue;
-
         // Search through all queued episodes to find the requested id
-        foreach (var season in queue)
+        foreach (var season in Plugin.Instance!.QueuedMediaItems)
         {
             foreach (var needle in season.Value)
             {
                 if (needle.EpisodeId == id)
                 {
-                    return FFmpegWrapper.Fingerprint(needle);
+                    return FFmpegWrapper.Fingerprint(needle, AnalysisMode.Introduction);
                 }
             }
         }
@@ -180,7 +178,7 @@ public class VisualizationController : ControllerBase
     /// <returns>Boolean indicating if the requested season was found.</returns>
     private bool LookupSeasonByName(string series, string season, out List<QueuedEpisode> episodes)
     {
-        foreach (var queuedEpisodes in Plugin.Instance!.AnalysisQueue)
+        foreach (var queuedEpisodes in Plugin.Instance!.QueuedMediaItems)
         {
             var first = queuedEpisodes.Value[0];
             var firstSeasonName = GetSeasonName(first);

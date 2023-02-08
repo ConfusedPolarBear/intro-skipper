@@ -16,15 +16,16 @@ public static class FFmpegWrapper
 {
     private static readonly object InvertedIndexCacheLock = new();
 
-    // FFmpeg logs lines similar to the following:
-    // [silencedetect @ 0x000000000000] silence_start: 12.34
-    // [silencedetect @ 0x000000000000] silence_end: 56.123 | silence_duration: 43.783
-
     /// <summary>
     /// Used with FFmpeg's silencedetect filter to extract the start and end times of silence.
     /// </summary>
     private static readonly Regex SilenceDetectionExpression = new(
         "silence_(?<type>start|end): (?<time>[0-9\\.]+)");
+
+    /// <summary>
+    /// Used with FFmpeg's blackframe filter to extract the time and percentage of black pixels.
+    /// </summary>
+    private static readonly Regex BlackFrameRegex = new("(pblack|t):[0-9.]+");
 
     /// <summary>
     /// Gets or sets the logger.
@@ -104,82 +105,31 @@ public static class FFmpegWrapper
     }
 
     /// <summary>
-    /// Run an FFmpeg command with the provided arguments and validate that the output contains
-    /// the provided string.
-    /// </summary>
-    /// <param name="arguments">Arguments to pass to FFmpeg.</param>
-    /// <param name="mustContain">String that the output must contain. Case insensitive.</param>
-    /// <param name="bundleName">Support bundle key to store FFmpeg's output under.</param>
-    /// <param name="errorMessage">Error message to log if this requirement is not met.</param>
-    /// <returns>true on success, false on error.</returns>
-    private static bool CheckFFmpegRequirement(
-        string arguments,
-        string mustContain,
-        string bundleName,
-        string errorMessage)
-    {
-        Logger?.LogDebug("Checking FFmpeg requirement {Arguments}", arguments);
-
-        var output = Encoding.UTF8.GetString(GetOutput(arguments, string.Empty, false, 2000));
-        Logger?.LogTrace("Output of ffmpeg {Arguments}: {Output}", arguments, output);
-        ChromaprintLogs[bundleName] = output;
-
-        if (!output.Contains(mustContain, StringComparison.OrdinalIgnoreCase))
-        {
-            Logger?.LogError("{ErrorMessage}", errorMessage);
-            return false;
-        }
-
-        Logger?.LogDebug("FFmpeg requirement {Arguments} met", arguments);
-
-        return true;
-    }
-
-    /// <summary>
     /// Fingerprint a queued episode.
     /// </summary>
     /// <param name="episode">Queued episode to fingerprint.</param>
+    /// <param name="mode">Portion of media file to fingerprint. Introduction = first 25% / 10 minutes and Credits = last 4 minutes.</param>
     /// <returns>Numerical fingerprint points.</returns>
-    public static uint[] Fingerprint(QueuedEpisode episode)
+    public static uint[] Fingerprint(QueuedEpisode episode, AnalysisMode mode)
     {
-        // Try to load this episode from cache before running ffmpeg.
-        if (LoadCachedFingerprint(episode, out uint[] cachedFingerprint))
+        int start, end;
+
+        if (mode == AnalysisMode.Introduction)
         {
-            Logger?.LogTrace("Fingerprint cache hit on {File}", episode.Path);
-            return cachedFingerprint;
+            start = 0;
+            end = episode.IntroFingerprintEnd;
+        }
+        else if (mode == AnalysisMode.Credits)
+        {
+            start = episode.CreditsFingerprintStart;
+            end = episode.Duration;
+        }
+        else
+        {
+            throw new ArgumentException("Unknown analysis mode " + mode.ToString());
         }
 
-        Logger?.LogDebug(
-            "Fingerprinting {Duration} seconds from \"{File}\" (id {Id})",
-            episode.FingerprintDuration,
-            episode.Path,
-            episode.EpisodeId);
-
-        var args = string.Format(
-            CultureInfo.InvariantCulture,
-            "-i \"{0}\" -to {1} -ac 2 -f chromaprint -fp_format raw -",
-            episode.Path,
-            episode.FingerprintDuration);
-
-        // Returns all fingerprint points as raw 32 bit unsigned integers (little endian).
-        var rawPoints = GetOutput(args, string.Empty);
-        if (rawPoints.Length == 0 || rawPoints.Length % 4 != 0)
-        {
-            Logger?.LogWarning("Chromaprint returned {Count} points for \"{Path}\"", rawPoints.Length, episode.Path);
-            throw new FingerprintException("chromaprint output for \"" + episode.Path + "\" was malformed");
-        }
-
-        var results = new List<uint>();
-        for (var i = 0; i < rawPoints.Length; i += 4)
-        {
-            var rawPoint = rawPoints.Slice(i, 4);
-            results.Add(BitConverter.ToUInt32(rawPoint));
-        }
-
-        // Try to cache this fingerprint.
-        CacheFingerprint(episode, results);
-
-        return results.ToArray();
+        return Fingerprint(episode, mode, start, end);
     }
 
     /// <summary>
@@ -231,9 +181,6 @@ public static class FFmpegWrapper
             limit,
             episode.EpisodeId);
 
-        // TODO: select the audio track that matches the user's preferred language, falling
-        //     back to the first track if nothing matches
-
         // -vn, -sn, -dn: ignore video, subtitle, and data tracks
         var args = string.Format(
             CultureInfo.InvariantCulture,
@@ -249,7 +196,12 @@ public static class FFmpegWrapper
         var currentRange = new TimeRange();
         var silenceRanges = new List<TimeRange>();
 
-        // Each match will have a type (either "start" or "end") and a timecode (a double).
+        /* Each match will have a type (either "start" or "end") and a timecode (a double).
+         *
+         * Sample output:
+         * [silencedetect @ 0x000000000000] silence_start: 12.34
+         * [silencedetect @ 0x000000000000] silence_end: 56.123 | silence_duration: 43.783
+        */
         var raw = Encoding.UTF8.GetString(GetOutput(args, cacheKey, true));
         foreach (Match match in SilenceDetectionExpression.Matches(raw))
         {
@@ -271,6 +223,138 @@ public static class FFmpegWrapper
     }
 
     /// <summary>
+    /// Finds the location of all black frames in a media file within a time range.
+    /// </summary>
+    /// <param name="episode">Media file to analyze.</param>
+    /// <param name="range">Time range to search.</param>
+    /// <param name="minimum">Percentage of the frame that must be black.</param>
+    /// <returns>Array of frames that are mostly black.</returns>
+    public static BlackFrame[] DetectBlackFrames(
+        QueuedEpisode episode,
+        TimeRange range,
+        int minimum)
+    {
+        // Seek to the start of the time range and find frames that are at least 50% black.
+        var args = string.Format(
+            CultureInfo.InvariantCulture,
+            "-ss {0} -i \"{1}\" -to {2} -an -dn -sn -vf \"blackframe=amount=50\" -f null -",
+            range.Start,
+            episode.Path,
+            range.End - range.Start);
+
+        // Cache the results to GUID-blackframes-START-END-v1.
+        var cacheKey = string.Format(
+            CultureInfo.InvariantCulture,
+            "{0}-blackframes-{1}-{2}-v1",
+            episode.EpisodeId.ToString("N"),
+            range.Start,
+            range.End);
+
+        var blackFrames = new List<BlackFrame>();
+
+        /* Run the blackframe filter.
+         *
+         * Sample output:
+         * [Parsed_blackframe_0 @ 0x0000000] frame:1 pblack:99 pts:43 t:0.043000 type:B last_keyframe:0
+         * [Parsed_blackframe_0 @ 0x0000000] frame:2 pblack:99 pts:85 t:0.085000 type:B last_keyframe:0
+         */
+        var raw = Encoding.UTF8.GetString(GetOutput(args, cacheKey, true));
+        foreach (var line in raw.Split('\n'))
+        {
+            var matches = BlackFrameRegex.Matches(line);
+            if (matches.Count != 2)
+            {
+                continue;
+            }
+
+            var (strPercent, strTime) = (
+                matches[0].Value.Split(':')[1],
+                matches[1].Value.Split(':')[1]
+            );
+
+            var bf = new BlackFrame(
+                Convert.ToInt32(strPercent, CultureInfo.InvariantCulture),
+                Convert.ToDouble(strTime, CultureInfo.InvariantCulture));
+
+            if (bf.Percentage > minimum)
+            {
+                blackFrames.Add(bf);
+            }
+        }
+
+        return blackFrames.ToArray();
+    }
+
+    /// <summary>
+    /// Gets Chromaprint debugging logs.
+    /// </summary>
+    /// <returns>Markdown formatted logs.</returns>
+    public static string GetChromaprintLogs()
+    {
+        // Print the FFmpeg detection status at the top.
+        // Format: "* FFmpeg: `error`"
+        // Append two newlines to separate the bulleted list from the logs
+        var logs = string.Format(
+            CultureInfo.InvariantCulture,
+            "* FFmpeg: `{0}`\n\n",
+            ChromaprintLogs["error"]);
+
+        // Always include ffmpeg version information
+        logs += FormatFFmpegLog("version");
+
+        // Don't print feature detection logs if the plugin started up okay
+        if (ChromaprintLogs["error"] == "okay")
+        {
+            return logs;
+        }
+
+        // Print all remaining logs
+        foreach (var kvp in ChromaprintLogs)
+        {
+            if (kvp.Key == "error" || kvp.Key == "version")
+            {
+                continue;
+            }
+
+            logs += FormatFFmpegLog(kvp.Key);
+        }
+
+        return logs;
+    }
+
+    /// <summary>
+    /// Run an FFmpeg command with the provided arguments and validate that the output contains
+    /// the provided string.
+    /// </summary>
+    /// <param name="arguments">Arguments to pass to FFmpeg.</param>
+    /// <param name="mustContain">String that the output must contain. Case insensitive.</param>
+    /// <param name="bundleName">Support bundle key to store FFmpeg's output under.</param>
+    /// <param name="errorMessage">Error message to log if this requirement is not met.</param>
+    /// <returns>true on success, false on error.</returns>
+    private static bool CheckFFmpegRequirement(
+        string arguments,
+        string mustContain,
+        string bundleName,
+        string errorMessage)
+    {
+        Logger?.LogDebug("Checking FFmpeg requirement {Arguments}", arguments);
+
+        var output = Encoding.UTF8.GetString(GetOutput(arguments, string.Empty, false, 2000));
+        Logger?.LogTrace("Output of ffmpeg {Arguments}: {Output}", arguments, output);
+        ChromaprintLogs[bundleName] = output;
+
+        if (!output.Contains(mustContain, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger?.LogError("{ErrorMessage}", errorMessage);
+            return false;
+        }
+
+        Logger?.LogDebug("FFmpeg requirement {Arguments} met", arguments);
+
+        return true;
+    }
+
+    /// <summary>
     /// Runs ffmpeg and returns standard output (or error).
     /// If caching is enabled, will use cacheFilename to cache the output of this command.
     /// </summary>
@@ -286,10 +370,11 @@ public static class FFmpegWrapper
     {
         var ffmpegPath = Plugin.Instance?.FFmpegPath ?? "ffmpeg";
 
-        // The silencedetect filter outputs silence timestamps at the info log level.
-        var logLevel = args.Contains("silencedetect", StringComparison.OrdinalIgnoreCase) ?
-            "info" :
-            "warning";
+        // The silencedetect and blackframe filters output data at the info log level.
+        var useInfoLevel = args.Contains("silencedetect", StringComparison.OrdinalIgnoreCase) ||
+            args.Contains("blackframe", StringComparison.OrdinalIgnoreCase);
+
+        var logLevel = useInfoLevel ? "info" : "warning";
 
         var cacheOutput =
             (Plugin.Instance?.Configuration.CacheFingerprints ?? false) &&
@@ -368,13 +453,69 @@ public static class FFmpegWrapper
     }
 
     /// <summary>
+    /// Fingerprint a queued episode.
+    /// </summary>
+    /// <param name="episode">Queued episode to fingerprint.</param>
+    /// <param name="mode">Portion of media file to fingerprint.</param>
+    /// <param name="start">Time (in seconds) relative to the start of the file to start fingerprinting from.</param>
+    /// <param name="end">Time (in seconds) relative to the start of the file to stop fingerprinting at.</param>
+    /// <returns>Numerical fingerprint points.</returns>
+    private static uint[] Fingerprint(QueuedEpisode episode, AnalysisMode mode, int start, int end)
+    {
+        // Try to load this episode from cache before running ffmpeg.
+        if (LoadCachedFingerprint(episode, mode, out uint[] cachedFingerprint))
+        {
+            Logger?.LogTrace("Fingerprint cache hit on {File}", episode.Path);
+            return cachedFingerprint;
+        }
+
+        Logger?.LogDebug(
+            "Fingerprinting [{Start}, {End}] from \"{File}\" (id {Id})",
+            start,
+            end,
+            episode.Path,
+            episode.EpisodeId);
+
+        var args = string.Format(
+            CultureInfo.InvariantCulture,
+            "-ss {0} -i \"{1}\" -to {2} -ac 2 -f chromaprint -fp_format raw -",
+            start,
+            episode.Path,
+            end - start);
+
+        // Returns all fingerprint points as raw 32 bit unsigned integers (little endian).
+        var rawPoints = GetOutput(args, string.Empty);
+        if (rawPoints.Length == 0 || rawPoints.Length % 4 != 0)
+        {
+            Logger?.LogWarning("Chromaprint returned {Count} points for \"{Path}\"", rawPoints.Length, episode.Path);
+            throw new FingerprintException("chromaprint output for \"" + episode.Path + "\" was malformed");
+        }
+
+        var results = new List<uint>();
+        for (var i = 0; i < rawPoints.Length; i += 4)
+        {
+            var rawPoint = rawPoints.Slice(i, 4);
+            results.Add(BitConverter.ToUInt32(rawPoint));
+        }
+
+        // Try to cache this fingerprint.
+        CacheFingerprint(episode, mode, results);
+
+        return results.ToArray();
+    }
+
+    /// <summary>
     /// Tries to load an episode's fingerprint from cache. If caching is not enabled, calling this function is a no-op.
     /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode to try to load from cache.</param>
+    /// <param name="mode">Analysis mode.</param>
     /// <param name="fingerprint">Array to store the fingerprint in.</param>
     /// <returns>true if the episode was successfully loaded from cache, false on any other error.</returns>
-    private static bool LoadCachedFingerprint(QueuedEpisode episode, out uint[] fingerprint)
+    private static bool LoadCachedFingerprint(
+        QueuedEpisode episode,
+        AnalysisMode mode,
+        out uint[] fingerprint)
     {
         fingerprint = Array.Empty<uint>();
 
@@ -384,7 +525,7 @@ public static class FFmpegWrapper
             return false;
         }
 
-        var path = GetFingerprintCachePath(episode);
+        var path = GetFingerprintCachePath(episode, mode);
 
         // If this episode isn't cached, bail out.
         if (!File.Exists(path))
@@ -392,7 +533,6 @@ public static class FFmpegWrapper
             return false;
         }
 
-        // TODO: make async
         var raw = File.ReadAllLines(path, Encoding.UTF8);
         var result = new List<uint>();
 
@@ -426,8 +566,12 @@ public static class FFmpegWrapper
     /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode to store in cache.</param>
+    /// <param name="mode">Analysis mode.</param>
     /// <param name="fingerprint">Fingerprint of the episode to store.</param>
-    private static void CacheFingerprint(QueuedEpisode episode, List<uint> fingerprint)
+    private static void CacheFingerprint(
+        QueuedEpisode episode,
+        AnalysisMode mode,
+        List<uint> fingerprint)
     {
         // Bail out if caching isn't enabled.
         if (!(Plugin.Instance?.Configuration.CacheFingerprints ?? false))
@@ -443,7 +587,10 @@ public static class FFmpegWrapper
         }
 
         // Cache the episode.
-        File.WriteAllLinesAsync(GetFingerprintCachePath(episode), lines, Encoding.UTF8).ConfigureAwait(false);
+        File.WriteAllLinesAsync(
+            GetFingerprintCachePath(episode, mode),
+            lines,
+            Encoding.UTF8).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -451,46 +598,25 @@ public static class FFmpegWrapper
     /// This function was created before the unified caching mechanism was introduced (in v0.1.7).
     /// </summary>
     /// <param name="episode">Episode.</param>
-    private static string GetFingerprintCachePath(QueuedEpisode episode)
+    /// <param name="mode">Analysis mode.</param>
+    private static string GetFingerprintCachePath(QueuedEpisode episode, AnalysisMode mode)
     {
-        return Path.Join(Plugin.Instance!.FingerprintCachePath, episode.EpisodeId.ToString("N"));
-    }
+        var basePath = Path.Join(
+            Plugin.Instance!.FingerprintCachePath,
+            episode.EpisodeId.ToString("N"));
 
-    /// <summary>
-    /// Gets Chromaprint debugging logs.
-    /// </summary>
-    /// <returns>Markdown formatted logs.</returns>
-    public static string GetChromaprintLogs()
-    {
-        // Print the FFmpeg detection status at the top.
-        // Format: "* FFmpeg: `error`"
-        // Append two newlines to separate the bulleted list from the logs
-        var logs = string.Format(
-            CultureInfo.InvariantCulture,
-            "* FFmpeg: `{0}`\n\n",
-            ChromaprintLogs["error"]);
-
-        // Always include ffmpeg version information
-        logs += FormatFFmpegLog("version");
-
-        // Don't print feature detection logs if the plugin started up okay
-        if (ChromaprintLogs["error"] == "okay")
+        if (mode == AnalysisMode.Introduction)
         {
-            return logs;
+            return basePath;
         }
-
-        // Print all remaining logs
-        foreach (var kvp in ChromaprintLogs)
+        else if (mode == AnalysisMode.Credits)
         {
-            if (kvp.Key == "error" || kvp.Key == "version")
-            {
-                continue;
-            }
-
-            logs += FormatFFmpegLog(kvp.Key);
+            return basePath + "-credits";
         }
-
-        return logs;
+        else
+        {
+            throw new ArgumentException("Unknown analysis mode " + mode.ToString());
+        }
     }
 
     private static string FormatFFmpegLog(string key)
