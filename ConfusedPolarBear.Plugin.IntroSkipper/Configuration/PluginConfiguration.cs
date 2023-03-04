@@ -163,9 +163,14 @@ public class PluginConfiguration : BasePluginConfiguration
     // ===== Localization support =====
 
     /// <summary>
-    /// Gets or sets the text to display in the Skip Intro button.
+    /// Gets or sets the text to display in the skip button in introduction mode.
     /// </summary>
-    public string SkipButtonText { get; set; } = "Skip Intro";
+    public string SkipButtonIntroText { get; set; } = "Skip Intro";
+
+    /// <summary>
+    /// Gets or sets the text to display in the skip button in end credits mode.
+    /// </summary>
+    public string SkipButtonEndCreditsText { get; set; } = "Next";
 
     /// <summary>
     /// Gets or sets the notification text sent after automatically skipping an introduction.

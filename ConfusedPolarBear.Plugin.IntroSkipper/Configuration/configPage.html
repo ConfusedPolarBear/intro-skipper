@@ -265,12 +265,22 @@
                             <summary>User Interface Customization</summary>
 
                             <div class="inputContainer">
-                                <label class="inputLabel" for="SkipButtonText">
+                                <label class="inputLabel" for="SkipButtonIntroText">
                                     Skip intro button text
                                 </label>
-                                <input id="SkipButtonText" type="text" is="emby-input" />
+                                <input id="SkipButtonIntroText" type="text" is="emby-input" />
                                 <div class="fieldDescription">
                                     Text to display in the skip intro button.
+                                </div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <label class="inputLabel" for="SkipButtonEndCreditsText">
+                                    Skip end credits button text
+                                </label>
+                                <input id="SkipButtonEndCreditsText" type="text" is="emby-input" />
+                                <div class="fieldDescription">
+                                    Text to display in the skip end credits button.
                                 </div>
                             </div>
 
@@ -440,7 +450,9 @@
                 // internals
                 "SilenceDetectionMaximumNoise",
                 "SilenceDetectionMinimumDuration",
-                "SkipButtonText",
+                // UI customization
+                "SkipButtonIntroText",
+                "SkipButtonEndCreditsText",
                 "AutoSkipNotificationText"
             ]
 

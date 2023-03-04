@@ -44,13 +44,31 @@ public class SkipIntroController : ControllerBase
             return NotFound();
         }
 
-        // Populate the prompt show/hide times.
-        var config = Plugin.Instance!.Configuration;
-        intro.ShowSkipPromptAt = Math.Max(0, intro.IntroStart - config.ShowPromptAdjustment);
-        intro.HideSkipPromptAt = intro.IntroStart + config.HidePromptAdjustment;
-        intro.IntroEnd -= config.SecondsOfIntroToPlay;
-
         return intro;
+    }
+
+    /// <summary>
+    /// Gets a dictionary of all skippable segments.
+    /// </summary>
+    /// <param name="id">Media ID.</param>
+    /// <response code="200">Skippable segments dictionary.</response>
+    /// <returns>Dictionary of skippable segments.</returns>
+    [HttpGet("Episode/{id}/IntroSkipperSegments")]
+    public ActionResult<Dictionary<AnalysisMode, Intro>> GetSkippableSegments([FromRoute] Guid id)
+    {
+        var segments = new Dictionary<AnalysisMode, Intro>();
+
+        if (GetIntro(id, AnalysisMode.Introduction) is Intro intro)
+        {
+            segments[AnalysisMode.Introduction] = intro;
+        }
+
+        if (GetIntro(id, AnalysisMode.Credits) is Intro credits)
+        {
+            segments[AnalysisMode.Credits] = credits;
+        }
+
+        return segments;
     }
 
     /// <summary>Lookup and return the skippable timestamps for the provided item.</summary>
@@ -65,8 +83,15 @@ public class SkipIntroController : ControllerBase
                 Plugin.Instance!.Intros[id] :
                 Plugin.Instance!.Credits[id];
 
-            // A copy is returned to avoid mutating the original Intro object stored in the dictionary.
-            return new(timestamp);
+            // Operate on a copy to avoid mutating the original Intro object stored in the dictionary.
+            var segment = new Intro(timestamp);
+
+            var config = Plugin.Instance!.Configuration;
+            segment.ShowSkipPromptAt = Math.Max(0, segment.IntroStart - config.ShowPromptAdjustment);
+            segment.HideSkipPromptAt = segment.IntroStart + config.HidePromptAdjustment;
+            segment.IntroEnd -= config.SecondsOfIntroToPlay;
+
+            return segment;
         }
         catch (KeyNotFoundException)
         {
@@ -145,6 +170,9 @@ public class SkipIntroController : ControllerBase
     public ActionResult<UserInterfaceConfiguration> GetUserInterfaceConfiguration()
     {
         var config = Plugin.Instance!.Configuration;
-        return new UserInterfaceConfiguration(config.SkipButtonVisible, config.SkipButtonText);
+        return new UserInterfaceConfiguration(
+            config.SkipButtonVisible,
+            config.SkipButtonIntroText,
+            config.SkipButtonEndCreditsText);
     }
 }

@@ -34,7 +34,7 @@ introSkipper.fetchWrapper = async function (...args) {
         introSkipper.d(path);
 
         let id = path.split("/")[2];
-        introSkipper.skipSegments = await introSkipper.secureFetch(`Episode/${id}/IntroTimestamps/v1`);
+        introSkipper.skipSegments = await introSkipper.secureFetch(`Episode/${id}/IntroSkipperSegments`);
 
         introSkipper.d("successfully retrieved skip segments");
         introSkipper.d(introSkipper.skipSegments);
@@ -151,10 +151,12 @@ introSkipper.injectButton = async function () {
     button.addEventListener("click", introSkipper.doSkip);
     button.innerHTML = `
     <button is="paper-icon-button-light" class="btnSkipIntro paper-icon-button-light">
-        <span id="btnSkipIntroText"></span>
+        <span id="btnSkipSegmentText"></span>
         <span class="material-icons skip_next"></span>
     </button>
     `;
+    button.dataset["intro_text"] = config.SkipButtonIntroText;
+    button.dataset["credits_text"] = config.SkipButtonEndCreditsText;
 
     /*
     * Alternative workaround for #44. Jellyfin's video component registers a global click handler
@@ -166,37 +168,60 @@ introSkipper.injectButton = async function () {
     // Append the button to the video OSD
     let controls = document.querySelector("div#videoOsdPage");
     controls.appendChild(button);
+}
 
-    document.querySelector("#btnSkipIntroText").textContent = config.SkipButtonText;
+/** Get the currently playing skippable segment. */
+introSkipper.getCurrentSegment = function (position) {
+    for (let key in introSkipper.skipSegments) {
+        const segment = introSkipper.skipSegments[key];
+        if (position >= segment.ShowSkipPromptAt && position < segment.HideSkipPromptAt) {
+            segment["SegmentType"] = key;
+            return segment;
+        }
+    }
+
+    return { "SegmentType": "None" };
 }
 
 /** Playback position changed, check if the skip button needs to be displayed. */
 introSkipper.videoPositionChanged = function () {
-    // Ensure a skip segment was found.
-    if (!introSkipper.skipSegments || !introSkipper.skipSegments.Valid) {
-        return;
-    }
-
     const skipButton = document.querySelector("#skipIntro");
     if (!skipButton) {
         return;
     }
 
-    const position = introSkipper.videoPlayer.currentTime;
-    if (position >= introSkipper.skipSegments.ShowSkipPromptAt &&
-        position < introSkipper.skipSegments.HideSkipPromptAt) {
-        skipButton.classList.remove("hide");
-        return;
+    const segment = introSkipper.getCurrentSegment(introSkipper.videoPlayer.currentTime);
+    switch (segment["SegmentType"]) {
+        case "None":
+            skipButton.classList.add("hide");
+            return;
+
+        case "Introduction":
+            skipButton.querySelector("#btnSkipSegmentText").textContent =
+                skipButton.dataset["intro_text"];
+            break;
+
+        case "Credits":
+            skipButton.querySelector("#btnSkipSegmentText").textContent =
+                skipButton.dataset["credits_text"];
+            break;
     }
 
-    skipButton.classList.add("hide");
+    skipButton.classList.remove("hide");
 }
 
 /** Seeks to the end of the intro. */
 introSkipper.doSkip = function (e) {
     introSkipper.d("Skipping intro");
     introSkipper.d(introSkipper.skipSegments);
-    introSkipper.videoPlayer.currentTime = introSkipper.skipSegments.IntroEnd;
+
+    const segment = introSkipper.getCurrentSegment(introSkipper.videoPlayer.currentTime);
+    if (segment["SegmentType"] === "None") {
+        console.warn("[intro skipper] doSkip() called without an active segment");
+        return;
+    }
+
+    introSkipper.videoPlayer.currentTime = segment["IntroEnd"];
 }
 
 /** Tests if an element with the provided selector exists. */
