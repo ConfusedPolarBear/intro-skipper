@@ -110,6 +110,11 @@ introSkipper.injectCss = function () {
         transition: ease-out 0.4s;
     }
 
+    #skipIntro #btnSkipSegmentText {
+        padding-right: 3px;
+        padding-bottom: 2px;
+    }
+
     @media (max-width: 1080px) {
         #skipIntro {
             right: 10%;
