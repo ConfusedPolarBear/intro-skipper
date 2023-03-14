@@ -136,7 +136,13 @@ introSkipper.injectCss = function () {
  * Calling this function is a no-op if the CSS has already been injected.
  */
 introSkipper.injectButton = async function () {
-    if (introSkipper.testElement(".btnSkipIntro")) {
+    // Ensure the button we're about to inject into the page doesn't conflict with a pre-existing one
+    const preExistingButton = introSkipper.testElement("div.skipIntro");
+    if (preExistingButton) {
+        preExistingButton.style.display = "none";
+    }
+
+    if (introSkipper.testElement(".btnSkipIntro.injected")) {
         introSkipper.d("Button already added");
         return;
     }
@@ -155,7 +161,7 @@ introSkipper.injectButton = async function () {
     button.classList.add("hide");
     button.addEventListener("click", introSkipper.doSkip);
     button.innerHTML = `
-    <button is="paper-icon-button-light" class="btnSkipIntro paper-icon-button-light">
+    <button is="paper-icon-button-light" class="btnSkipIntro paper-icon-button-light injected">
         <span id="btnSkipSegmentText"></span>
         <span class="material-icons skip_next"></span>
     </button>
