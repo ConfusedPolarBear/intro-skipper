@@ -181,11 +181,23 @@ introSkipper.injectButton = async function () {
     controls.appendChild(button);
 }
 
+introSkipper.osdVisible = function () {
+    let osd = document.querySelector("div.videoOsdBottom");
+
+    if (!osd) {
+        return false;
+
+    }
+
+    return !osd.classList.contains("hide");
+}
+
+
 /** Get the currently playing skippable segment. */
 introSkipper.getCurrentSegment = function (position) {
     for (let key in introSkipper.skipSegments) {
         const segment = introSkipper.skipSegments[key];
-        if (position >= segment.ShowSkipPromptAt && position < segment.HideSkipPromptAt) {
+        if ((position >= segment.ShowSkipPromptAt && position < segment.HideSkipPromptAt) || (introSkipper.osdVisible() && position >= segment.IntroStart && position < segment.IntroEnd)) {
             segment["SegmentType"] = key;
             return segment;
         }
