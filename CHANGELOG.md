@@ -7,6 +7,7 @@
   * Detect ending credits in television episodes
   * Add support for using chapter names to locate introductions and ending credits
   * Add support for using black frames to locate ending credits
+  * Show skip button when on screen controls are visible (#149 by @DualScorch)
 * Internal changes
   * Move Chromaprint analysis code out of the episode analysis task
   * Add support for multiple analysis techinques
