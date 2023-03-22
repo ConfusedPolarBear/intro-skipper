@@ -181,17 +181,11 @@ introSkipper.injectButton = async function () {
     controls.appendChild(button);
 }
 
+/** Tests if the OSD controls are visible. */
 introSkipper.osdVisible = function () {
-    let osd = document.querySelector("div.videoOsdBottom");
-
-    if (!osd) {
-        return false;
-
-    }
-
-    return !osd.classList.contains("hide");
+    const osd = document.querySelector("div.videoOsdBottom");
+    return osd ? !osd.classList.contains("hide") : false;
 }
-
 
 /** Get the currently playing skippable segment. */
 introSkipper.getCurrentSegment = function (position) {
