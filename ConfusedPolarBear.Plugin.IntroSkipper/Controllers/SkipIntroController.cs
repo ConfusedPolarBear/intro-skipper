@@ -91,6 +91,12 @@ public class SkipIntroController : ControllerBase
             segment.HideSkipPromptAt = segment.IntroStart + config.HidePromptAdjustment;
             segment.IntroEnd -= config.SecondsOfIntroToPlay;
 
+            // Don't show prompt after the segment has ended
+            if (segment.HideSkipPromptAt > segment.IntroEnd)
+            {
+                segment.HideSkipPromptAt = segment.IntroEnd;
+            }
+
             return segment;
         }
         catch (KeyNotFoundException)
