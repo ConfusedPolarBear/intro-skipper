@@ -19,8 +19,8 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x]
-        jellyfin-container-version: [10.8.9]
-        jellyfin-web-version: [10.8.9]
+        jellyfin-container-version: [10.8.10]
+        jellyfin-web-version: [10.8.10]
 
     steps:
       - uses: actions/checkout@v3
