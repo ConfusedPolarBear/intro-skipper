@@ -25,6 +25,18 @@ services:
             - '/media:/media:ro'
         image: 'jellyfin/jellyfin:10.8.0'
 ```
+OR
+
+(For Unraid Only)
+
+In the Docker tab, click on the Jellyfin container, then click on "Edit" and enable the advanced view. Under "Extra Parameters", add the following
+
+```
+--volume /full/path/to/extracted/dist:/jellyfin/jellyfin-web:ro # <== add this line if using the official container
+--volume /full/path/to/extracted/dist:/usr/share/jellyfin/web:ro # <== add this line if using the linuxserver container
+```
+
+Make sure to clear any previous cache on the web page, or else you will have to wait a few minutes for it to clear automatically.
 
 ## Method 2: switching container images
 
