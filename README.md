@@ -19,7 +19,7 @@ However, if you want to use an unmodified installation of Jellyfin 10.8.z or use
   * `jellyfin/jellyfin` 10.8.z container: preinstalled
   * `linuxserver/jellyfin` 10.8.z container: preinstalled
   * Debian Linux based native installs: provided by the `jellyfin-ffmpeg5` package
-  * MacOS native installs require to build ffmpeg with chromaprint (instructions below)
+  * MacOS native installs: build ffmpeg with chromaprint support ([instructions](#installation-instructions-for-macos))
 
 ## Introduction requirements
 
@@ -50,9 +50,9 @@ Instructions on how to switch web interface versions are located [here](docs/web
 6. After a season has completed analyzing, play some episodes from it and observe the results
     1. Status updates are logged before analyzing each season of a show
 
-### Installation instructions for MacOS
+## Installation instructions for MacOS
 
-1. Build ffmpeg with chromapring using brew
+1. Build ffmpeg with chromaprint support using brew:
 
 ```
 brew uninstall --force --ignore-dependencies ffmpeg
@@ -64,8 +64,7 @@ brew link --overwrite ffmpeg
 
 2. Retrieve ffmpeg path with `whereis ffmpeg` and use this path on Jellyfin under [encoding settings](http://localhost:8096/web/index.html#!/encodingsettings.html)
 
-3. Continue with step 2 above
-
+3. Follow the [installation instructions](#installation-instructions) above
 
 ## Documentation
 
