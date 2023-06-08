@@ -19,24 +19,22 @@ services:
         ports:
             - '8096:8096'
         volumes:
+            # change `:ro` to `:rw` if you are using a plugin that modifies Jellyfin's web interface from inside the container (such as Jellyscrub)
             - '/full/path/to/extracted/dist:/jellyfin/jellyfin-web:ro'  # <== add this line if using the official container
             - '/full/path/to/extracted/dist:/usr/share/jellyfin/web:ro' # <== add this line if using the linuxserver container
             - '/config:/config'
             - '/media:/media:ro'
         image: 'jellyfin/jellyfin:10.8.0'
 ```
-OR
 
-(For Unraid Only)
+Make sure to clear the browser's cached version of the web interface before testing the skip button.
 
-In the Docker tab, click on the Jellyfin container, then click on "Edit" and enable the advanced view. Under "Extra Parameters", add the following
+### Instructions for Unraid users only
 
-```
---volume /full/path/to/extracted/dist:/jellyfin/jellyfin-web:ro # <== add this line if using the official container
---volume /full/path/to/extracted/dist:/usr/share/jellyfin/web:ro # <== add this line if using the linuxserver container
-```
+In the Docker tab, click on the Jellyfin container, then click on "Edit" and enable the advanced view. Under "Extra Parameters", add one of the following:
 
-Make sure to clear any previous cache on the web page, or else you will have to wait a few minutes for it to clear automatically.
+* If using the official `jellyfin/jellyfin` container: `--volume /full/path/to/extracted/dist:/jellyfin/jellyfin-web:ro`
+* If using the LinuxServer.io container: `--volume /full/path/to/extracted/dist:/usr/share/jellyfin/web:ro`
 
 ## Method 2: switching container images
 
