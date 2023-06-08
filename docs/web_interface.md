@@ -33,8 +33,8 @@ Make sure to clear the browser's cached version of the web interface before test
 
 In the Docker tab, click on the Jellyfin container, then click on "Edit" and enable the advanced view. Under "Extra Parameters", add one of the following:
 
-* If using the official `jellyfin/jellyfin` container: `--volume /full/path/to/extracted/dist:/jellyfin/jellyfin-web:ro`
-* If using the LinuxServer.io container: `--volume /full/path/to/extracted/dist:/usr/share/jellyfin/web:ro`
+* If using the `jellyfin/jellyfin` container: `--volume /full/path/to/extracted/dist:/jellyfin/jellyfin-web:ro`
+* If using the `linuxserver/jellyfin` container: `--volume /full/path/to/extracted/dist:/usr/share/jellyfin/web:ro`
 
 ## Method 2: switching container images
 
