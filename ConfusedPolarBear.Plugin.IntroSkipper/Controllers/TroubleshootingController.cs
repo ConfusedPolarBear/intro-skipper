@@ -42,6 +42,7 @@ public class TroubleshootingController : ControllerBase
     [Produces(MediaTypeNames.Text.Plain)]
     public ActionResult<string> GetSupportBundle()
     {
+        var config = Plugin.Instance!.Configuration;
         var bundle = new StringBuilder();
 
         bundle.Append("* Jellyfin version: ");
@@ -69,7 +70,9 @@ public class TroubleshootingController : ControllerBase
 
         bundle.Append("* Queue contents: ");
         bundle.Append(Plugin.Instance!.TotalQueued);
-        bundle.Append(" episodes\n");
+        bundle.Append(" episodes, ");
+        bundle.Append(Plugin.Instance!.TotalSeasons);
+        bundle.Append(" seasons\n");
 
         bundle.Append("* Warnings: `");
         bundle.Append(WarningManager.GetWarnings());

@@ -79,6 +79,7 @@ public class QueueManager
             }
         }
 
+        Plugin.Instance!.TotalSeasons = _queuedEpisodes.Count;
         Plugin.Instance!.QueuedMediaItems.Clear();
         foreach (var kvp in _queuedEpisodes)
         {

@@ -137,6 +137,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public int TotalQueued { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of seasons in the queue.
+    /// </summary>
+    public int TotalSeasons { get; set; }
+
+    /// <summary>
     /// Gets the directory to cache fingerprints in.
     /// </summary>
     public string FingerprintCachePath { get; private set; }
