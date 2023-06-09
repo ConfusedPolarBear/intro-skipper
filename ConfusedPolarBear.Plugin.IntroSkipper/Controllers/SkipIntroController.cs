@@ -88,14 +88,10 @@ public class SkipIntroController : ControllerBase
 
             var config = Plugin.Instance!.Configuration;
             segment.ShowSkipPromptAt = Math.Max(0, segment.IntroStart - config.ShowPromptAdjustment);
-            segment.HideSkipPromptAt = segment.IntroStart + config.HidePromptAdjustment;
+            segment.HideSkipPromptAt = Math.Min(
+                segment.IntroStart + config.HidePromptAdjustment,
+                segment.IntroEnd);
             segment.IntroEnd -= config.SecondsOfIntroToPlay;
-
-            // Don't show prompt after the segment has ended
-            if (segment.HideSkipPromptAt > segment.IntroEnd)
-            {
-                segment.HideSkipPromptAt = segment.IntroEnd;
-            }
 
             return segment;
         }
